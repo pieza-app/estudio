@@ -93,6 +93,7 @@ class Proyectos(unittest.TestCase):
         sys.path.insert(0, os.path.join(RAIZ, "bin"))
         import proyectos
         self.p = proyectos
+        self._puede = proyectos.ia.puede_escribir
         self.respuestas = []
         self.pedidos = []
 
@@ -104,6 +105,7 @@ class Proyectos(unittest.TestCase):
 
     def tearDown(self):
         self.p.ia.preguntar = self._original
+        self.p.ia.puede_escribir = self._puede
         os.environ.pop("PIEZA_PROYECTOS", None)
         self.tmp.cleanup()
 
@@ -133,8 +135,44 @@ class Proyectos(unittest.TestCase):
             self.assertFalse(self.p._ruta_valida(mala), mala)
         self.assertTrue(self.p._ruta_valida("ui/app.js"))
 
+    def test_paso_editando_la_carpeta(self):
+        """Con Claude o Codex la IA edita directo; Pieza devuelve lo que no le toca y corre las pruebas."""
+        self.plan()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        nucleo_antes = open(os.path.join(carpeta, "bin", "nucleo.py"), encoding="utf-8").read()
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+
+        def edita(pedido, **opciones):
+            self.pedidos.append((pedido, opciones))
+            c = opciones["escribir"]
+            open(os.path.join(c, "bin", "recetas.py"), "w").write("print('recetas')\n")
+            open(os.path.join(c, "bin", "nucleo.py"), "w").write("# roto\n")  # de una pieza: se devuelve
+            open(os.path.join(c, "pruebas", "correr.sh"), "w").write("exit 0\n")  # aflojar las pruebas: se devuelve
+            app = json.load(open(os.path.join(c, "app.json")))
+            app["id"] = "otra"  # lo que identifica a la app: se devuelve
+            app["acciones"]["recetasListar"] = {"script": "recetas.py", "args": ["lista"], "entrada": None, "datos": {},
+                                                "responde": "recetasListas", "limite": 30}
+            json.dump(app, open(os.path.join(c, "app.json"), "w"))
+            return "Hice la lista de recetas.", None
+        self.p.ia.preguntar = edita
+        r = self.p.paso({"id": "recetas", "n": 0})
+        self.assertTrue(r["ok"], r)
+        x = r["proyecto"]["pasos"][0]
+        self.assertIn("bin/recetas.py", x["escritos"])
+        self.assertIn("bin/nucleo.py", x["cuidados"])
+        self.assertIn("app.json:id", x["cuidados"])
+        self.assertIn("pruebas/correr.sh", x["cuidados"])
+        self.assertEqual(open(os.path.join(carpeta, "bin", "nucleo.py"), encoding="utf-8").read(), nucleo_antes)
+        app = json.load(open(os.path.join(carpeta, "app.json")))
+        self.assertEqual(app["id"], "recetas")
+        self.assertIn("recetasListar", json.load(open(os.path.join(carpeta, "acciones.json")))["acciones"])
+        self.assertEqual(self.pedidos[-1][1]["escribir"], carpeta)
+        self.assertNotIn('"archivos"', self.pedidos[-1][0])  # sin JSON de archivos: edita directo
+
     def test_crear_y_paso(self):
         self.plan()
+        self.p.ia.puede_escribir = lambda ia=None: False
         r = self.p.crear({"id": "recetas"})
         self.assertTrue(r["ok"], r)
         carpeta = r["proyecto"]["carpeta"]
@@ -142,6 +180,17 @@ class Proyectos(unittest.TestCase):
         # Un archivo de pieza nunca se escribe; uno propio sí.
         with self.assertRaises(ValueError):
             self.p.validar_archivos({"archivos": [{"ruta": "bin/nucleo.py", "contenido": "x"}]}, carpeta)
+        with self.assertRaises(ValueError):  # app.json: sumar acciones sí; cambiar lo que identifica a la app, no
+            self.p.validar_archivos({"archivos": [{"ruta": "app.json", "contenido": '{"id": "otra"}'}]}, carpeta)
+        with open(os.path.join(carpeta, "app.json"), encoding="utf-8") as f:
+            app = json.load(f)
+        app["acciones"]["recetasListar"] = {"script": "recetas.py", "args": ["lista"], "entrada": None, "datos": {},
+                                            "responde": "recetasListas", "limite": 30}
+        _, _, borrar = self.p.validar_archivos({"archivos": [{"ruta": "app.json", "contenido": json.dumps(app)}],
+                                                 "borrar": ["bin/ejemplo.py"]}, carpeta)
+        self.assertEqual(borrar, ["bin/ejemplo.py"])
+        with self.assertRaises(ValueError):
+            self.p.validar_archivos({"archivos": [{"ruta": "x.txt", "contenido": "x"}], "borrar": ["bin/nucleo.py"]}, carpeta)
         pruebas = []
         self.p.probar = lambda c: (pruebas.append(c) or (len(pruebas) > 1, "falló algo"))
         respuesta = json.dumps({"resumen": "Listo.", "archivos": [{"ruta": "bin/recetas.py", "contenido": "print('hola')\n"}]})

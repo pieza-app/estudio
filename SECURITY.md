@@ -45,7 +45,10 @@ ya necesitan control total del computador; o encabezados que GitHub Pages no dej
 - Pieza sale a internet solo para buscar actualizaciones y para el explorador de apps (pieza-app.github.io). Crea las apps con su copia de Pieza (`datos/pieza/`).
 - Publicar usa el `gh` de la persona: Pieza no guarda claves ni tokens. Antes de subir corre la revisión de privacidad de la app.
   El explorador solo lee `pieza-app.github.io` (pieza «red») y valida cada app (repo de GitHub y página https).
-- La IA de la persona lee la carpeta de la app (solo leer, nunca los secretos) y responde archivos en JSON. No tiene herramientas.
+- Con Claude o Codex, la IA de la persona edita la carpeta de la app y nada más: sin terminal, internet ni subagentes. Corre en
+  una carpeta temporal (no carga la configuración ni los hooks del proyecto). Después de cada paso, Pieza devuelve los archivos
+  de piezas, `piezas.json`, `acciones.json` y lo que identifica a la app en `app.json`. Con Gemini, la IA solo lee y responde
+  archivos en JSON.
   Pieza revisa cada ruta: nada fuera de la carpeta, nada en `.git/`, ningún archivo de pieza ni `app.json`, `acciones.json`,
   `piezas.json` o `.gitignore`. Después corre las pruebas de la app (`bash pruebas/correr.sh`) sin las variables de Pieza.
 

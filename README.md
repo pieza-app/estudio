@@ -26,7 +26,8 @@ Cada instalador baja la última versión de los Releases de este repo y revisa s
 
 Desde el inicio también puedes explorar las apps que otras personas hicieron con Pieza.
 
-Tu IA (Claude Code, Codex o Gemini) usa tu cuenta. Solo lee la carpeta de tu app: Pieza revisa y escribe los archivos. El plan
+Tu IA (Claude Code, Codex o Gemini) usa tu cuenta. Edita solo la carpeta de tu app, sin terminal. Después de cada paso, Pieza
+devuelve lo que no le toca (las piezas) y corre las pruebas. El plan
 completo está en [El programa Pieza](https://github.com/pieza-app/pieza/blob/main/docs/programa.md).
 
 ## Cómo está hecha

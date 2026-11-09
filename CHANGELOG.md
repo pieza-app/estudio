@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.4.0
+- Ahora «Ver mi app» abre tu app en el navegador, sin terminal. Con Claude o Codex, tu IA edita la carpeta de tu app directamente (más rápido) y Pieza devuelve lo que no le toca. · *“See my app” now opens your app in the browser, no terminal needed. With Claude or Codex, your AI edits your app's folder directly (faster) and Pieza restores what it shouldn't touch.*
+
 ## 0.3.0
 - Ahora puedes publicar tu app en GitHub con tu cuenta, sumarla al explorador de apps hechas con Pieza y proponer una pieza nueva. Las piezas también se ven en inglés. · *You can now publish your app on GitHub with your account, add it to the explorer of apps made with Pieza and propose a new piece. Pieces now show in English too.*
 
