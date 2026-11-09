@@ -11,12 +11,12 @@ las pruebas).
 
 - `plan`: la IA desglosa lo propio de la app en pasos chicos (JSON validado). Las piezas ya hechas no entran al plan.
 - `crear`: `pieza.py crear` con las piezas elegidas (el Pieza que va dentro de la app, en datos/pieza/). No usa la IA.
-- `paso`: la IA lee la carpeta de la app (solo leer) y devuelve los archivos del paso en JSON. Pieza los revisa y los escribe:
-  nunca fuera de la carpeta, nunca un archivo de pieza. Después corre `bash pruebas/correr.sh`. Si falla, la IA recibe el error y
-  tiene un intento más.
+- `paso`: con Claude o Codex (`ia.puede_escribir()`), la IA edita los archivos de la app directamente, SOLO en su carpeta y sin
+  terminal. Después Pieza revisa lo que cambió: devuelve a su estado los archivos de piezas, `piezas.json` y `acciones.json`, y lo
+  que identifica a la app en `app.json`. Con Gemini, la IA devuelve los archivos en JSON y Pieza los revisa y los escribe. En los
+  dos casos Pieza corre `bash pruebas/correr.sh`; si falla, la IA recibe el error y tiene un intento más.
 
-La IA nunca escribe por su cuenta: no tiene herramientas. Los tokens se estiman con el largo del pedido y de la respuesta
-(~4 caracteres por token).
+Los tokens se estiman con el largo del pedido, de la respuesta y de lo que la IA escribió (~4 caracteres por token).
 """
 import json
 import os
@@ -35,6 +35,7 @@ MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
 LIMITE_PRUEBAS = 600
+LIMITE_IA = 1500  # por intento; la acción de la app tiene 3600 s para dos intentos y las pruebas
 # Lo que la IA nunca escribe: lo que arma pieza.py. app.json sí (sus acciones), pero sin tocar lo que la identifica.
 PROTEGIDOS = {"piezas.json", "acciones.json"}
 APP_FIJO = ("id", "nombre", "repo", "datos", "plataformas", "privado", "version")
@@ -301,25 +302,45 @@ def paso(d):
         raise ValueError("Paso desconocido.")
     carpeta, x = p["carpeta"], p["pasos"][n]
     error_prueba, resumen, escritos = None, "", []
+    edita = ia.puede_escribir()
     for intento in range(1, INTENTOS + 1):
-        pedido = _prompt_paso(p, n, error_prueba)
-        texto, error = ia.preguntar(pedido, timeout=900, leer=carpeta)
-        x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto)
-        if error:
-            x.update(estado="fallo", error=ia.frase(error), intentos=intento)
-            break
-        try:
-            resumen, archivos, borrar = validar_archivos(_json_de(texto), carpeta)
-        except ValueError as e:
-            error_prueba = f"La respuesta no se pudo usar: {e}"
-            x.update(estado="fallo", error=str(e), intentos=intento)
-            continue
-        _escribir(carpeta, archivos)
-        for ruta in borrar:
-            destino = nucleo.ruta_en(carpeta, ruta)
-            if destino and os.path.isfile(destino):
-                os.remove(destino)
-        escritos = sorted(set(escritos) | {r for r, _ in archivos})
+        if edita:
+            # La IA edita la carpeta directamente; después Pieza devuelve lo que no le toca.
+            antes = _foto(carpeta)
+            pedido = _prompt_editar(p, n, error_prueba)
+            texto, error = ia.preguntar(pedido, timeout=LIMITE_IA, escribir=carpeta)
+            nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
+            x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN
+            if cuidados:
+                x["cuidados"] = sorted(set(x.get("cuidados", [])) | set(cuidados))
+            if error:
+                x.update(estado="fallo", error=ia.frase(error), intentos=intento, escritos=sorted(set(escritos) | set(nuevos)))
+                break
+            resumen = _texto(texto, 600)
+            escritos = sorted(set(escritos) | set(nuevos))
+            if not nuevos:
+                error_prueba = "No cambiaste ningún archivo. Haz el paso editando la carpeta."
+                x.update(estado="fallo", error=error_prueba, intentos=intento)
+                continue
+        else:
+            pedido = _prompt_paso(p, n, error_prueba)
+            texto, error = ia.preguntar(pedido, timeout=LIMITE_IA, leer=carpeta)
+            x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto)
+            if error:
+                x.update(estado="fallo", error=ia.frase(error), intentos=intento)
+                break
+            try:
+                resumen, archivos, borrar = validar_archivos(_json_de(texto), carpeta)
+            except ValueError as e:
+                error_prueba = f"La respuesta no se pudo usar: {e}"
+                x.update(estado="fallo", error=str(e), intentos=intento)
+                continue
+            _escribir(carpeta, archivos)
+            for ruta in borrar:
+                destino = nucleo.ruta_en(carpeta, ruta)
+                if destino and os.path.isfile(destino):
+                    os.remove(destino)
+            escritos = sorted(set(escritos) | {r for r, _ in archivos})
         if "app.json" in escritos:
             # Las acciones nuevas pasan a acciones.json (lo que lee la app de escritorio), con las reglas de pieza.py.
             r = subprocess.run([sys.executable, _pieza_py(), "acciones", carpeta], capture_output=True, text=True, timeout=120,
@@ -338,6 +359,67 @@ def paso(d):
     p["estado"] = "pasos"
     p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
     return {"ok": x["estado"] == "listo", "proyecto": _guardar(p), "n": n}
+
+
+def _foto(carpeta):
+    """{ruta relativa: bytes} de lo propio de la app (sin .git, node_modules ni target), para saber qué cambió en un paso."""
+    foto = {}
+    for raiz, dirs, archivos in os.walk(carpeta):
+        dirs[:] = [x for x in dirs if x not in (".git", "node_modules", "target", "__pycache__")]
+        for a in archivos:
+            ruta = os.path.join(raiz, a)
+            rel = os.path.relpath(ruta, carpeta).replace(os.sep, "/")
+            try:
+                if os.path.getsize(ruta) <= 5_000_000:
+                    with open(ruta, "rb") as f:
+                        foto[rel] = f.read()
+            except OSError:
+                pass
+    return foto
+
+
+def _cuidar(carpeta, antes):
+    """Después de que la IA editó: devuelve lo que no le toca (piezas, piezas.json, acciones.json, lo que identifica a la app en
+    app.json) y dice qué archivos cambió. Devuelve (escritos, cuidados, bytes_escritos)."""
+    ahora = _foto(carpeta)
+    intocables = (_de_piezas(carpeta) | PROTEGIDOS) & set(antes)
+    cuidados = []
+    for rel in sorted(intocables):
+        if ahora.get(rel) != antes[rel]:
+            destino = nucleo.ruta_en(carpeta, rel)
+            os.makedirs(os.path.dirname(destino), exist_ok=True)
+            with open(destino, "wb") as f:
+                f.write(antes[rel])
+            cuidados.append(rel)
+    if "app.json" in antes and ahora.get("app.json") != antes["app.json"]:
+        try:
+            nuevo, viejo = json.loads(ahora.get("app.json") or b"{}"), json.loads(antes["app.json"])
+            if not isinstance(nuevo, dict):
+                raise ValueError
+            for k in APP_FIJO:
+                if nuevo.get(k) != viejo.get(k):
+                    if k in viejo:
+                        nuevo[k] = viejo[k]
+                    else:
+                        nuevo.pop(k, None)
+                    cuidados.append(f"app.json:{k}")
+            nucleo.escribir_json(os.path.join(carpeta, "app.json"), nuevo)
+        except ValueError:
+            with open(os.path.join(carpeta, "app.json"), "wb") as f:
+                f.write(antes["app.json"])
+            cuidados.append("app.json")
+    final = _foto(carpeta)
+    escritos = sorted(r for r in set(final) | set(antes) if final.get(r) != antes.get(r))
+    return escritos, cuidados, sum(len(final.get(r, b"")) for r in escritos)
+
+
+def _prompt_editar(p, n, error=None):
+    """El pedido de un paso cuando la IA edita la carpeta: las mismas reglas, sin JSON."""
+    base = _prompt_paso(p, n, error)
+    return base.split("# Cómo responder")[0] + """# Cómo trabajar en este paso
+1. Lee la carpeta de la app (empieza por AGENTS.md).
+2. Crea o cambia los archivos que el paso necesita, directamente en la carpeta. No toques los archivos de piezas.
+3. Al terminar, responde en 1 a 3 frases qué hiciste. Nada más."""
 
 
 def lista(_d):

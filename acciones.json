@@ -101,7 +101,7 @@
     }
    },
    "responde": "pasoListo",
-   "limite": 2400,
+   "limite": 3600,
    "pieza": "app"
   },
   "proyectoPlan": {

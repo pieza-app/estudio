@@ -13,9 +13,9 @@
    }
   },
   "ia": {
-   "version": "0.6.3",
+   "version": "0.7.0",
    "archivos": {
-    "bin/ia.py": "36d6df8fb3097e149e15174406e7d8fd82a4a4c9cac4b2ba8b2505ecb4dcdfef"
+    "bin/ia.py": "61a588bacd51c42778aa236d43fb4c29ecc3cc296044bd20b2f0bb9606a0f1bb"
    },
    "ficha": {
     "requiere": [
@@ -93,10 +93,10 @@
    }
   },
   "tema": {
-   "version": "0.2.1",
+   "version": "0.3.0",
    "archivos": {
-    "ui/tema.css": "1d43c1cf027fafcbd282bd90bc87ae3937059f247fb823cd1aab2a26f7c9363e",
-    "ui/tema.js": "b679ecb7bc80556b70e3f3fe768f0e3af0086bdf44c0d73ed0867da6a8f33f6e"
+    "ui/tema.css": "d009fd0b0a9cf952b19cac82715c5fadb92bfdbe122a93db5c522c6fc69e56e6",
+    "ui/tema.js": "d476607ea31535a91fd2a81e7eef81558bfbbfc03dd772b447d7b359f9913dd4"
    },
    "ficha": {
     "requiere": [],
@@ -209,11 +209,11 @@
     "red": []
    },
    "generados": {
-    "escritorio/Cargo.toml": "424e2e9db67e32c2652360b1c1e2f3b3708648ba5ceadea0ca5ffbcf53eb7314",
+    "escritorio/Cargo.toml": "e0f20ddced1bb19e27e0050890b13cac9b6d972968a25e79cb5a5d48f639c694",
     "escritorio/Info.plist": "caced4288d0950352371b370e923ab85f8620d694948429b3f4c01130a089c4f",
     "escritorio/build.rs": "8af41c0062014fc594e4bb9899e60ee9930ab57d4cf0c73041ff557d6ec736e6",
     "escritorio/pruebas/arranque.sh": "010c2d4b4d6329ecc98c661e35974271ef5fdad57e66c18a79830417aedd2aab",
-    "escritorio/tauri.conf.json": "7f70654a643d7a44935ee2f4edcfc265d0b44b6e464364fbaadcc916ebe67b56",
+    "escritorio/tauri.conf.json": "a45b440ff9195f659baaaf1a979624d51079834c59af0862184f20057c81ac34",
     "escritorio/vacio/index.html": "7bcf3f155d8e0139c9b300a61c12bbb42fbde92d8e08267bbd8d694321672ea9"
    },
    "una_vez": [
@@ -236,13 +236,13 @@
     ".github/workflows/publicar.yml": "33888cb82ca4eace57d8c8d9819a778e3af9cfaf2a6fc49d958a194174a89dc4",
     "build.sh": "094fb3ede5f22f4304fa09641f7630959ffbfcd2417f1bf5c3499fe3cc34b53f",
     "escritorio/herramientas/preparar.sh": "e73b0a523b37d23a8144a1005f2a355a066de8fd165bbd3e50dd2149ed471067",
-    "herramientas/empaquetar.sh": "cb26ac8b10dea70edea255a90a801de520ef76c88c151e63ca8bbd09722234ce",
+    "herramientas/empaquetar.sh": "2c04e4742f508dd1e563713ddcb6d41a82c99d09250ba1ab922ee430b1084970",
     "instalar.ps1": "0cbe4679aa022ce838855a9910acd42800482750a12b7ee31aa5f0ce2b5374ca",
     "instalar.sh": "167fbfabfd1c674264bccf48cdbf817ccdee7f91f153a70481a42780b36150f5"
    }
   },
   "esqueleto": {
-   "version": "0.2.0",
+   "version": "0.2.1",
    "archivos": {},
    "ficha": {
     "requiere": [
@@ -271,7 +271,7 @@
    ]
   },
   "github": {
-   "version": "0.3.0",
+   "version": "0.3.1",
    "archivos": {},
    "ficha": {
     "requiere": [],

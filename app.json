@@ -24,7 +24,8 @@
   "tema": [
    "sistema",
    "claro",
-   "oscuro"
+   "oscuro",
+   "vidrio"
   ]
  },
  "empaquetado": {
@@ -147,7 +148,7 @@
     }
    },
    "responde": "pasoListo",
-   "limite": 2400
+   "limite": 3600
   },
   "publicarExplorar": {
    "script": "publicar.py",
