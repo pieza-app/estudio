@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.7.1
+- Pieza toma las piezas nuevas de la familia (tema 0.4.0 y componentes 0.4.0): los mismos colores, sin cambios que se noten. · *Pieza takes the family's new pieces (theme 0.4.0 and components 0.4.0): the same colors, no visible changes.*
+
 ## 0.7.0
 - Pieza tiene un diseño nuevo: una barra lateral con tus apps, las etapas de cada app a la vista y, al lado de tu idea, las piezas que calzan en vivo. · *Pieza has a new design: a sidebar with your apps, the stages of each app in view and, next to your idea, the pieces that fit, live.*
 - Ahora puedes escribir tu idea directo en el inicio y empezar desde ahí. · *You can now write your idea right on the home screen and start from there.*

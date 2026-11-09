@@ -2,18 +2,11 @@
    --texto-suave, --linea, --acento…); un color nuevo va como par --x-claro/--x-oscuro con light-dark(). Botones, diálogos y filas
    son los de «componentes» (.pz-boton, .pz-principal, .pz-campo, .pz-pie…). Aquí: la marca, la barra lateral y el asistente. */
 :root {
-  /* El ámbar de la marca. Sobre ámbar va texto oscuro (contraste AA). */
+  /* El ámbar de la marca (los neutros son los de la familia, pieza «tema» 0.4.0). Sobre ámbar va texto oscuro (contraste AA). */
   --acento-claro: #8f5400; --acento-oscuro: #ffb020; --sobre-acento-claro: #ffffff; --sobre-acento-oscuro: #1a1406;
-  --fondo-claro: #f6f5f2; --fondo-oscuro: #0f1115;
-  --panel-claro: #ffffff; --panel-oscuro: #171a20;
-  --panel-2-claro: #f1efea; --panel-2-oscuro: #1f232b;
-  --linea-claro: #e7e4dd; --linea-oscuro: #2a2f39;
-  --texto-claro: #17181c; --texto-oscuro: #ecedf0;
-  --texto-suave-claro: #5e6068; --texto-suave-oscuro: #a0a4ae;
   /* La barra lateral es oscura en los dos modos. */
   --lateral: #15171c; --lateral-2: #23262e; --lateral-texto: #e9e9ec; --lateral-suave: #9a9da6; --marca: #f2a33a;
   --ok: light-dark(#1b7a4b, #6fd39b); --ok-suave: color-mix(in srgb, var(--ok) 14%, transparent);
-  --radio-grande: 16px;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 var(--fuente); -webkit-font-smoothing: antialiased; }

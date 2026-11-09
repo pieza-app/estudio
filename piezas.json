@@ -93,9 +93,9 @@
    }
   },
   "tema": {
-   "version": "0.3.0",
+   "version": "0.4.0",
    "archivos": {
-    "ui/tema.css": "d009fd0b0a9cf952b19cac82715c5fadb92bfdbe122a93db5c522c6fc69e56e6",
+    "ui/tema.css": "0f92833b29256c23f533da70292b53c493eae2da2690b5324f71429ab0ce1c74",
     "ui/tema.js": "d476607ea31535a91fd2a81e7eef81558bfbbfc03dd772b447d7b359f9913dd4"
    },
    "ficha": {
@@ -105,10 +105,10 @@
    }
   },
   "componentes": {
-   "version": "0.3.1",
+   "version": "0.4.0",
    "archivos": {
     "ui/componentes.js": "fd5eafba3affb59be9506c57f38eff7a712297371621fe070b2b6d0ce3dfdf80",
-    "ui/componentes.css": "101586f0fa7aa509f42b626de378c5ad32d176da5a4c0ad85b081a47908fe56f"
+    "ui/componentes.css": "7ed1292d7ecb9fb6674a70808d5caca7611fa5be79578464b86ae32b4fff196a"
    },
    "ficha": {
     "requiere": [
@@ -236,7 +236,7 @@
     ".github/workflows/publicar.yml": "b4579dcba407c1ae9b56052af7dc4cbc2439b58d5edbd60c7caaea9871deea50",
     "build.sh": "094fb3ede5f22f4304fa09641f7630959ffbfcd2417f1bf5c3499fe3cc34b53f",
     "escritorio/herramientas/preparar.sh": "e73b0a523b37d23a8144a1005f2a355a066de8fd165bbd3e50dd2149ed471067",
-    "herramientas/empaquetar.sh": "680412c8436d5928d2b3ef221537b22a2d3a280c573ddaf2f981dc37ebb57c5d",
+    "herramientas/empaquetar.sh": "c12658fe0a176e2dd032cd4b73c6961eb2c3fb74572a546725f1dc2c07e18cb4",
     "instalar.ps1": "0cbe4679aa022ce838855a9910acd42800482750a12b7ee31aa5f0ce2b5374ca",
     "instalar.sh": "167fbfabfd1c674264bccf48cdbf817ccdee7f91f153a70481a42780b36150f5"
    }
