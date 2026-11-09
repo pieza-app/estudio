@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.2.0
+- Ahora Pieza crea tu app: tu IA arma el plan, Pieza crea la app con las piezas ya hechas y tu IA hace lo propio, paso a paso o todo automático, con los tokens a la vista. · *Pieza now builds your app: your AI makes the plan, Pieza builds the app with the ready-made pieces and your AI does the rest, step by step or fully automatic, with tokens in view.*
+
 ## 0.1.1
 - Pieza ahora tiene el logo y los colores de Pieza, y su página es la de [Pieza](https://pieza-app.github.io/pieza/). · *Pieza now has the Pieza logo and colors, and its website is the [Pieza](https://pieza-app.github.io/pieza/) one.*
 

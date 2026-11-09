@@ -1,0 +1,143 @@
+{
+ "formato": 1,
+ "id": "github",
+ "version": "0.3.1",
+ "estado": "lista",
+ "nombre": "Repo listo para la comunidad",
+ "icono": "icono.svg",
+ "licencia": "MPL-2.0",
+ "categoria": "repo",
+ "descripcion": "El repo listo para la comunidad desde app.json: plantillas de issues y PR, dependabot, revisar.yml, Pieza al día, AGENTS/CONTRIBUTING/SECURITY con lo que llena la IA marcado, agentes, revisión de privacidad, .gitignore de lista blanca y pieza.py repo configurar.",
+ "origen": "Esquema (.github/ entero, CONTRIBUTING con «Cómo revisamos» y la línea de los flujos de Pieza, SECURITY, agentes revisor y privacidad, revisar_privacidad.sh, .gitignore de lista blanca) + Alcancía y Repasa (job mac que compila también si cambia app.json o acciones.json) + las seis apps (secciones comunes de AGENTS.md: «Piezas», «Reglas al cambiar cosas», «Lo que rodea a un cambio», «Revisar aportes») + Pieza (Pieza al día, .claude/settings.json con solo extraKnownMarketplaces). La configuración del repo que se hacía a mano queda en pieza.py repo configurar.",
+ "recomendar": {
+  "siempre": true,
+  "cuando": "Siempre: es lo que hace que la comunidad pueda aportar con seguridad (agrégala al final, después de las demás piezas: AGENTS.md lista las que ya están)."
+ },
+ "requiere": [],
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux",
+  "ios",
+  "android"
+ ],
+ "generar": {
+  "plantillas/github/ISSUE_TEMPLATE/config.yml": ".github/ISSUE_TEMPLATE/config.yml",
+  "plantillas/github/ISSUE_TEMPLATE/error.yml": ".github/ISSUE_TEMPLATE/error.yml",
+  "plantillas/github/ISSUE_TEMPLATE/idea.yml": ".github/ISSUE_TEMPLATE/idea.yml",
+  "plantillas/github/ISSUE_TEMPLATE/probar.yml": {
+   "destino": ".github/ISSUE_TEMPLATE/probar.yml",
+   "una_vez": true
+  },
+  "plantillas/github/pull_request_template.md": {
+   "destino": ".github/pull_request_template.md",
+   "una_vez": true
+  },
+  "plantillas/github/dependabot.yml": ".github/dependabot.yml",
+  "plantillas/github/workflows/revisar.yml": ".github/workflows/revisar.yml",
+  "plantillas/github/workflows/pieza-al-dia.yml": ".github/workflows/pieza-al-dia.yml",
+  "plantillas/github/workflows/wiki.yml": ".github/workflows/wiki.yml",
+  "plantillas/wiki/Home.md": {
+   "destino": "docs/wiki/Home.md",
+   "una_vez": true
+  },
+  "plantillas/wiki/_Sidebar.md": {
+   "destino": "docs/wiki/_Sidebar.md",
+   "una_vez": true
+  },
+  "plantillas/wiki/Instalar.md": {
+   "destino": "docs/wiki/Instalar.md",
+   "una_vez": true
+  },
+  "plantillas/wiki/Primeros-pasos.md": {
+   "destino": "docs/wiki/Primeros-pasos.md",
+   "una_vez": true
+  },
+  "plantillas/wiki/Preguntas-frecuentes.md": {
+   "destino": "docs/wiki/Preguntas-frecuentes.md",
+   "una_vez": true
+  },
+  "plantillas/claude/settings.json": ".claude/settings.json",
+  "plantillas/claude/agents/revisor.md": {
+   "destino": ".claude/agents/{{id}}-revisor.md",
+   "una_vez": true
+  },
+  "plantillas/claude/agents/privacidad.md": {
+   "destino": ".claude/agents/{{id}}-privacidad.md",
+   "una_vez": true
+  },
+  "plantillas/herramientas/revisar_privacidad.sh": "herramientas/revisar_privacidad.sh",
+  "plantillas/gitignore": {
+   "destino": ".gitignore",
+   "una_vez": true
+  },
+  "plantillas/AGENTS.md": {
+   "destino": "AGENTS.md",
+   "una_vez": true
+  },
+  "plantillas/CLAUDE.md": {
+   "destino": "CLAUDE.md",
+   "una_vez": true
+  },
+  "plantillas/GEMINI.md": {
+   "destino": "GEMINI.md",
+   "una_vez": true
+  },
+  "plantillas/CONTRIBUTING.md": {
+   "destino": "CONTRIBUTING.md",
+   "una_vez": true
+  },
+  "plantillas/SECURITY.md": {
+   "destino": "SECURITY.md",
+   "una_vez": true
+  },
+  "plantillas/CODE_OF_CONDUCT.md": {
+   "destino": "CODE_OF_CONDUCT.md",
+   "una_vez": true
+  },
+  "plantillas/CHANGELOG.md": {
+   "destino": "CHANGELOG.md",
+   "una_vez": true
+  },
+  "plantillas/LICENSE": {
+   "destino": "LICENSE",
+   "una_vez": true
+  }
+ },
+ "tareas_persona": [
+  "Crear la organización <app>-app en GitHub",
+  "Correr pieza.py repo configurar . --aplicar con gh y permisos de admin del repo (topics, Discussions, reporte privado de fallas, aprobar las pruebas de quien aporta, proteger la rama principal, etiquetas)",
+  "Crear la wiki una vez: pestaña «Wiki» → «Create the first page» → «Save» (después se publica sola desde docs/wiki/)"
+ ],
+ "cambios": [
+  {
+   "version": "0.3.1",
+   "tipo": "arreglo",
+   "resumen": "AGENTS.md: el mapa del repo describe la app de escritorio de «host-tauri» (escritorio/, Rust + Tauri). Antes hablaba de app/ (Swift) y de Electron, que ya no se generan."
+  },
+  {
+   "version": "0.3.0",
+   "tipo": "mejora",
+   "resumen": "Wiki desde el repo: wiki.yml publica docs/wiki/*.md en la wiki de GitHub en cada cambio (Home.md es la portada, _Sidebar.md el menú). La primera vez llegan cinco páginas de partida (Inicio, Instalar, Primeros pasos, Preguntas frecuentes y el menú) que después son de la app. La wiki se escribe y se revisa por pull request como todo lo demás.",
+   "migrar": [
+    "Crea la wiki una vez: pestaña «Wiki» → «Create the first page» → «Save». Hasta entonces, wiki.yml avisa y no falla.",
+    "Completa docs/wiki/Primeros-pasos.md con los pasos propios de la app."
+   ]
+  },
+  {
+   "version": "0.2.1",
+   "tipo": "arreglo",
+   "resumen": "dependabot.yml: en las apps, Dependabot ya no abre PR de versiones nuevas de los crates (open-pull-requests-limit: 0); solo los de seguridad. Los crates son de «host-tauri»: suben en Pieza, con sus pruebas, y llegan con «Pieza al día». Ignora glib: la versión arreglada necesita gtk4, que Tauri todavía no usa. Antes, los PR agrupados (ureq 3, sha2 0.11, rfd 0.17, opener 0.9) rompían la compilación."
+  },
+  {
+   "version": "0.2.0",
+   "tipo": "mejora",
+   "resumen": "Con «host-tauri»: .gitignore deja escritorio/ (también en una app solo de Mac) e ignora escritorio/target/ y escritorio/gen/; Dependabot revisa los crates de Rust (cargo, escritorio/Cargo.lock) en vez de npm; revisar.yml prueba la app nativa en el job «app» (cargo test, clippy y la app abierta en Linux, en cada sistema de app.json) en vez de compilar el Swift, y el job «revisar» corre correr.sh con SIN_RUST=1."
+  },
+  {
+   "version": "0.1.0",
+   "tipo": "inicial",
+   "resumen": "Primera versión: plantillas de issues (error, idea, probar, config con seguridad privada y Discussions) y de PR, dependabot (actions y npm con cooldown), revisar.yml (ubuntu-24.04 con Playwright fijado y job mac), Pieza al día, AGENTS.md/CONTRIBUTING.md/SECURITY.md/CODE_OF_CONDUCT.md/CHANGELOG.md con lo que llena la IA marcado (<!-- La app: … -->), agentes revisor y privacidad, revisar_privacidad.sh, .gitignore de lista blanca y LICENSE. pieza.py repo configurar imprime (o con --aplicar corre) la configuración del repo."
+  }
+ ]
+}

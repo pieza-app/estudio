@@ -431,7 +431,7 @@
   {
    "id": "esqueleto",
    "nombre": "Esqueleto de una app nueva",
-   "version": "0.2.0",
+   "version": "0.2.1",
    "estado": "lista",
    "categoria": "base",
    "descripcion": "Lo propio de una app nueva, mínimo y andando de punta a punta: interfaz con bienvenida (idioma primero), una pantalla de ejemplo, un script declarado, la app de Mac y la de Windows/Linux sobre el host, demo y pruebas. Se escribe una vez y desde ahí es de la app.",
@@ -469,12 +469,12 @@
     "cuando": "Al crear una app nueva: la agrega pieza.py crear (no hace falta pedirla). Es el punto de partida de lo propio, que la IA de la app reemplaza.",
     "palabras": []
    },
-   "bytes": 23034
+   "bytes": 23052
   },
   {
    "id": "github",
    "nombre": "Repo listo para la comunidad",
-   "version": "0.3.0",
+   "version": "0.3.1",
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "El repo listo para la comunidad desde app.json: plantillas de issues y PR, dependabot, revisar.yml, Pieza al día, AGENTS/CONTRIBUTING/SECURITY con lo que llena la IA marcado, agentes, revisión de privacidad, .gitignore de lista blanca y pieza.py repo configurar.",
@@ -496,7 +496,7 @@
     "cuando": "Siempre: es lo que hace que la comunidad pueda aportar con seguridad (agrégala al final, después de las demás piezas: AGENTS.md lista las que ya están).",
     "palabras": []
    },
-   "bytes": 86326
+   "bytes": 86503
   },
   {
    "id": "grabar-pantalla",

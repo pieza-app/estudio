@@ -1,0 +1,150 @@
+{
+ "formato": 1,
+ "id": "ia",
+ "version": "0.6.3",
+ "estado": "lista",
+ "nombre": "Tu IA",
+ "icono": "icono.svg",
+ "licencia": "MPL-2.0",
+ "categoria": "ia",
+ "descripcion": "La IA de la persona (Claude Code, Codex o Gemini) con su propia cuenta: sin herramientas, sin su memoria, el pedido nunca como argumento, material y revisión a fondo de solo lectura, y en vivo (lo que lee y «Detener»).",
+ "recomendar": {
+  "cuando": "La app usa IA para algo (resumir, generar, ordenar, responder) con la cuenta de la persona.",
+  "palabras": [
+   "ia",
+   "resumir",
+   "generar",
+   "asistente",
+   "chat",
+   "redactar",
+   "analizar"
+  ]
+ },
+ "origen": "esquema/bin/ia.py + alcancia (pedido en archivo) + repasa (material) + esquema/bin/ia_vivo.py (preguntar_vivo: stream-json de Claude, --json de Codex, «Detener») — corrige el reintento sin protecciones de graba y minuta",
+ "requiere": [
+  "nucleo"
+ ],
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux"
+ ],
+ "pantallas": [
+  {
+   "donde": "Bienvenida",
+   "nombre": "Tu IA",
+   "que": "elegir Claude, ChatGPT o Gemini y probar que responde"
+  },
+  {
+   "donde": "Ajustes",
+   "nombre": "Tu IA",
+   "que": "cambiar de IA y volver a probar"
+  }
+ ],
+ "tareas_persona": [],
+ "archivos": {
+  "python/ia.py": "bin/ia.py"
+ },
+ "config": {
+  "ia": [
+   "claude",
+   "codex",
+   "gemini"
+  ]
+ },
+ "acciones": {
+  "probarIA": {
+   "script": "ia.py",
+   "args": [
+    "probar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "ia": {
+     "tipo": "enum",
+     "valores": [
+      "claude",
+      "codex",
+      "gemini"
+     ]
+    }
+   },
+   "responde": "iaProbada",
+   "limite": 150
+  },
+  "listaIA": {
+   "script": "ia.py",
+   "args": [
+    "lista"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "iaLista",
+   "limite": 30
+  }
+ },
+ "textos": {
+  "{ia} se demoró demasiado en responder. Inténtalo de nuevo.": "{ia} took too long to answer. Please try again.",
+  "{ia} no respondió. {detalle}": "{ia} didn't answer. {detalle}",
+  "No conozco esa IA.": "I don't know that AI.",
+  "Actualiza {ia} para usarla con {app}: tu versión no conoce las protecciones que necesitamos.": "Update {ia} to use it with {app}: your version doesn't know the protections we need.",
+  "No encontré {ia} en este computador.": "I couldn't find {ia} on this computer.",
+  "{ia} no respondió.": "{ia} didn't answer.",
+  "Detuviste a {ia}.": "You stopped {ia}."
+ },
+ "compatible": {
+  "nucleo": ">=0.2.0 <1.0.0"
+ },
+ "red_nota": "La app no sale a internet: la IA de la persona se conecta a su proveedor (Anthropic, OpenAI o Google) con su propia cuenta.",
+ "cambios": [
+  {
+   "version": "0.6.3",
+   "tipo": "arreglo",
+   "resumen": "probarIA (la acción declarada para el host) con límite 150 s: con 120 el host la cortaba justo cuando ia.probar iba a responder por su cuenta (su propio límite es 120 s), y la persona veía «Tardó demasiado» en vez de lo que pasó."
+  },
+  {
+   "version": "0.6.2",
+   "tipo": "arreglo",
+   "resumen": "La salida de Codex (-o) se lee cerrando el archivo y preguntar_vivo cierra sus tuberías: sin ResourceWarning en las pruebas de la app."
+  },
+  {
+   "version": "0.6.1",
+   "tipo": "arreglo",
+   "resumen": "probar ya no suma la «ayuda» de app.json (la persona ya está en «Tu IA»: «Revisa en Ajustes → Tu IA» sobraba), ni en el campo ayuda ni en error. Los demás errores (preguntar, frase) la siguen trayendo."
+  },
+  {
+   "version": "0.6.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Esquema: preguntar_vivo(prompt, al_evento, detener) cuenta en vivo lo que la IA lee (Claude con stream-json, Codex con --json) y se puede detener (código «detenido», ia.detenido(error)); usa el mismo armado del comando que ejecutar (_armar), así las protecciones están en un solo lugar (Esquema puede borrar bin/ia_vivo.py). A Claude solo se le prohíben las herramientas que su versión conoce: ya no avisa «Permission deny rule \"MultiEdit\" matches no known tool» (solo cuando conoce --tools, que igual deja fuera todo lo demás). preguntar y preguntar_vivo aceptan material y modelo por igual."
+  },
+  {
+   "version": "0.5.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Corta: \"ia\": {\"ayuda\": \"Revisa en Ajustes → Tu IA.\"} en app.json suma a los errores no_instalada y actualizar la frase de la app (campo «ayuda», que la interfaz traduce con su en.json) sin copiar la tabla de errores. Para saber qué IA están instaladas, el host usa ia.py lista (acción listaIA) en vez de buscarlas por su cuenta."
+  },
+  {
+   "version": "0.4.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Repasa: «no la encontré» ya no nombra un menú (cada app dice dónde se elige la IA), y «no respondió» sin detalle tiene su propia frase (código sin_respuesta_corta), así se traduce entera. Las variables de la app se quitan sin importar mayúsculas (Windows).",
+   "seguridad": true
+  },
+  {
+   "version": "0.3.0",
+   "tipo": "mejora",
+   "seguridad": true,
+   "resumen": "Lo que pidió Graba al migrar: los errores traen «plantilla» (la interfaz hace Tp(plantilla, valores) sin copiar la tabla ERRORES); un CLI sin las protecciones obligatorias da el error «actualizar» claro en vez de su propio error; --help se pregunta sin las variables de la app y otra vez si el CLI cambia; Claude con --tools si lo conoce (las demás herramientas ni se cargan)."
+  },
+  {
+   "version": "0.2.0",
+   "tipo": "arreglo",
+   "resumen": "Seguridad: la IA siempre corre en una carpeta temporal; la carpeta a revisar solo se agrega para leer (su configuración, hooks y AGENTS.md ya no se cargan). Claude sin configuración de proyecto (--setting-sources user) si lo conoce. Detectar opciones del CLI exige la opción exacta.",
+   "seguridad": true
+  },
+  {
+   "version": "0.1.0",
+   "tipo": "inicial",
+   "seguridad": true,
+   "resumen": "Primera versión: une lo mejor de las cinco apps y nunca corre la IA sin protecciones."
+  }
+ ]
+}

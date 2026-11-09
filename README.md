@@ -17,9 +17,13 @@ Cada instalador baja la última versión de los Releases de este repo y revisa s
 2. Escribes el nombre de la app y lo que hace, en una frase.
 3. Eliges las piezas. Pieza sugiere las piezas que calzan con tu frase.
 4. Ves la ficha: qué piezas ya están hechas, qué falta hacer, qué permisos pide y cuántos tokens ahorras.
+5. Tu IA arma el plan: lo propio de tu app, en pasos chicos, con un estimado de tokens por paso.
+6. Pieza crea la app en `~/Pieza/<Nombre>` con las piezas ya hechas. Este paso no gasta tokens.
+7. Tu IA hace cada paso. Después de cada uno, Pieza corre las pruebas. Eliges «Paso a paso» (apruebas cada uno) o «Todo
+   automático» (con un tope de tokens).
 
-Crear la app con tu IA llega en la próxima versión. El plan completo está en
-[El programa Pieza](https://github.com/pieza-app/pieza/blob/main/docs/programa.md).
+Tu IA (Claude Code, Codex o Gemini) usa tu cuenta. Solo lee la carpeta de tu app: Pieza revisa y escribe los archivos. El plan
+completo está en [El programa Pieza](https://github.com/pieza-app/pieza/blob/main/docs/programa.md).
 
 ## Cómo está hecha
 

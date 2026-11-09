@@ -1,0 +1,57 @@
+{
+ "formato": 1,
+ "id": "host-ui",
+ "version": "0.3.0",
+ "estado": "lista",
+ "nombre": "Puente de la interfaz",
+ "icono": "icono.svg",
+ "licencia": "MPL-2.0",
+ "categoria": "interfaz",
+ "descripcion": "host.enviar(accion, datos) y las respuestas window.<App>.*, igual en Mac, Electron, móvil y navegador (modo demo).",
+ "recomendar": {
+  "siempre": true,
+  "cuando": "Siempre: es como la interfaz habla con la app."
+ },
+ "requiere": [],
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux",
+  "ios",
+  "android"
+ ],
+ "origen": "esquema/ui/app.js (host.enviar con webkit.messageHandlers.<id> → window.<id>Escritorio → simular, window.<App> con las respuestas) + repasa y alcancia (puente del celular, window.<id>Movil) + minuta (mensaje plano y canal propio mientras su app nativa no cambie). Nuevo: un solo crearHost({nombre, global, simular}) con la plataforma leída de window.<ID>_HOST, nombres y acciones validados, los datos viajan como JSON también en la vista previa (la simulación nunca comparte objetos con la interfaz), simular como función o como mapa por acción y simulacionesComunes() (probarIA {ia}, buscarActualizacion, actualizar, abrirEnlace solo https, copiar).",
+ "archivos": {
+  "ui/host.js": "ui/host.js"
+ },
+ "config": {},
+ "acciones": {},
+ "textos": {
+  "En la vista previa no hay nada que actualizar.": "There's nothing to update in the preview."
+ },
+ "permisos": {},
+ "red": [],
+ "cambios": [
+  {
+   "version": "0.3.0",
+   "tipo": "mejora",
+   "resumen": "host.medio(nombre, ruta): la dirección de un medio que sirve la app (con «host-tauri», en el mismo origen que la interfaz: sin CORS; con los hosts de antes, <id>://<nombre>/…). host.base dice la dirección base que puso el host. La interfaz habla igual con host-tauri (window.<id>Escritorio). host.atender(funcion, async (datos) => respuesta): lo que la app le pide a la página y espera (host.pedir en «host-tauri»).",
+   "migrar": [
+    "Cambia cada `<id>://video/${…}` armado a mano por host.medio(\"video\", ruta)."
+   ]
+  },
+  {
+   "version": "0.2.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidieron Graba, Repasa y Minuta al migrar: host.responder({…}) también acepta objetos (como `_pruebas`, para las pruebas de la app; antes se ignoraban en silencio) y avisa lo que no es función ni objeto; si la app hace `window.<App> = {…}` después de crearHost, se avisa en la consola y lo nuevo se suma al mismo objeto (antes se perdían las respuestas de las piezas).",
+   "migrar": [
+    "Nada obligatorio. Si tu app hacía `window.<App>._pruebas = …` o `Object.assign(window.<App>, …)`, sigue igual; si hacía `window.<App> = {…}`, cámbialo por host.responder({…}) para no ver el aviso."
+   ]
+  },
+  {
+   "version": "0.1.0",
+   "tipo": "inicial",
+   "resumen": "Primera versión: crearHost({nombre, global, simular}) reemplaza el objeto host de cada app; probarIA lleva {ia} en todas (antes Graba, Corta, Repasa, Alcancía y Minuta mandaban {id})."
+  }
+ ]
+}

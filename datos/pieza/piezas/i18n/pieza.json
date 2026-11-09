@@ -1,0 +1,80 @@
+{
+ "formato": 1,
+ "id": "i18n",
+ "version": "0.3.1",
+ "estado": "lista",
+ "nombre": "Idiomas",
+ "icono": "icono.svg",
+ "licencia": "MPL-2.0",
+ "categoria": "interfaz",
+ "descripcion": "Traducciones con la frase en español como clave, plantillas {n}, escape seguro y traducir la página entera.",
+ "recomendar": {
+  "siempre": true,
+  "cuando": "Siempre: toda app sale en español e inglés y deja sumar idiomas."
+ },
+ "requiere": [],
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux",
+  "ios",
+  "android"
+ ],
+ "pantallas": [
+  {
+   "donde": "Ajustes",
+   "nombre": "Idioma",
+   "que": "cambiar el idioma de la app"
+  }
+ ],
+ "origen": "minuta/ui/app.js (tr: plantillas {n}/{x}, íconos alrededor, partes con « · », palabras para fechas) + esquema (T que escapa también los valores, Tp, frase, traducirDOM con atributos) + alcancia (Thtml para HTML armado con esc) + graba (prioridad config > URL > sistema). Nuevo: valida los paquetes de afuera (solo texto, mismos marcadores y **, sin control ni bidi), marcadores con nombre en cualquier orden, T en una sola pasada (un valor con «{x}» nunca se reemplaza) y idiomas/<codigo>.json solo con un código válido.",
+ "archivos": {
+  "ui/i18n.js": "ui/i18n.js"
+ },
+ "config": {
+  "idioma_ui": [
+   "es",
+   "en"
+  ]
+ },
+ "acciones": {},
+ "textos": {
+  "Idioma": "Language"
+ },
+ "permisos": {},
+ "red": [],
+ "cambios": [
+  {
+   "version": "0.3.1",
+   "tipo": "arreglo",
+   "resumen": "Con crear({noTraducirAtributos}), [data-sin-traducir] siempre cuenta: los atributos (title, aria-label…) de lo marcado así y de lo que tiene adentro ya no se traducen, sin tener que agregarlo al selector (el README ya lo decía).",
+   "migrar": [
+    "Si agregaste [data-sin-traducir] a mano a noTraducirAtributos, puedes quitarlo (dejarlo no hace daño)."
+   ]
+  },
+  {
+   "version": "0.3.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Minuta: traducirDOM traduce el placeholder, title y aria-label de un <textarea> (su texto, el de la persona, no), y crear({noTraducirAtributos}) traduce los atributos también dentro de las zonas de noTraducir (un botón «Abrir nota» en una lista de notas) menos donde diga ese selector.",
+   "migrar": [
+    "Si tu app recorría el DOM a mano para traducir esos atributos (Minuta), pásale tu selector de zonas sin atributos a crear({noTraducirAtributos}) y borra el recorrido."
+   ]
+  },
+  {
+   "version": "0.2.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Minuta: T/Tp/Thtml aceptan una lista de valores que se llenan en orden («Paso {n} de {n}» → «Paso 2 de 8»), y una frase ya armada con un marcador repetido se traduce con cada valor en su lugar."
+  },
+  {
+   "version": "0.1.1",
+   "tipo": "arreglo",
+   "resumen": "Un texto como «<nombre>.md» ya no se rechaza como HTML; ?idioma= gana sobre la config (vistas previas y pruebas); traducirDOM(raiz, {soloDentro: true}) no toca los atributos de la raíz. Lo encontró Esquema al migrar."
+  },
+  {
+   "version": "0.1.0",
+   "tipo": "inicial",
+   "seguridad": true,
+   "resumen": "Primera versión: T(), Tp(), Thtml(), tr() y traducirDOM() de las apps en un solo archivo; valida las traducciones que vienen de afuera y escapa los valores (en Alcancía, Corta y Repasa T() no los escapaba)."
+  }
+ ]
+}
