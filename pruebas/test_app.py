@@ -157,6 +157,14 @@ class Proyectos(unittest.TestCase):
         self.assertIn("# Cambios acordados en la revisión", self.pedidos[-1][0])
         self.assertIn("Guardar con respaldo.", self.pedidos[-1][0])
 
+    def test_plan_reintenta_si_se_pasa_de_pasos(self):
+        muchos = {"pasos": [{"titulo": f"Paso {i}", "que": "x", "archivos": [], "tokens": 1} for i in range(20)]}
+        self.respuestas.append(json.dumps(muchos))
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": []})
+        self.assertTrue(r["ok"], r)
+        self.assertIn("trajo 20", self.pedidos[-1][0])
+
     def test_revisar_sin_plan(self):
         with self.assertRaises(ValueError):
             self.p.revisar({"id": "nada"})
@@ -171,7 +179,7 @@ class Proyectos(unittest.TestCase):
         self.assertIn("0 tokens", self.pedidos[0][0])  # el pedido dice qué ya está hecho
 
     def test_plan_malo(self):
-        self.respuestas.append("No sé.")
+        self.respuestas += ["No sé.", "Tampoco."]  # dos intentos
         r = self.p.plan({"nombre": "Recetas", "frase": "Ordena recetas.", "plataformas": ["mac"], "piezas": []})
         self.assertFalse(r["ok"])
         self.assertEqual(r["codigo"], "plan")

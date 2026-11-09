@@ -126,7 +126,8 @@ def validar_plan(datos):
     """{pasos: [{titulo, que, archivos, tokens}]} → la lista limpia, o ValueError."""
     pasos = datos.get("pasos") if isinstance(datos, dict) else None
     if not isinstance(pasos, list) or not 1 <= len(pasos) <= MAX_PASOS:
-        raise ValueError(f"El plan tiene que traer entre 1 y {MAX_PASOS} pasos.")
+        n = len(pasos) if isinstance(pasos, list) else 0
+        raise ValueError(f"El plan tiene que traer entre 1 y {MAX_PASOS} pasos (trajo {n}).")
     limpio = []
     for x in pasos:
         if not isinstance(x, dict) or not _texto(x.get("titulo"), 80):
@@ -190,18 +191,24 @@ def plan(d):
         raise ValueError("Esa app ya está creada: sigue con sus pasos.")
     p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "acuerdos": acuerdos, "revision": None, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
               if x in ficha["piezas"]], "ahorro": ficha["tokens_ahorrados"]})
-    pedido = _prompt_plan(p, ficha)
-    texto, error = ia.preguntar(pedido, timeout=600)
-    if error:
-        return {"ok": False, "error": ia.frase(error), "codigo": error["codigo"]}
-    gastado = tokens(pedido, texto)
+    pedido, gastado, pasos = _prompt_plan(p, ficha), 0, None
+    for intento in range(INTENTOS):
+        texto, error = ia.preguntar(pedido, timeout=600)
+        if error:
+            return {"ok": False, "error": ia.frase(error), "codigo": error["codigo"]}
+        gastado += tokens(pedido, texto)
+        try:
+            pasos = validar_plan(_json_de(texto))
+            break
+        except ValueError as e:
+            falla = str(e)
+            # Una app grande a veces sale con más pasos de la cuenta o sin JSON: se pide de nuevo diciendo qué falló.
+            pedido = _prompt_plan(p, ficha) + f"\n\n# Tu respuesta anterior no sirvió\n{falla} Junta pasos si te pasaste. Responde solo el JSON."
     p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
     p["gastado"] = p["gastado_plan"]
-    try:
-        pasos = validar_plan(_json_de(texto))
-    except ValueError as e:
+    if pasos is None:
         _guardar(p)
-        return {"ok": False, "error": str(e), "codigo": "plan", "gastado": gastado}
+        return {"ok": False, "error": falla, "codigo": "plan", "gastado": gastado}
     p.update({"estado": "plan", "pasos": [dict(x, estado="pendiente", gastado=0) for x in pasos]})
     return {"ok": True, "proyecto": _guardar(p)}
 
