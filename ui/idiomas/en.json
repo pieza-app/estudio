@@ -195,6 +195,7 @@
   "Mostrar un ejemplo y un botón para agregar el primero.": "Show an example and a button to add the first one.",
   "La página y el README quedan para el final.": "The page and the README are left for the end.",
   "Escribir el README junto con el primer paso.": "Write the README with the first step.",
+  "Para actualizar, mueve {app} a la carpeta Aplicaciones y ábrela desde ahí. Ahora macOS la abre desde una copia temporal que no se puede cambiar.": "To update, move {app} to the Applications folder and open it from there. Right now macOS runs it from a temporary copy that cannot be changed.",
   "~{n} tokens gastados": "~{n} tokens spent",
   "{n} tokens gastados": "{n} tokens spent",
   "Hacer el paso {n}": "Do step {n}",

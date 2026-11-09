@@ -20,6 +20,7 @@ use serde_json::{json, Value};
 use base64::Engine;
 use ed25519_dalek::{Signature, VerifyingKey};
 use sha2::{Digest, Sha256};
+use ureq::ResponseExt;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -37,6 +38,7 @@ pub fn texto(codigo: &str) -> &'static str {
         "errorBajar" => "No pude descargar la versión nueva. Revisa tu conexión e intenta de nuevo.",
         "sinDescarga" => "No encontré la descarga de la versión nueva.",
         "firma" => "La versión nueva no trae una firma válida. {app} sigue igual que antes: no la instalé por seguridad.",
+        "mover" => "Para actualizar, mueve {app} a la carpeta Aplicaciones y ábrela desde ahí. Ahora macOS la abre desde una copia temporal que no se puede cambiar.",
         _ => "No pude preparar la versión nueva. {app} sigue igual que antes; intenta de nuevo más tarde.",
     }
 }
@@ -171,6 +173,12 @@ pub enum Instalacion {
     Tar { destino: PathBuf },
 }
 impl Instalacion {
+    /// En Mac, una app que se abrió sin moverla (con la marca de cuarentena) corre desde /…/AppTranslocation/…, de solo lectura:
+    /// ahí no se puede reemplazar.
+    pub fn traslocada(&self) -> bool {
+        matches!(self, Instalacion::Mac { app } if app.to_string_lossy().contains("/AppTranslocation/"))
+    }
+
     pub fn archivo(&self, base: &str) -> String {
         match self {
             Instalacion::Mac { .. } => format!("{base}-macOS.zip"),
@@ -234,7 +242,13 @@ impl Actualizaciones {
         instalacion(&exe, &casa, std::env::var_os("APPIMAGE").map(PathBuf::from), &self.base, &self.ejecutable)
     }
     fn agente(&self) -> ureq::Agent {
-        ureq::AgentBuilder::new().timeout_connect(Duration::from_secs(15)).timeout_read(Duration::from_secs(60)).redirects(5).https_only(true).build()
+        ureq::Agent::config_builder()
+            .timeout_connect(Some(Duration::from_secs(15)))
+            .timeout_recv_response(Some(Duration::from_secs(60)))
+            .max_redirects(5)
+            .https_only(true)
+            .build()
+            .into()
     }
     fn fin(&self, hay: bool, sin_conexion: bool, version: &str, notas: &str) -> Value {
         // `disponible` (lo que la app manda en su estado) tiene la misma forma que la respuesta.
@@ -253,11 +267,11 @@ impl Actualizaciones {
     /// Baja `url` a `destino` calculando su SHA-256 al vuelo.
     fn descargar(&self, url: &str, destino: &Path, progreso: &dyn Fn(f64)) -> Result<String, String> {
         let r = self.agente().get(url).call().map_err(|e| e.to_string())?;
-        if !r.get_url().starts_with("https://") {
+        if r.get_uri().scheme_str() != Some("https") {
             return Err("redirección sin https".into());
         }
-        let total: u64 = r.header("content-length").and_then(|x| x.parse().ok()).unwrap_or(0);
-        let mut lector = r.into_reader().take(MAX_DESCARGA);
+        let total: u64 = r.headers().get("content-length").and_then(|x| x.to_str().ok()).and_then(|x| x.parse().ok()).unwrap_or(0);
+        let mut lector = r.into_body().into_reader().take(MAX_DESCARGA);
         let mut salida = fs::File::create(destino).map_err(|e| e.to_string())?;
         let mut h = Sha256::new();
         let (mut b, mut bytes) = (vec![0u8; 256 * 1024], 0u64);
@@ -287,12 +301,12 @@ impl Actualizador for Actualizaciones {
         let r = self
             .agente()
             .get(&format!("https://api.github.com/repos/{}/releases/latest", self.repo))
-            .set("Accept", "application/vnd.github+json")
-            .set("User-Agent", &format!("{}/{version}", self.base))
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", &format!("{}/{version}", self.base))
             .call();
         let d: Value = match r {
-            Ok(r) => r.into_json().unwrap_or(json!({})),
-            Err(ureq::Error::Status(404, _)) => return self.fin(false, false, "", ""), // aún no hay versiones
+            Ok(mut r) => r.body_mut().read_json().unwrap_or(json!({})),
+            Err(ureq::Error::StatusCode(404)) => return self.fin(false, false, "", ""), // aún no hay versiones
             Err(_) => return self.fin(false, true, "", ""),
         };
         let tag = d.get("tag_name").and_then(Value::as_str).and_then(limpiar_version);
@@ -315,6 +329,10 @@ impl Actualizador for Actualizaciones {
     fn instalar(&self, host: &Host, avisar: &dyn Fn(Value)) {
         let urls = self.urls.lock().ok().and_then(|u| u.clone());
         let (Some(i), Some((url, url_huella, version))) = (self.inst(), urls) else { return avisar(self.aviso("error", "sinDescarga")) };
+        if i.traslocada() {
+            // Abierta sin moverla (por ejemplo, desde Descargas): macOS la corre desde una copia de solo lectura.
+            return avisar(self.aviso("error", "mover"));
+        }
         if !es_descarga_nuestra(&url, &self.repo) || !es_descarga_nuestra(&url_huella, &self.repo) {
             return avisar(self.aviso("error", "sinDescarga"));
         }
@@ -343,10 +361,10 @@ impl Actualizador for Actualizaciones {
             .get(&url_huella)
             .call()
             .ok()
-            .filter(|r| r.get_url().starts_with("https://"))
+            .filter(|r| r.get_uri().scheme_str() == Some("https"))
             .and_then(|r| {
                 let mut t = String::new();
-                r.into_reader().take(MAX_HUELLA).read_to_string(&mut t).ok()?;
+                r.into_body().into_reader().take(MAX_HUELLA).read_to_string(&mut t).ok()?;
                 leer_huella(&t)
             });
         let huella = match (huella, esperada) {
@@ -363,10 +381,10 @@ impl Actualizador for Actualizaciones {
             let firma = Some(&url_firma)
                 .filter(|u| es_descarga_nuestra(u, &self.repo))
                 .and_then(|u| self.agente().get(u).call().ok())
-                .filter(|r| r.get_url().starts_with("https://"))
+                .filter(|r| r.get_uri().scheme_str() == Some("https"))
                 .and_then(|r| {
                     let mut t = String::new();
-                    r.into_reader().take(MAX_FIRMA).read_to_string(&mut t).ok()?;
+                    r.into_body().into_reader().take(MAX_FIRMA).read_to_string(&mut t).ok()?;
                     Some(t)
                 });
             if !firma.is_some_and(|f| firma_valida(&llaves, &host.app.id, &version, &huella, &f)) {
@@ -500,6 +518,15 @@ mod pruebas {
         assert!(!es_descarga_nuestra("https://github.com/otro/ana/releases/download/v1/x", r));
         assert!(!es_descarga_nuestra("https://github.com/ana-app/ana/releases/download/../x", r));
         assert!(!es_descarga_nuestra("https://github.com/ana-app/ana/releases/download/v1/x?y=1", r));
+    }
+
+    #[test]
+    fn traslocada_no_se_puede_reemplazar() {
+        let t = Instalacion::Mac { app: PathBuf::from("/private/var/folders/x/T/AppTranslocation/ABC/d/Ana.app") };
+        assert!(t.traslocada());
+        assert!(!Instalacion::Mac { app: PathBuf::from("/Applications/Ana.app") }.traslocada());
+        assert!(!Instalacion::Windows { exe: PathBuf::from("C:/Ana/ana.exe") }.traslocada());
+        assert!(texto("mover").contains("Aplicaciones"));
     }
 
     #[test]
