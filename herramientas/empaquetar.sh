@@ -17,7 +17,7 @@ case "${1:-$(uname -s)}" in
   linux | Linux) SO=linux; V=linux ;;
   *) echo "sistema desconocido: $1" >&2; exit 1 ;;
 esac
-VERSION=$(python3 -c "import json;print(json.load(open('app.json'))['version'])" 2>/dev/null || echo 0.7.0)
+VERSION=$(python3 -c "import json;print(json.load(open('app.json'))['version'])" 2>/dev/null || echo 0.7.1)
 mkdir -p dist
 huella() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
 firmar() { (cd dist && printf '%s  %s\n' "$(huella "$1")" "$1" > "$1.sha256"); }
