@@ -105,9 +105,9 @@
    }
   },
   "componentes": {
-   "version": "0.3.0",
+   "version": "0.3.1",
    "archivos": {
-    "ui/componentes.js": "310712e40f69b674f5d64fc723ccd2dbf2ad114f6ac68ee72a598cf4c36bb76a",
+    "ui/componentes.js": "fd5eafba3affb59be9506c57f38eff7a712297371621fe070b2b6d0ce3dfdf80",
     "ui/componentes.css": "101586f0fa7aa509f42b626de378c5ad32d176da5a4c0ad85b081a47908fe56f"
    },
    "ficha": {
@@ -145,9 +145,9 @@
    }
   },
   "actualizaciones": {
-   "version": "0.5.0",
+   "version": "0.5.2",
    "archivos": {
-    "escritorio/src/pieza/actualizaciones.rs": "28ce276a7d25652c14ca497cb585d4e43c7905edbfc529db064ecde7701d3bcd"
+    "escritorio/src/pieza/actualizaciones.rs": "e241b86c0f678c0f7cd1fd21dcf290a45f46506ac75c000e5f8b6c75b6d8116c"
    },
    "ficha": {
     "requiere": [],
@@ -236,7 +236,7 @@
     ".github/workflows/publicar.yml": "b4579dcba407c1ae9b56052af7dc4cbc2439b58d5edbd60c7caaea9871deea50",
     "build.sh": "094fb3ede5f22f4304fa09641f7630959ffbfcd2417f1bf5c3499fe3cc34b53f",
     "escritorio/herramientas/preparar.sh": "e73b0a523b37d23a8144a1005f2a355a066de8fd165bbd3e50dd2149ed471067",
-    "herramientas/empaquetar.sh": "1668a24d9aea59d852f22cadec2b3836883e1ee50b618d953eddd45f7078b00a",
+    "herramientas/empaquetar.sh": "680412c8436d5928d2b3ef221537b22a2d3a280c573ddaf2f981dc37ebb57c5d",
     "instalar.ps1": "0cbe4679aa022ce838855a9910acd42800482750a12b7ee31aa5f0ce2b5374ca",
     "instalar.sh": "167fbfabfd1c674264bccf48cdbf817ccdee7f91f153a70481a42780b36150f5"
    }

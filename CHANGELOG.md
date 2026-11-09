@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.6.1
+- La ventana ya no parpadea mientras Pieza se actualiza, y si la abriste desde Descargas te pide moverla a Aplicaciones para poder actualizar. · *The window no longer flickers while Pieza updates, and if you opened it from Downloads it asks you to move it to Applications so it can update.*
+
 ## 0.6.0
 - Nueva «Revisión a ciegas»: tres sesiones nuevas de tu IA leen solo tu idea y el plan, buscan fallas (riesgos, uso y pasos) y tú eliges qué cambios entran al plan. · *New «Blind review»: three new sessions of your AI read only your idea and the plan, look for flaws (risks, use and steps), and you choose which changes go into the plan.*
 - Ahora puedes darle a Pieza la idea completa de tu app (cómo funciona, reglas, pantallas y datos), no solo una frase. Va al plan y a cada paso. · *You can now give Pieza the full idea of your app (how it works, rules, screens and data), not just one sentence. It goes into the plan and every step.*
