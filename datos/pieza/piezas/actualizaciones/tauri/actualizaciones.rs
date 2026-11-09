@@ -6,7 +6,10 @@
 //!   · Mac: `<Base>-macOS.zip` se descomprime con `ditto`, se le quita la cuarentena y reemplaza la app cuando se cerró.
 //!   · Windows: el instalador del Release (`<Base>-Windows.exe`, en silencio) cuando la app se cerró; después la abre.
 //!   · Linux: el AppImage se reemplaza a sí mismo; la instalación de instalar.sh (~/.local/share/<Base>) se cambia entera.
-//! Solo desde https://github.com/<repo>/releases/download/… y siempre verificado con su .sha256. Los datos de la persona
+//! Solo desde https://github.com/<repo>/releases/download/… y siempre verificado con su .sha256. Con llaves en app.json
+//! (`"actualizaciones": {"llaves": ["<pública Ed25519 en base64>"]}`, hasta 2 para rotar), además exige `<archivo>.sig`: la
+//! firma Ed25519 (base64, 64 bytes) de `<id>-actualizacion|<versión sin v>|<sha256>`. Sin firma válida no instala. La llave
+//! privada vive fuera de GitHub (un secreto del entorno de publicación): quien entre a la cuenta no puede firmar. Los datos de la persona
 //! viven fuera de la app: actualizar no borra nada. Nada de la app adentro: repo y nombre llegan como parámetros.
 //!
 //!   lector: …, actualizaciones: Some(Arc::new(actualizaciones::Actualizaciones::nuevas("ana-app/ana", "Ana")?)),
@@ -14,7 +17,10 @@
 use crate::pieza::host::{Actualizador, Host};
 use regex::Regex;
 use serde_json::{json, Value};
+use base64::Engine;
+use ed25519_dalek::{Signature, VerifyingKey};
 use sha2::{Digest, Sha256};
+use ureq::ResponseExt;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -31,10 +37,44 @@ pub fn texto(codigo: &str) -> &'static str {
         "instalando" => "Instalando: {app} se cerrará y volverá a abrirse sola",
         "errorBajar" => "No pude descargar la versión nueva. Revisa tu conexión e intenta de nuevo.",
         "sinDescarga" => "No encontré la descarga de la versión nueva.",
+        "firma" => "La versión nueva no trae una firma válida. {app} sigue igual que antes: no la instalé por seguridad.",
+        "mover" => "Para actualizar, mueve {app} a la carpeta Aplicaciones y ábrela desde ahí. Ahora macOS la abre desde una copia temporal que no se puede cambiar.",
         _ => "No pude preparar la versión nueva. {app} sigue igual que antes; intenta de nuevo más tarde.",
     }
 }
 const MAX_HUELLA: u64 = 4096;
+const MAX_FIRMA: u64 = 1024;
+
+/// Las llaves públicas de app.json → "actualizaciones" → "llaves" (base64 de 32 bytes, hasta 2). Las que no sirven se descartan.
+pub fn llaves_de(app: &Value) -> Vec<VerifyingKey> {
+    let b64 = base64::engine::general_purpose::STANDARD;
+    app.get("actualizaciones")
+        .and_then(|a| a.get("llaves"))
+        .and_then(Value::as_array)
+        .map(|l| {
+            l.iter()
+                .take(2)
+                .filter_map(Value::as_str)
+                .filter_map(|s| b64.decode(s.trim()).ok())
+                .filter_map(|b| <[u8; 32]>::try_from(b.as_slice()).ok())
+                .filter_map(|b| VerifyingKey::from_bytes(&b).ok())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Lo que se firma: `<id>-actualizacion|<versión sin v>|<sha256 en minúsculas>`.
+pub fn mensaje_firmado(id: &str, version: &str, huella: &str) -> String {
+    format!("{id}-actualizacion|{}|{}", version.trim_start_matches('v'), huella.to_lowercase())
+}
+
+/// ¿La firma (base64 de 64 bytes, como viene en el .sig) es de alguna de las llaves? Estricta (verify_strict).
+pub fn firma_valida(llaves: &[VerifyingKey], id: &str, version: &str, huella: &str, firma_b64: &str) -> bool {
+    let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(firma_b64.trim()) else { return false };
+    let Ok(firma) = Signature::from_slice(&bytes) else { return false };
+    let m = mensaje_firmado(id, version, huella);
+    llaves.iter().any(|k| k.verify_strict(m.as_bytes(), &firma).is_ok())
+}
 const MAX_DESCARGA: u64 = 2 << 30;
 
 fn re(p: &'static str, c: &'static OnceLock<Regex>) -> &'static Regex {
@@ -133,6 +173,12 @@ pub enum Instalacion {
     Tar { destino: PathBuf },
 }
 impl Instalacion {
+    /// En Mac, una app que se abrió sin moverla (con la marca de cuarentena) corre desde /…/AppTranslocation/…, de solo lectura:
+    /// ahí no se puede reemplazar.
+    pub fn traslocada(&self) -> bool {
+        matches!(self, Instalacion::Mac { app } if app.to_string_lossy().contains("/AppTranslocation/"))
+    }
+
     pub fn archivo(&self, base: &str) -> String {
         match self {
             Instalacion::Mac { .. } => format!("{base}-macOS.zip"),
@@ -170,7 +216,8 @@ pub struct Actualizaciones {
     pub base: String,
     pub ejecutable: String,
     disponible: Mutex<Value>,
-    urls: Mutex<Option<(String, String)>>,
+    /// (archivo, .sha256, versión) de la última revisión con algo nuevo.
+    urls: Mutex<Option<(String, String, String)>>,
 }
 
 impl Actualizaciones {
@@ -195,7 +242,13 @@ impl Actualizaciones {
         instalacion(&exe, &casa, std::env::var_os("APPIMAGE").map(PathBuf::from), &self.base, &self.ejecutable)
     }
     fn agente(&self) -> ureq::Agent {
-        ureq::AgentBuilder::new().timeout_connect(Duration::from_secs(15)).timeout_read(Duration::from_secs(60)).redirects(5).https_only(true).build()
+        ureq::Agent::config_builder()
+            .timeout_connect(Some(Duration::from_secs(15)))
+            .timeout_recv_response(Some(Duration::from_secs(60)))
+            .max_redirects(5)
+            .https_only(true)
+            .build()
+            .into()
     }
     fn fin(&self, hay: bool, sin_conexion: bool, version: &str, notas: &str) -> Value {
         // `disponible` (lo que la app manda en su estado) tiene la misma forma que la respuesta.
@@ -214,11 +267,11 @@ impl Actualizaciones {
     /// Baja `url` a `destino` calculando su SHA-256 al vuelo.
     fn descargar(&self, url: &str, destino: &Path, progreso: &dyn Fn(f64)) -> Result<String, String> {
         let r = self.agente().get(url).call().map_err(|e| e.to_string())?;
-        if !r.get_url().starts_with("https://") {
+        if r.get_uri().scheme_str() != Some("https") {
             return Err("redirección sin https".into());
         }
-        let total: u64 = r.header("content-length").and_then(|x| x.parse().ok()).unwrap_or(0);
-        let mut lector = r.into_reader().take(MAX_DESCARGA);
+        let total: u64 = r.headers().get("content-length").and_then(|x| x.to_str().ok()).and_then(|x| x.parse().ok()).unwrap_or(0);
+        let mut lector = r.into_body().into_reader().take(MAX_DESCARGA);
         let mut salida = fs::File::create(destino).map_err(|e| e.to_string())?;
         let mut h = Sha256::new();
         let (mut b, mut bytes) = (vec![0u8; 256 * 1024], 0u64);
@@ -248,12 +301,12 @@ impl Actualizador for Actualizaciones {
         let r = self
             .agente()
             .get(&format!("https://api.github.com/repos/{}/releases/latest", self.repo))
-            .set("Accept", "application/vnd.github+json")
-            .set("User-Agent", &format!("{}/{version}", self.base))
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", &format!("{}/{version}", self.base))
             .call();
         let d: Value = match r {
-            Ok(r) => r.into_json().unwrap_or(json!({})),
-            Err(ureq::Error::Status(404, _)) => return self.fin(false, false, "", ""), // aún no hay versiones
+            Ok(mut r) => r.body_mut().read_json().unwrap_or(json!({})),
+            Err(ureq::Error::StatusCode(404)) => return self.fin(false, false, "", ""), // aún no hay versiones
             Err(_) => return self.fin(false, true, "", ""),
         };
         let tag = d.get("tag_name").and_then(Value::as_str).and_then(limpiar_version);
@@ -266,7 +319,7 @@ impl Actualizador for Actualizaciones {
             return self.fin(false, false, "", "");
         }
         if let Ok(mut u) = self.urls.lock() {
-            *u = Some((a, h));
+            *u = Some((a, h, tag.clone()));
         }
         let notas: String = d.get("body").and_then(Value::as_str).unwrap_or("").lines().take(4).collect::<Vec<_>>().join("\n").chars().take(1000).collect();
         self.fin(true, false, &tag, &notas)
@@ -275,7 +328,11 @@ impl Actualizador for Actualizaciones {
     /// guardándose.
     fn instalar(&self, host: &Host, avisar: &dyn Fn(Value)) {
         let urls = self.urls.lock().ok().and_then(|u| u.clone());
-        let (Some(i), Some((url, url_huella))) = (self.inst(), urls) else { return avisar(self.aviso("error", "sinDescarga")) };
+        let (Some(i), Some((url, url_huella, version))) = (self.inst(), urls) else { return avisar(self.aviso("error", "sinDescarga")) };
+        if i.traslocada() {
+            // Abierta sin moverla (por ejemplo, desde Descargas): macOS la corre desde una copia de solo lectura.
+            return avisar(self.aviso("error", "mover"));
+        }
         if !es_descarga_nuestra(&url, &self.repo) || !es_descarga_nuestra(&url_huella, &self.repo) {
             return avisar(self.aviso("error", "sinDescarga"));
         }
@@ -304,17 +361,35 @@ impl Actualizador for Actualizaciones {
             .get(&url_huella)
             .call()
             .ok()
-            .filter(|r| r.get_url().starts_with("https://"))
+            .filter(|r| r.get_uri().scheme_str() == Some("https"))
             .and_then(|r| {
                 let mut t = String::new();
-                r.into_reader().take(MAX_HUELLA).read_to_string(&mut t).ok()?;
+                r.into_body().into_reader().take(MAX_HUELLA).read_to_string(&mut t).ok()?;
                 leer_huella(&t)
             });
-        match (huella, esperada) {
-            (Ok(h), Some(e)) if h == e => {}
+        let huella = match (huella, esperada) {
+            (Ok(h), Some(e)) if h == e => h,
             _ => {
                 borrar();
                 return avisar(self.aviso("error", "errorBajar"));
+            }
+        };
+        // Con llaves en app.json, la firma es obligatoria: <archivo>.sig, del mismo Release.
+        let llaves = llaves_de(&host.app.crudo);
+        if !llaves.is_empty() {
+            let url_firma = format!("{url}.sig");
+            let firma = Some(&url_firma)
+                .filter(|u| es_descarga_nuestra(u, &self.repo))
+                .and_then(|u| self.agente().get(u).call().ok())
+                .filter(|r| r.get_uri().scheme_str() == Some("https"))
+                .and_then(|r| {
+                    let mut t = String::new();
+                    r.into_body().into_reader().take(MAX_FIRMA).read_to_string(&mut t).ok()?;
+                    Some(t)
+                });
+            if !firma.is_some_and(|f| firma_valida(&llaves, &host.app.id, &version, &huella, &f)) {
+                borrar();
+                return avisar(self.aviso("error", "firma"));
             }
         }
         avisar(self.aviso("2", "preparando"));
@@ -446,6 +521,15 @@ mod pruebas {
     }
 
     #[test]
+    fn traslocada_no_se_puede_reemplazar() {
+        let t = Instalacion::Mac { app: PathBuf::from("/private/var/folders/x/T/AppTranslocation/ABC/d/Ana.app") };
+        assert!(t.traslocada());
+        assert!(!Instalacion::Mac { app: PathBuf::from("/Applications/Ana.app") }.traslocada());
+        assert!(!Instalacion::Windows { exe: PathBuf::from("C:/Ana/ana.exe") }.traslocada());
+        assert!(texto("mover").contains("Aplicaciones"));
+    }
+
+    #[test]
     fn versiones_y_huellas() {
         assert!(es_mayor("v0.10.0", "0.9.3"));
         assert!(!es_mayor("0.9.3", "0.9.3"));
@@ -454,6 +538,39 @@ mod pruebas {
         assert_eq!(leer_huella("corta"), None);
         assert_eq!(base_de("Matías Café"), "MatiasCafe");
         assert_eq!(comillas("a'b"), "'a'\\''b'");
+    }
+
+    #[test]
+    fn firma_ed25519() {
+        use ed25519_dalek::{Signer, SigningKey};
+        let b64 = base64::engine::general_purpose::STANDARD;
+        let llave = SigningKey::from_bytes(&[7u8; 32]);
+        let otra = SigningKey::from_bytes(&[9u8; 32]);
+        let publica = b64.encode(llave.verifying_key().to_bytes());
+        let app = json!({"actualizaciones": {"llaves": [publica, "no-es-base64", b64.encode([1u8; 5])]}});
+        let llaves = llaves_de(&app);
+        assert_eq!(llaves.len(), 1, "solo las que sirven");
+        let h = "ab".repeat(32);
+        let m = mensaje_firmado("ana", "v1.2.0", &h.to_uppercase());
+        assert_eq!(m, format!("ana-actualizacion|1.2.0|{h}"));
+        let firma = b64.encode(llave.sign(m.as_bytes()).to_bytes());
+        assert!(firma_valida(&llaves, "ana", "1.2.0", &h, &firma));
+        assert!(!firma_valida(&llaves, "ana", "1.2.1", &h, &firma), "otra versión");
+        assert!(!firma_valida(&llaves, "beto", "1.2.0", &h, &firma), "otra app");
+        assert!(!firma_valida(&llaves, "ana", "1.2.0", &"cd".repeat(32), &firma), "otro archivo");
+        let ajena = b64.encode(otra.sign(m.as_bytes()).to_bytes());
+        assert!(!firma_valida(&llaves, "ana", "1.2.0", &h, &ajena), "otra llave");
+        assert!(!firma_valida(&llaves, "ana", "1.2.0", &h, "basura"));
+        assert!(llaves_de(&json!({})).is_empty(), "sin llaves, todo igual que antes");
+    }
+
+    #[test]
+    fn firma_hecha_con_openssl() {
+        // El mismo camino que publicar.yml: openssl pkeyutl -sign -rawin con una llave de `llave.sh`.
+        let llaves = llaves_de(&json!({"actualizaciones": {"llaves": ["NBOgFlGpYRyMuv6i7605YbRsVYVvMu/28sWT0mY6W/4="]}}));
+        let h = "ab".repeat(32);
+        assert!(firma_valida(&llaves, "ana", "1.0.0", &h, "QqWlG2CVRPFypKVykz+B2rRiryZ214MIsb8Zys4Xa0PWeV+VWA4vdtq3lnX/hR5A47V1NlF4Pqqpm1vUD24/Cg=="));
+        assert!(!firma_valida(&llaves, "ana", "1.0.1", &h, "QqWlG2CVRPFypKVykz+B2rRiryZ214MIsb8Zys4Xa0PWeV+VWA4vdtq3lnX/hR5A47V1NlF4Pqqpm1vUD24/Cg=="));
     }
 
     #[test]
