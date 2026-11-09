@@ -2,7 +2,7 @@
 
 Pieza te ayuda a crear tu propia app de escritorio o de celular, paso a paso. Usa piezas ya hechas y probadas: cada pieza ya hecha no gasta tokens de tu IA.
 
-**[Descargar](https://github.com/pieza-app/estudio/releases/latest) · [Página](https://pieza-app.github.io/estudio/) · [Probar en el navegador](https://pieza-app.github.io/estudio/demo/) ·
+**[Descargar](https://github.com/pieza-app/estudio/releases/latest) · [Página](https://pieza-app.github.io/pieza/) · [Probar en el navegador](https://pieza-app.github.io/pieza/app/) ·
 [Cómo aportar](CONTRIBUTING.md)**
 
 - **Mac** (Apple Silicon, macOS 15): `curl -fsSL https://raw.githubusercontent.com/pieza-app/estudio/main/instalar.sh | bash`
@@ -37,6 +37,6 @@ cd ui && python3 -m http.server 8765         # la vista previa: http://localhost
 
 Pieza helps you build your own desktop or phone app, step by step. It uses pieces that are already made and tested: a ready piece costs your AI no tokens.
 
-Free and open source (AGPL-3.0). [Download](https://github.com/pieza-app/estudio/releases/latest) · [Website](https://pieza-app.github.io/estudio/).
+Free and open source (AGPL-3.0). [Download](https://github.com/pieza-app/estudio/releases/latest) · [Website](https://pieza-app.github.io/pieza/).
 
 [![Hecho con Pieza](https://pieza-app.github.io/pieza/sello.svg)](https://pieza-app.github.io/pieza/)

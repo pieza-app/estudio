@@ -1,11 +1,13 @@
 /* Pieza: lo propio de la interfaz. Los colores son los tokens de la pieza «tema» (tema.css: --fondo, --panel, --texto,
    --texto-suave, --linea, --acento…); un color nuevo va como par --x-claro/--x-oscuro con light-dark(). Botones, diálogos y filas
    son los de «componentes» (.pz-boton, .pz-principal, .pz-campo, .pz-pie…). Aquí: el acento de la marca y el asistente. */
+:root { --acento-claro: #8f5400; --acento-oscuro: #ffb020; --sobre-acento-claro: #ffffff; --sobre-acento-oscuro: #1f1b2e; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
 @media (pointer: coarse), (max-width: 760px) { :root { --pz-boton-alto: var(--pz-tactil); --pz-chip-alto: var(--pz-tactil); } }
 .barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--linea); background: var(--panel); }
-.barra h1 { margin: 0; font-size: 18px; }
+.barra h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.barra h1 img { width: 24px; height: 24px; }
 .contenido { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
 .contenido h2 { margin: 0 0 4px; font-size: 20px; }
 .suave { color: var(--texto-suave); margin: 0 0 8px; }
