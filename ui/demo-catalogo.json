@@ -1,0 +1,1294 @@
+{
+ "formato": 1,
+ "piezas": [
+  {
+   "id": "actualizaciones",
+   "nombre": "Actualizaciones",
+   "version": "0.4.0",
+   "estado": "lista",
+   "categoria": "plataforma",
+   "descripcion": "Avisa dentro de la app, descarga solo de los Releases del repo, verifica sha256 y actualiza en un clic sin tocar los datos.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Actualizaciones",
+     "que": "buscar, ver el avance «Paso n de 3» y «Estás en la última versión» (la pieza da los datos y los textos; la fila la pinta la app)"
+    }
+   ],
+   "permisos": {},
+   "red": [
+    "api.github.com",
+    "github.com",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com"
+   ],
+   "tareas_persona": [
+    "Publicar versiones como Releases con los archivos y su .sha256 (lo hace el workflow publicar)"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre en escritorio.",
+    "palabras": []
+   },
+   "bytes": 53163
+  },
+  {
+   "id": "bienvenida",
+   "nombre": "Bienvenida",
+   "version": "0.4.1",
+   "estado": "lista",
+   "categoria": "interfaz",
+   "descripcion": "Primer uso por pasos, con el idioma SIEMPRE primero; cada pieza puede sumar su paso.",
+   "requiere": [
+    "i18n"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Bienvenida",
+     "nombre": "Idioma",
+     "que": "primer paso, antes de todo"
+    },
+    {
+     "donde": "Bienvenida",
+     "nombre": "Listo",
+     "que": "último paso, qué hacer primero"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre.",
+    "palabras": []
+   },
+   "bytes": 18019
+  },
+  {
+   "id": "calendario",
+   "nombre": "Calendario",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "conexiones",
+   "descripcion": "Leer las reuniones del calendario (EventKit en Mac, archivo .ics en el resto) para avisar y nombrar.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Calendario",
+     "que": "conectar el calendario o un .ics"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "NSCalendarsFullAccessUsageDescription",
+      "por": "ver tus reuniones"
+     },
+     {
+      "clave": "NSRemindersFullAccessUsageDescription",
+      "por": "crear recordatorios (opcional)"
+     }
+    ]
+   },
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app depende de reuniones o eventos.",
+    "palabras": [
+     "reunión",
+     "calendario",
+     "agenda"
+    ]
+   },
+   "bytes": 0
+  },
+  {
+   "id": "catalogo",
+   "nombre": "Catálogo de la comunidad",
+   "version": "0.3.0",
+   "estado": "lista",
+   "categoria": "datos",
+   "descripcion": "Contenido de la comunidad (plantillas, efectos, temas…) desde un repo de solo datos: dominio fijo, sin redirecciones, tamaño máximo y SHA-256 obligatorio; cada app pone su validador.",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Galería",
+     "nombre": "Comunidad",
+     "que": "ver, descargar y quitar contenido (la pieza da los datos y los errores; la galería la pinta la app)"
+    }
+   ],
+   "permisos": {},
+   "red": [
+    "raw.githubusercontent.com"
+   ],
+   "tareas_persona": [
+    "Crear el repo <org>/<app>-catalogo (solo datos JSON)"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La gente puede crear y compartir contenido para la app (plantillas, temas, universos, efectos).",
+    "palabras": [
+     "plantillas",
+     "temas",
+     "comunidad",
+     "descargar",
+     "galería"
+    ]
+   },
+   "bytes": 57018
+  },
+  {
+   "id": "celular",
+   "nombre": "Copia al celular",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "datos",
+   "descripcion": "El computador es la fuente; el celular lee una copia cifrada en una carpeta de la nube de la persona.",
+   "requiere": [
+    "cifrado"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Celular",
+     "que": "elegir la carpeta compartida y la frase"
+    }
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "Hay app de celular y los datos viven en el computador.",
+    "palabras": []
+   },
+   "bytes": 0
+  },
+  {
+   "id": "cifrado",
+   "nombre": "Cifrado",
+   "version": "0.2.0",
+   "estado": "lista",
+   "categoria": "datos",
+   "descripcion": "Cifrar con una frase de la persona (PBKDF2-SHA256 600.000 + AES-256-GCM con AAD), nombres de archivo opacos con HMAC, verificador de frase y archivos con versión.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "Datos personales salen del computador (respaldo, celular, nube).",
+    "palabras": []
+   },
+   "bytes": 19515
+  },
+  {
+   "id": "comentarios",
+   "nombre": "Enviar comentarios",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "interfaz",
+   "descripcion": "Formulario que abre un issue en GitHub prellenado con versión, sistema e IA. Nunca obligatorio.",
+   "requiere": [
+    "componentes"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Enviar comentarios",
+     "que": "contar un error o una idea"
+    }
+   ],
+   "red": [
+    "github.com"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app es abierta y quieres ideas y errores de la gente sin que tengan que ir a GitHub.",
+    "palabras": []
+   },
+   "bytes": 0
+  },
+  {
+   "id": "componentes",
+   "nombre": "Componentes",
+   "version": "0.3.0",
+   "estado": "lista",
+   "categoria": "interfaz",
+   "descripcion": "Diálogo accesible, confirmar, avisos (toast) en cola, filas de Tu IA, actualizaciones «Paso n de 3», Acerca de y comentarios a GitHub.",
+   "requiere": [
+    "i18n",
+    "tema"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Tu IA",
+     "que": "probar y elegir la IA de la persona"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Actualizaciones",
+     "que": "buscar, ver las notas e instalar, paso a paso"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Acerca de",
+     "que": "versión, licencia y enlaces: código, comunidad, cómo aportar"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Enviar comentarios",
+     "que": "contar un error o una idea en un issue de GitHub, sin cuenta en la app"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre.",
+    "palabras": []
+   },
+   "bytes": 50892
+  },
+  {
+   "id": "conectores",
+   "nombre": "Conectores de servicios",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "conexiones",
+   "descripcion": "Contrato para conectar servicios externos (bancos, billeteras, APIs) con credencial en el llavero y por la entrada estándar.",
+   "requiere": [
+    "red",
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Conexiones",
+     "que": "conectar, probar, reparar y quitar cada servicio"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "Llavero",
+      "por": "guardar la credencial (sin aviso extra)"
+     }
+    ]
+   },
+   "tareas_persona": [
+    "Por cada servicio: cuenta de desarrollador o API propia de la persona (ej. Mercado Pago)"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app trae datos de servicios de la persona (banco, billetera, tienda).",
+    "palabras": [
+     "banco",
+     "conectar",
+     "api",
+     "importar"
+    ]
+   },
+   "bytes": 0
+  },
+  {
+   "id": "contenido",
+   "nombre": "Leer archivos",
+   "version": "0.1.0",
+   "estado": "lista",
+   "categoria": "datos",
+   "descripcion": "El texto de un .md, .txt, .pdf, .docx, .odt, .epub o .html solo con la biblioteca estándar, con topes contra zip bombas y XML sin entidades; y partir un libro en capítulos sin IA.",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "permisos": {},
+   "red": [],
+   "tareas_persona": [],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La persona agrega documentos, libros, apuntes o actas para que la app los lea.",
+    "palabras": [
+     "pdf",
+     "docx",
+     "epub",
+     "documento",
+     "libro",
+     "importar"
+    ]
+   },
+   "bytes": 23979
+  },
+  {
+   "id": "contrato",
+   "nombre": "Contrato del puente",
+   "version": "0.1.3",
+   "estado": "lista",
+   "categoria": "repo",
+   "descripcion": "Una prueba que revisa que la interfaz y cada plataforma (Mac, Windows/Linux, celular, vista previa) digan lo mismo: cada acción atendida (registrada, del host o declarada), acciones.json al día, las respuestas existen y la seguridad común. Lo propio de la app va en un archivo chico.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [],
+   "permisos": {},
+   "red": [],
+   "tareas_persona": [],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Toda app con interfaz y al menos un host (Mac, Windows/Linux o celular).",
+    "palabras": []
+   },
+   "bytes": 43497
+  },
+  {
+   "id": "empaquetado",
+   "nombre": "Empaquetado",
+   "version": "0.2.1",
+   "estado": "lista",
+   "categoria": "repo",
+   "descripcion": "Arma, firma, publica e instala la app desde app.json con su host de Tauri: empaquetar.sh para Mac, Windows y Linux con un solo Python portátil, build.sh (desarrollo en el Mac), preparar.sh, instalar.sh/ps1 y publicar.yml.",
+   "requiere": [
+    "host-tauri"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "tareas_persona": [
+    "Un Mac con Apple Silicon y Xcode para compilar la app de Mac la primera vez (después la arma GitHub en cada versión)"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre: es lo que arma la app de Mac, Windows y Linux y la publica en los Releases del repo.",
+    "palabras": []
+   },
+   "bytes": 30021
+  },
+  {
+   "id": "esqueleto",
+   "nombre": "Esqueleto de una app nueva",
+   "version": "0.2.0",
+   "estado": "lista",
+   "categoria": "base",
+   "descripcion": "Lo propio de una app nueva, mínimo y andando de punta a punta: interfaz con bienvenida (idioma primero), una pantalla de ejemplo, un script declarado, la app de Mac y la de Windows/Linux sobre el host, demo y pruebas. Se escribe una vez y desde ahí es de la app.",
+   "requiere": [
+    "nucleo",
+    "host-ui",
+    "i18n",
+    "tema",
+    "componentes",
+    "bienvenida",
+    "contrato"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "App",
+     "nombre": "Principal",
+     "que": "la pantalla de ejemplo (cuenta palabras con un script de bin/): la reemplaza la app"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Ajustes",
+     "que": "idioma, apariencia y lo de las piezas (Tu IA, actualizaciones, Acerca de)"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "tareas_persona": [],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "Al crear una app nueva: la agrega pieza.py crear (no hace falta pedirla). Es el punto de partida de lo propio, que la IA de la app reemplaza.",
+    "palabras": []
+   },
+   "bytes": 23034
+  },
+  {
+   "id": "github",
+   "nombre": "Repo listo para la comunidad",
+   "version": "0.3.0",
+   "estado": "lista",
+   "categoria": "repo",
+   "descripcion": "El repo listo para la comunidad desde app.json: plantillas de issues y PR, dependabot, revisar.yml, Pieza al día, AGENTS/CONTRIBUTING/SECURITY con lo que llena la IA marcado, agentes, revisión de privacidad, .gitignore de lista blanca y pieza.py repo configurar.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "tareas_persona": [
+    "Crear la organización <app>-app en GitHub",
+    "Correr pieza.py repo configurar . --aplicar con gh y permisos de admin del repo (topics, Discussions, reporte privado de fallas, aprobar las pruebas de quien aporta, proteger la rama principal, etiquetas)",
+    "Crear la wiki una vez: pestaña «Wiki» → «Create the first page» → «Save» (después se publica sola desde docs/wiki/)"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre: es lo que hace que la comunidad pueda aportar con seguridad (agrégala al final, después de las demás piezas: AGENTS.md lista las que ya están).",
+    "palabras": []
+   },
+   "bytes": 86326
+  },
+  {
+   "id": "grabar-pantalla",
+   "nombre": "Grabar pantalla",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "medios",
+   "descripcion": "Pantalla + cámara + voz, con recorte, pausa y atajos globales.",
+   "requiere": [
+    "microfono"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Bienvenida",
+     "nombre": "Permisos de grabación",
+     "que": "pantalla, cámara y micrófono, con por qué"
+    },
+    {
+     "donde": "Barra",
+     "nombre": "Grabando",
+     "que": "pausa, terminar, tiempo"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "Grabación de pantalla (Privacidad y seguridad)",
+      "por": "macOS lo pide al primer uso; no va en Info.plist"
+     },
+     {
+      "clave": "NSCameraUsageDescription",
+      "por": "mostrar la cámara"
+     }
+    ],
+    "windows": [
+     {
+      "clave": "Privacidad → Cámara",
+      "por": "mostrar la cámara"
+     }
+    ],
+    "linux": [
+     {
+      "clave": "Portal de captura (PipeWire)",
+      "por": "Wayland pide elegir la pantalla"
+     }
+    ]
+   },
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app graba la pantalla o la cámara.",
+    "palabras": [
+     "grabar",
+     "pantalla",
+     "cámara",
+     "tutorial"
+    ]
+   },
+   "bytes": 0
+  },
+  {
+   "id": "host-ios",
+   "nombre": "App de iPhone",
+   "version": "0.1.1",
+   "estado": "lista",
+   "categoria": "plataforma",
+   "descripcion": "Host genérico en Swift para iPhone (WKWebView a pantalla completa): la misma interfaz de ui/ con plataforma «movil», puente con las guardas de host-mac, config e idioma desde app.json, apariencia, pantalla encendida y unos segundos extra en segundo plano mientras algo está en curso, y el proyecto de Xcode generado desde app.json.",
+   "requiere": [
+    "nucleo",
+    "host-ui"
+   ],
+   "plataformas": [
+    "ios"
+   ],
+   "pantallas": [
+    {
+     "donde": "iPhone",
+     "nombre": "La app",
+     "que": "la interfaz de ui/ a pantalla completa, respetando la muesca y la barra de inicio (env(safe-area-inset-*)), en el idioma y el tema elegidos"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "tareas_persona": [
+    "Un Mac con Xcode para compilar e instalar la app de iPhone (abrir movil/ios/App.xcodeproj)",
+    "En Xcode, «Signing & Capabilities» → Team: tu Apple ID (gratis; la app dura 7 días y se reinstala) o Apple Developer (USD 99/año) para TestFlight y la App Store",
+    "La primera vez, el iPhone por cable con el Modo desarrollador activado (Ajustes → Privacidad y seguridad)"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre que haya app de iPhone.",
+    "palabras": []
+   },
+   "bytes": 32842
+  },
+  {
+   "id": "host-movil",
+   "nombre": "App de celular",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "plataforma",
+   "descripcion": "Capacitor con la misma interfaz; las acciones corren en un motor JS.",
+   "requiere": [
+    "host-ui"
+   ],
+   "plataformas": [
+    "ios",
+    "android"
+   ],
+   "permisos": {
+    "android": [
+     {
+      "clave": "INTERNET",
+      "por": "solo si alguna pieza sale a la red"
+     }
+    ]
+   },
+   "tareas_persona": [
+    "Instalaciones de prueba primero; para tiendas: Apple Developer y Google Play Console (USD 25 una vez)"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La persona necesita la app en el celular.",
+    "palabras": []
+   },
+   "bytes": 0
+  },
+  {
+   "id": "host-tauri",
+   "nombre": "App de Mac, Windows y Linux",
+   "version": "0.1.1",
+   "estado": "lista",
+   "categoria": "plataforma",
+   "descripcion": "Un solo host en Rust (Tauri) para Mac, Windows y Linux, con la misma API que host-mac y host-escritorio: ventana con el WebView del sistema (liviana, sin Chromium adentro), protocolo propio solo para ui/ y los medios que la app aprueba, puente con guardas, acciones declaradas con datos validados y límite de tiempo, config, idioma, menús, bandeja, apariencia, carpeta, vigilante, secretos en el llavero del sistema, avisos, diálogos y una sola instancia.",
+   "requiere": [
+    "nucleo",
+    "host-ui"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ventana",
+     "nombre": "La app",
+     "que": "la interfaz de ui/ en una ventana que recuerda su tamaño, con los menús de siempre en el idioma elegido; en Windows y Linux, también la bandeja si la app sigue viva al cerrar"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "Notificaciones",
+      "por": "solo si la app usa avisos: macOS pregunta la primera vez"
+     },
+     {
+      "clave": "Llavero",
+      "por": "solo si la app usa secretos: quedan en el Llavero de la persona, solo en este Mac"
+     }
+    ],
+    "windows": [
+     {
+      "clave": "Credenciales de Windows",
+      "por": "solo si la app usa secretos: quedan en el Administrador de credenciales de la persona"
+     }
+    ],
+    "linux": [
+     {
+      "clave": "Secret Service (gnome-keyring o KWallet)",
+      "por": "solo si la app usa secretos; sin llavero no se guarda nada"
+     }
+    ]
+   },
+   "red": [],
+   "tareas_persona": [
+    "Para compilar: Rust (rustup.rs). En Linux, además: libwebkit2gtk-4.1-dev, libgtk-3-dev, libayatana-appindicator3-dev, librsvg2-dev",
+    "Opcional: Apple Developer (USD 99/año) para firmar y que macOS no advierta"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre que haya app de escritorio (Mac, Windows o Linux).",
+    "palabras": []
+   },
+   "bytes": 194818
+  },
+  {
+   "id": "host-ui",
+   "nombre": "Puente de la interfaz",
+   "version": "0.3.0",
+   "estado": "lista",
+   "categoria": "interfaz",
+   "descripcion": "host.enviar(accion, datos) y las respuestas window.<App>.*, igual en Mac, Electron, móvil y navegador (modo demo).",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre: es como la interfaz habla con la app.",
+    "palabras": []
+   },
+   "bytes": 10452
+  },
+  {
+   "id": "i18n",
+   "nombre": "Idiomas",
+   "version": "0.3.1",
+   "estado": "lista",
+   "categoria": "interfaz",
+   "descripcion": "Traducciones con la frase en español como clave, plantillas {n}, escape seguro y traducir la página entera.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Idioma",
+     "que": "cambiar el idioma de la app"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre: toda app sale en español e inglés y deja sumar idiomas.",
+    "palabras": []
+   },
+   "bytes": 17993
+  },
+  {
+   "id": "ia",
+   "nombre": "Tu IA",
+   "version": "0.6.3",
+   "estado": "lista",
+   "categoria": "ia",
+   "descripcion": "La IA de la persona (Claude Code, Codex o Gemini) con su propia cuenta: sin herramientas, sin su memoria, el pedido nunca como argumento, material y revisión a fondo de solo lectura, y en vivo (lo que lee y «Detener»).",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Bienvenida",
+     "nombre": "Tu IA",
+     "que": "elegir Claude, ChatGPT o Gemini y probar que responde"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Tu IA",
+     "que": "cambiar de IA y volver a probar"
+    }
+   ],
+   "tareas_persona": [],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app usa IA para algo (resumir, generar, ordenar, responder) con la cuenta de la persona.",
+    "palabras": [
+     "ia",
+     "resumir",
+     "generar",
+     "asistente",
+     "chat",
+     "redactar",
+     "analizar"
+    ]
+   },
+   "bytes": 28803
+  },
+  {
+   "id": "mcp",
+   "nombre": "Hablar con tu IA (MCP)",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "ia",
+   "descripcion": "Servidor MCP local para que la persona converse con sus datos desde su IA, y alta en Claude, Codex, Gemini y Claude Desktop.",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Conectar a tu IA",
+     "que": "conectar, ver estado y quitar"
+    }
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La persona querría preguntarle cosas a su IA sobre sus datos de la app.",
+    "palabras": [
+     "preguntar",
+     "conversar",
+     "chat"
+    ]
+   },
+   "bytes": 0
+  },
+  {
+   "id": "microfono",
+   "nombre": "Micrófono",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "medios",
+   "descripcion": "Grabar o escuchar el micrófono (y el audio del sistema en Mac) con permiso explicado.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Bienvenida",
+     "nombre": "Permiso de micrófono",
+     "que": "explicar para qué antes de pedirlo"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "NSMicrophoneUsageDescription",
+      "por": "grabar la voz"
+     },
+     {
+      "clave": "NSAudioCaptureUsageDescription",
+      "por": "grabar el audio del sistema (reuniones)"
+     }
+    ],
+    "windows": [
+     {
+      "clave": "Privacidad → Micrófono",
+      "por": "Windows pregunta la primera vez"
+     }
+    ],
+    "linux": [],
+    "ios": [
+     {
+      "clave": "NSMicrophoneUsageDescription",
+      "por": "grabar la voz"
+     }
+    ],
+    "android": [
+     {
+      "clave": "RECORD_AUDIO",
+      "por": "grabar la voz"
+     }
+    ]
+   },
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app graba o escucha voz.",
+    "palabras": []
+   },
+   "bytes": 0
+  },
+  {
+   "id": "notas-git",
+   "nombre": "Datos en tu git",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "datos",
+   "descripcion": "Guarda los datos de la persona en un repo suyo de GitHub o GitLab, nunca en un servidor nuestro.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Bienvenida",
+     "nombre": "Dónde guardar",
+     "que": "elegir o crear el repo de datos"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Datos",
+     "que": "cambiar el repo"
+    }
+   ],
+   "red": [
+    "github.com",
+    "gitlab.com"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "Los datos deben tener historial y respaldo en la cuenta de la persona.",
+    "palabras": [
+     "notas",
+     "respaldo",
+     "historial",
+     "git"
+    ]
+   },
+   "bytes": 0
+  },
+  {
+   "id": "notificaciones",
+   "nombre": "Avisos",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "plataforma",
+   "descripcion": "Avisos programados del sistema (pagos, repasos, recordatorios), con permiso y opción de apagarlos.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Avisos",
+     "que": "activar y elegir cuáles"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "Notificaciones",
+      "por": "macOS pregunta al primer aviso"
+     }
+    ],
+    "ios": [
+     {
+      "clave": "Notificaciones",
+      "por": "se pide en el momento"
+     }
+    ],
+    "android": [
+     {
+      "clave": "POST_NOTIFICATIONS",
+      "por": "Android 13 o más"
+     }
+    ]
+   },
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app tiene que recordarle algo a la persona aunque esté cerrada.",
+    "palabras": []
+   },
+   "bytes": 0
+  },
+  {
+   "id": "nucleo",
+   "nombre": "Núcleo",
+   "version": "0.7.1",
+   "estado": "lista",
+   "categoria": "base",
+   "descripcion": "Lo que todo script necesita: app.json, carpeta de datos, config validada, escritura atómica y el contrato «el último argumento es la salida».",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre: es la base de cualquier script de la app.",
+    "palabras": []
+   },
+   "bytes": 12049
+  },
+  {
+   "id": "pagina",
+   "nombre": "Página pública",
+   "version": "0.1.2",
+   "estado": "lista",
+   "categoria": "repo",
+   "descripcion": "La página pública bilingüe (GitHub Pages) generada desde docs/pagina.json: descarga según el sistema, demo, permisos e internet que salen de sus piezas, preguntas frecuentes con su JSON-LD, SEO y el sello «Hecho con Pieza».",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Web",
+     "nombre": "Inicio",
+     "que": "qué es, descargar, cómo funciona, comparación, preguntas, comunidad"
+    },
+    {
+     "donde": "Web",
+     "nombre": "Demo",
+     "que": "la app en el navegador con datos ficticios"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "tareas_persona": [
+    "Activar GitHub Pages en el repo de la app (Settings → Pages → Source: GitHub Actions)",
+    "Completar docs/pagina.json (frase, funciones, preguntas propias, capturas y colores) y correr pieza.py generar . pagina",
+    "Crear el repo <org>/<org>.github.io con herramientas/org.github.io/robots.txt e index.html (opcional: la raíz de la organización)",
+    "Verificar la página en Google Search Console",
+    "Mirar docs/img/compartir.png y las capturas antes de subirlas (datos ficticios)"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre.",
+    "palabras": []
+   },
+   "bytes": 71842
+  },
+  {
+   "id": "privacidad",
+   "nombre": "Revisión de privacidad",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "repo",
+   "descripcion": "Antes de cada commit busca nombres, correos y rutas reales (lista local nunca versionada).",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "tareas_persona": [
+    "Llenar .terminos-privados con nombres y empresas reales (nunca se sube)"
+   ],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre: el repo es público.",
+    "palabras": []
+   },
+   "bytes": 0
+  },
+  {
+   "id": "red",
+   "nombre": "Red segura",
+   "version": "0.2.0",
+   "estado": "lista",
+   "categoria": "conexiones",
+   "descripcion": "Pedidos HTTPS desde los scripts: solo a dominios permitidos, sin redirecciones, con tope de tamaño y de tiempo, y la credencial nunca en un error.",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "Algún script de la app sale a internet (APIs, descargas).",
+    "palabras": []
+   },
+   "bytes": 12280
+  },
+  {
+   "id": "tema",
+   "nombre": "Tema claro y oscuro",
+   "version": "0.2.1",
+   "estado": "lista",
+   "categoria": "interfaz",
+   "descripcion": "Sistema, claro u oscuro con un solo juego de tokens CSS y light-dark(): cada color se escribe una vez.",
+   "requiere": [],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "Apariencia",
+     "que": "sistema, claro u oscuro"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "recomendar": {
+    "siempre": true,
+    "cuando": "Siempre.",
+    "palabras": []
+   },
+   "bytes": 11638
+  },
+  {
+   "id": "trabajos",
+   "nombre": "Trabajos largos",
+   "version": "0.2.2",
+   "estado": "lista",
+   "categoria": "datos",
+   "descripcion": "Lo que tarda minutos corre por etapas en segundo plano: estado en disco, avance en vivo, latido, «Detener», «Seguir donde quedó» y trabajos que esperan respuestas.",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Panel",
+     "nombre": "Trabajo",
+     "que": "etapas, ítems con su estado, «Detener», «Seguir» y preguntas (la pieza da los datos; la tarjeta la pinta la app)"
+    }
+   ],
+   "permisos": {},
+   "red": [],
+   "tareas_persona": [],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app hace algo que tarda minutos (documentar, transcribir, resumir un libro) y no puede perderse si se cierra.",
+    "palabras": [
+     "trabajo",
+     "segundo plano",
+     "progreso",
+     "detener",
+     "largo"
+    ]
+   },
+   "bytes": 28700
+  },
+  {
+   "id": "transcribir",
+   "nombre": "Transcribir",
+   "version": "0.2.0",
+   "estado": "lista",
+   "categoria": "medios",
+   "descripcion": "Audio a texto en el computador con whisper.cpp: modelos con huella fija, vocabulario por archivo privado (nunca como argumento), VAD y filtro de inventos y bucles.",
+   "requiere": [
+    "nucleo"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Bienvenida",
+     "nombre": "Modelo de voz",
+     "que": "descargar el modelo la primera vez, con avance (la descarga la hace el host con MODELOS)"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Voz",
+     "que": "idioma del audio y modelo"
+    }
+   ],
+   "permisos": {
+    "mac": [
+     {
+      "clave": "NSMicrophoneUsageDescription",
+      "por": "solo si la app graba la voz que transcribe (la pieza solo lee archivos de audio)"
+     }
+    ]
+   },
+   "red": [
+    "huggingface.co"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app trabaja con voz, reuniones o videos.",
+    "palabras": [
+     "audio",
+     "voz",
+     "video",
+     "subtítulos",
+     "reunión"
+    ]
+   },
+   "bytes": 20339
+  },
+  {
+   "id": "universos",
+   "nombre": "Universos",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "datos",
+   "descripcion": "Mundos temáticos que cambian textos, colores y juego de la app; se descargan, se votan y se crean con la IA.",
+   "requiere": [
+    "catalogo",
+    "tema"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux",
+    "ios",
+    "android"
+   ],
+   "pantallas": [
+    {
+     "donde": "Galería",
+     "nombre": "Universos",
+     "que": "elegir, previsualizar, votar y descargar"
+    },
+    {
+     "donde": "Ajustes",
+     "nombre": "Crear universo",
+     "que": "pedírselo a tu IA"
+    }
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "Quieres que la app sea entretenida y personalizable por temas.",
+    "palabras": [
+     "universos",
+     "juego",
+     "gamificar",
+     "temas"
+    ]
+   },
+   "bytes": 0
+  },
+  {
+   "id": "youtube",
+   "nombre": "Subir a YouTube",
+   "version": "0.0.0",
+   "estado": "planeada",
+   "categoria": "conexiones",
+   "descripcion": "Conectar el canal de la persona con OAuth y subir videos directo.",
+   "requiere": [
+    "red"
+   ],
+   "plataformas": [
+    "mac",
+    "windows",
+    "linux"
+   ],
+   "pantallas": [
+    {
+     "donde": "Ajustes",
+     "nombre": "YouTube",
+     "que": "conectar y desconectar el canal"
+    },
+    {
+     "donde": "Exportar",
+     "nombre": "Subir a YouTube",
+     "que": "título, privacidad y subir"
+    }
+   ],
+   "red": [
+    "accounts.google.com",
+    "oauth2.googleapis.com",
+    "www.googleapis.com"
+   ],
+   "tareas_persona": [
+    "Proyecto en Google Cloud con YouTube Data API y cliente OAuth de escritorio",
+    "Verificación de la app en Google si se abre a más de 100 personas"
+   ],
+   "recomendar": {
+    "siempre": false,
+    "cuando": "La app produce videos para publicar.",
+    "palabras": [
+     "youtube",
+     "publicar",
+     "subir",
+     "canal"
+    ]
+   },
+   "bytes": 0
+  }
+ ]
+}

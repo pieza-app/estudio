@@ -1,0 +1,68 @@
+{
+ "formato": 1,
+ "acciones": {
+  "listaIA": {
+   "script": "ia.py",
+   "args": [
+    "lista"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "iaLista",
+   "limite": 30,
+   "pieza": "ia"
+  },
+  "piezasFicha": {
+   "script": "piezas.py",
+   "args": [
+    "ficha"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "plataformas": {
+     "tipo": "lista",
+     "max": 6,
+     "requerido": true
+    },
+    "piezas": {
+     "tipo": "lista",
+     "max": 60
+    }
+   },
+   "responde": "fichaLista",
+   "limite": 30,
+   "pieza": "app"
+  },
+  "piezasLista": {
+   "script": "piezas.py",
+   "args": [
+    "lista"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "piezasListas",
+   "limite": 30,
+   "pieza": "app"
+  },
+  "probarIA": {
+   "script": "ia.py",
+   "args": [
+    "probar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "ia": {
+     "tipo": "enum",
+     "valores": [
+      "claude",
+      "codex",
+      "gemini"
+     ]
+    }
+   },
+   "responde": "iaProbada",
+   "limite": 150,
+   "pieza": "ia"
+  }
+ }
+}

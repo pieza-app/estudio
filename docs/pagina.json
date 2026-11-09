@@ -1,0 +1,109 @@
+{
+ "formato": 1,
+ "titulo": {
+  "es": "Pieza — Crea tu app paso a paso, con piezas ya hechas",
+  "en": "Pieza — Build your app step by step, with ready-made pieces"
+ },
+ "descripcion": {
+  "es": "Pieza es un programa gratis para crear apps de escritorio y celular paso a paso. Las piezas ya hechas no gastan tokens de tu IA.",
+  "en": "Pieza is a free program to build desktop and phone apps step by step. Ready-made pieces cost your AI no tokens."
+ },
+ "frase": {
+  "es": "Crea tu app paso a paso.",
+  "en": "Build your app step by step."
+ },
+ "intro": {
+  "es": "Eliges los sistemas, cuentas tu idea y eliges las piezas. Pieza te muestra lo que ya está hecho y lo que falta. Lo ya hecho no gasta tokens de tu IA.",
+  "en": "Choose the systems, tell your idea and pick the pieces. Pieza shows you what is already made and what is left. What is already made costs your AI no tokens."
+ },
+ "categoria": "DeveloperApplication",
+ "licencia": "AGPL-3.0",
+ "licencia_url": "https://www.gnu.org/licenses/agpl-3.0.html",
+ "acento": {
+  "claro": "#2f5fd0",
+  "oscuro": "#7fa2ff"
+ },
+ "descargas": true,
+ "demo": true,
+ "datos": {
+  "es": "En tu computador. Son archivos en formato abierto. No hay servidores ni cuentas: nada sale de ahí sin que lo pidas.",
+  "en": "On your computer. They're open-format files. There are no servers or accounts: nothing leaves it unless you ask."
+ },
+ "usa": {
+  "notificaciones": false,
+  "llavero": false,
+  "microfono": false
+ },
+ "funciones": [
+  {
+   "titulo": {
+    "es": "Para qué sistemas",
+    "en": "For which systems"
+   },
+   "texto": {
+    "es": "Primero eliges dónde corre tu app: Mac, Windows, Linux o iPhone.",
+    "en": "First you choose where your app runs: Mac, Windows, Linux or iPhone."
+   }
+  },
+  {
+   "titulo": {
+    "es": "Piezas sugeridas",
+    "en": "Suggested pieces"
+   },
+   "texto": {
+    "es": "Cuentas tu idea en una frase y Pieza sugiere las piezas que calzan.",
+    "en": "You tell your idea in one sentence and Pieza suggests the pieces that fit."
+   }
+  },
+  {
+   "titulo": {
+    "es": "0 tokens en lo ya hecho",
+    "en": "0 tokens on what is made"
+   },
+   "texto": {
+    "es": "Las piezas con el ícono de Pieza ya están hechas y probadas. Tu IA no las escribe.",
+    "en": "Pieces with the Pieza icon are already made and tested. Your AI doesn't write them."
+   }
+  },
+  {
+   "titulo": {
+    "es": "La ficha de tu app",
+    "en": "Your app's summary"
+   },
+   "texto": {
+    "es": "Antes de crear, ves lo que falta, los permisos que pide y a qué se conecta.",
+    "en": "Before you build, you see what is left, the permissions it asks for and what it connects to."
+   }
+  }
+ ],
+ "pasos": [],
+ "comparacion": null,
+ "capturas": [],
+ "preguntas": [],
+ "permisos": [],
+ "red": [],
+ "comunidad": [
+  {
+   "titulo": {
+    "es": "Aporta",
+    "en": "Contribute"
+   },
+   "texto": {
+    "es": "Con o sin programar, con o sin IA.",
+    "en": "With or without code, with or without AI."
+   },
+   "url": "https://github.com/pieza-app/estudio/blob/main/CONTRIBUTING.md"
+  },
+  {
+   "titulo": {
+    "es": "Cuéntanos",
+    "en": "Tell us"
+   },
+   "texto": {
+    "es": "Ideas, dudas y errores.",
+    "en": "Ideas, questions and bugs."
+   },
+   "url": "https://github.com/pieza-app/estudio/issues/new/choose"
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+# Para el repo pieza-app/pieza-app.github.io (la raíz del sitio de la organización): copia este archivo ahí.
+User-agent: *
+Allow: /
+Sitemap: https://pieza-app.github.io/estudio/sitemap.xml
