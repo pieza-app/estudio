@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.3.0
+- Ahora puedes publicar tu app en GitHub con tu cuenta, sumarla al explorador de apps hechas con Pieza y proponer una pieza nueva. Las piezas también se ven en inglés. · *You can now publish your app on GitHub with your account, add it to the explorer of apps made with Pieza and propose a new piece. Pieces now show in English too.*
+
 ## 0.2.0
 - Ahora Pieza crea tu app: tu IA arma el plan, Pieza crea la app con las piezas ya hechas y tu IA hace lo propio, paso a paso o todo automático, con los tokens a la vista. · *Pieza now builds your app: your AI makes the plan, Pieza builds the app with the ready-made pieces and your AI does the rest, step by step or fully automatic, with tokens in view.*
 

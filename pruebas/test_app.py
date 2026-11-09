@@ -154,3 +154,38 @@ class Proyectos(unittest.TestCase):
         self.assertEqual(self.pedidos[-1][1]["leer"], carpeta)  # la IA solo lee la carpeta
         with open(os.path.join(carpeta, "bin", "recetas.py"), encoding="utf-8") as f:
             self.assertEqual(f.read(), "print('hola')\n")
+
+
+class Publicar(unittest.TestCase):
+    """bin/publicar.py: lo que llega del explorador se valida; sin gh con sesión no se publica nada."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        os.environ["PIEZA_DATOS"] = os.path.join(self.tmp.name, "datos")
+        sys.path.insert(0, os.path.join(RAIZ, "bin"))
+        import publicar
+        self.m = publicar
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_explorador_valida(self):
+        apps = self.m.limpiar_apps({"proyectos": [
+            {"nombre": "Recetas", "repo": "ana-perez/recetas", "pagina": "https://ana-perez.github.io/recetas/", "revision": {"estado": "revisado"}},
+            {"nombre": "Mala", "repo": "../../etc", "pagina": "javascript:alert(1)"},
+            {"nombre": "Sin página", "repo": "matias-soto/gastos", "pagina": "http://x"}]})
+        self.assertEqual([a["repo"] for a in apps], ["ana-perez/recetas", "matias-soto/gastos"])
+        self.assertTrue(apps[0]["revisada"])
+        self.assertEqual(apps[1]["pagina"], "")
+        self.assertEqual(self.m.limpiar_apps("no"), [])
+
+    def test_sin_sesion_no_publica(self):
+        import proyectos
+        carpeta = os.path.join(self.tmp.name, "Recetas")
+        os.makedirs(carpeta)
+        proyectos._guardar({"id": "recetas", "nombre": "Recetas", "frase": "x", "estado": "pasos", "pasos": [], "carpeta": carpeta})
+        self.m.revisar = lambda d: {"ok": True, "gh": False, "sesion": False}
+        r = self.m.subir({"id": "recetas", "dueno": "ana-perez", "visibilidad": "publico", "explorador": "si"})
+        self.assertEqual(r["codigo"], "gh")
+        with self.assertRaises(ValueError):
+            self.m.subir({"id": "recetas", "dueno": "ana perez; rm", "visibilidad": "publico"})

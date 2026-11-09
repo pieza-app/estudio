@@ -145,6 +145,71 @@
    "responde": "proyectosListos",
    "limite": 30,
    "pieza": "app"
+  },
+  "publicarExplorar": {
+   "script": "publicar.py",
+   "args": [
+    "explorar"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "explorarListo",
+   "limite": 45,
+   "pieza": "app"
+  },
+  "publicarRevisar": {
+   "script": "publicar.py",
+   "args": [
+    "revisar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "publicarRevisado",
+   "limite": 60,
+   "pieza": "app"
+  },
+  "publicarSubir": {
+   "script": "publicar.py",
+   "args": [
+    "subir"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "dueno": {
+     "tipo": "texto",
+     "max": 39,
+     "requerido": true
+    },
+    "visibilidad": {
+     "tipo": "enum",
+     "valores": [
+      "publico",
+      "privado"
+     ],
+     "requerido": true
+    },
+    "explorador": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
+    }
+   },
+   "responde": "publicado",
+   "limite": 900,
+   "pieza": "app"
   }
  }
 }

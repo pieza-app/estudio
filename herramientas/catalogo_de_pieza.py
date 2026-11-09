@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 
-CAMPOS = ("id", "nombre", "version", "estado", "categoria", "descripcion", "requiere", "plataformas", "pantallas", "permisos",
+CAMPOS = ("id", "nombre", "version", "estado", "categoria", "descripcion", "en", "requiere", "plataformas", "pantallas", "permisos",
           "red", "tareas_persona")
 
 
