@@ -40,13 +40,20 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 
 ## Cómo funciona
 - **El asistente** (`ui/app.js`, `E.paso`): `inicio` → `sistemas` → `idea` → `piezas` → `ficha` → `plan` → `crear` → `pasos`. Cada
-  paso tiene su función (`pasoSistemas` … `pasoPasos`) y se cambia con `irA()`. El inicio lista las apps empezadas («Seguir»).
+  paso tiene su función (`pasoSistemas` … `pasoPasos`) y se cambia con `irA()`. El inicio
+  (`inicio()`) tiene la caja «Tu idea» (`#frase-rapida`, pasa a `E.nueva.frase`) y las apps empezadas en tarjetas con su avance y
+  el menú «⋯» (`data-quitar`: solo el registro; `data-borrar`: también la carpeta, con `ui.confirmar`). La barra lateral
+  (`lateral()`, dentro de `.marco`) va en todas las pantallas; en el celular queda arriba. Las cuatro etapas (`ETAPAS`, `etapas()`)
+  van sobre cada paso. Idea, plan y pasos usan dos columnas (`.dos-columnas`): al lado, las piezas que calzan en vivo
+  (`piezasVivo`) o la consola de la IA (`consolaHTML`).
+- **Borrar una app** (`proyectos.py borrar`, acción `proyectoBorrar` {id, carpeta si/no} → `proyectoBorrado`): borra el registro y,
+  con `carpeta: "si"`, la carpeta, solo si está dentro de la carpeta Pieza y su `app.json` tiene el mismo `id`.
 - **Sugerencias:** una pieza se sugiere si la frase trae una de sus `recomendar.palabras`. Las de `recomendar.siempre` van siempre.
 - **La ficha** la calcula `bin/piezas.py ficha` (acción `piezasFicha` → `fichaLista`). En el navegador la calcula `fichaSimulada`
   con la misma regla: si cambias la regla, cambia los dos lados y `pruebas/test_app.py` (clase `Piezas`).
 - **Acciones** (`app.json` → `acciones`): `piezasLista` → `piezasListas`, `piezasFicha` → `fichaLista`, `proyectosLista` →
   `proyectosListos`, `proyectoPlan` → `planListo`, `proyectoCrear` → `proyectoCreado`, `proyectoPaso` → `pasoListo`,
-  `proyectoVista` → `vistaAbierta`, `publicarExplorar` → `explorarListo`, `publicarRevisar` → `publicarRevisado` y `publicarSubir` → `publicado`. Lo que
+  `proyectoVista` → `vistaAbierta`, `publicarExplorar` → `explorarListo`, `publicarRevisar` → `publicarRevisado`, `publicarSubir` → `publicado` y `proyectoBorrar` → `proyectoBorrado`. Lo que
   escribe la persona llega en el archivo de entrada, nunca como argumento. En el navegador las simula `simular()` (`planSimulado`).
 - **Cómo escribe la IA.** Con Claude o Codex (`ia.puede_escribir()`), edita la carpeta de la app directamente
   (`ia.preguntar(..., escribir=carpeta)`: solo ahí, sin terminal ni internet). Antes del paso Pieza saca una foto (`_foto`) y
@@ -55,6 +62,8 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   `app.json` puede sumar acciones y config, pero no cambiar `id`, `nombre`, `repo`, `datos`, `plataformas`, `privado` ni
   `version`; después Pieza corre `pieza.py acciones`. También puede pedir `borrar` archivos propios (nunca de piezas). Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
 - **Publicar y proponer:** al terminar, «Publicar en GitHub» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
+  «En una organización nueva» (`__nueva__`) muestra la guía (`.guia-org`): abre GitHub para crearla y «Ya la creé: revisar» vuelve
+  a `publicarRevisar`; si la encuentra, la elige. «Publicar» espera hasta entonces.
   «Proponer en GitHub» abre en el navegador un issue prellenado en `pieza-app/pieza` (etiqueta `pieza-nueva`).
 - **En vivo:** `proyectoPaso` tiene `"progreso": "pasoAvance"`: `proyectos.py` emite (`trabajos.emitir`) la fase (`ia`,
   `pruebas`) y lo que la IA lee y escribe; la interfaz lo muestra con el tiempo que lleva (`vivoHTML`).

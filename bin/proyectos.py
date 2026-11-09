@@ -6,6 +6,7 @@
   proyectos.py revisar <entrada.json {id}> <salida.json>
   proyectos.py crear <entrada.json {id}> <salida.json>
   proyectos.py paso  <entrada.json {id, n}> <salida.json>
+  proyectos.py borrar <entrada.json {id, carpeta: si|no}> <salida.json>
 
 Un proyecto se guarda en <carpeta de datos>/proyectos/<id>.json. La app queda en ~/Pieza/<Nombre> (o en PIEZA_PROYECTOS, para
 las pruebas).
@@ -28,6 +29,7 @@ la respuesta y de lo que cambió en los archivos (~4 caracteres por token).
 """
 import json
 import os
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 import re
 import subprocess
@@ -630,6 +632,26 @@ def _prompt_editar(p, n, error=None):
 3. Al terminar, responde en 1 a 3 frases qué hiciste. Nada más."""
 
 
+def borrar(d):
+    """Quita una app de la lista. Con carpeta «si», también borra su carpeta, pero solo si está dentro de la carpeta de Pieza y es
+    esa misma app (su app.json dice su id): nunca otra cosa del computador."""
+    p = _leer(d.get("id"))
+    carpeta_tambien = d.get("carpeta") == "si"
+    borrada = False
+    c = p.get("carpeta")
+    if carpeta_tambien and isinstance(c, str) and c:
+        base = os.path.realpath(_base_proyectos())
+        real = os.path.realpath(c)
+        dentro = os.path.commonpath([base, real]) == base and real != base
+        app = nucleo.leer_json(os.path.join(real, "app.json"), {}, maximo=2_000_000) if dentro else {}
+        if not dentro or not isinstance(app, dict) or app.get("id") != p["id"]:
+            raise ValueError("No borré la carpeta: no es la de esta app dentro de la carpeta Pieza.")
+        shutil.rmtree(real)
+        borrada = True
+    os.remove(os.path.join(_registro(), p["id"] + ".json"))
+    return {"ok": True, "id": p["id"], "carpeta": borrada}
+
+
 def lista(_d):
     proyectos = []
     for nombre in sorted(os.listdir(_registro())):
@@ -641,4 +663,4 @@ def lista(_d):
 
 
 if __name__ == "__main__":
-    nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso}, __doc__)
+    nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso, "borrar": borrar}, __doc__)

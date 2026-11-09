@@ -64,6 +64,31 @@
    "limite": 150,
    "pieza": "ia"
   },
+  "proyectoBorrar": {
+   "script": "proyectos.py",
+   "args": [
+    "borrar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "carpeta": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ],
+     "requerido": true
+    }
+   },
+   "responde": "proyectoBorrado",
+   "limite": 120,
+   "pieza": "app"
+  },
   "proyectoCrear": {
    "script": "proyectos.py",
    "args": [
