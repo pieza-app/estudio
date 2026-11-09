@@ -16,7 +16,11 @@ las pruebas).
   que identifica a la app en `app.json`. Con Gemini, la IA devuelve los archivos en JSON y Pieza los revisa y los escribe. En los
   dos casos Pieza corre `bash pruebas/correr.sh`; si falla, la IA recibe el error y tiene un intento más.
 
-Los tokens se estiman con el largo del pedido, de la respuesta y de lo que la IA escribió (~4 caracteres por token).
+Para gastar menos en cada paso, la IA recibe un mapa de los archivos propios de la app y lo que hicieron los pasos anteriores, y
+no puede leer lo que no le sirve para programar (`NO_LEER`: lo generado, la app de escritorio, la página, las licencias).
+
+Los tokens son los que la IA dice haber usado (Claude y Codex). Si no los dice (Gemini), se estiman con el largo del pedido, de
+la respuesta y de lo que cambió en los archivos (~4 caracteres por token).
 """
 import json
 import os
@@ -40,6 +44,10 @@ LIMITE_IA = 1500  # por intento; la acción de la app tiene 3600 s para dos inte
 # Lo que la IA nunca escribe: lo que arma pieza.py. app.json sí (sus acciones), pero sin tocar lo que la identifica.
 PROTEGIDOS = {"piezas.json", "acciones.json", "pruebas/correr.sh"}  # correr.sh: la IA no puede aflojar las pruebas
 APP_FIJO = ("id", "nombre", "repo", "datos", "plataformas", "privado", "version")
+# Lo que la IA no lee en un paso: no le sirve para programar la app y solo gasta tokens. Las piezas sí se pueden leer (su API).
+NO_LEER = ("escritorio/", "docs/", ".github/", "herramientas/", "piezas.json", "acciones.json", "LICENSE", "CODE_OF_CONDUCT.md",
+           "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md", "GEMINI.md", "build.sh", "instalar.sh")
+MAX_MAPA = 80  # archivos en el mapa
 
 
 def _guias():
@@ -272,11 +280,44 @@ def probar(carpeta):
     return r.returncode == 0, salida
 
 
+def _no_leer(rel):
+    return any(rel == x or (x.endswith("/") and rel.startswith(x)) for x in NO_LEER)
+
+
+def _mapa(carpeta):
+    """Los archivos de la app que la IA puede leer, con su tamaño: así va directo a lo que necesita. Las piezas van aparte."""
+    de_piezas = _de_piezas(carpeta)
+    propios, piezas_ = [], []
+    for raiz, dirs, archivos in os.walk(carpeta):
+        dirs[:] = sorted(x for x in dirs if x not in (".git", "node_modules", "target", "__pycache__", "dist"))
+        for a in sorted(archivos):
+            rel = os.path.relpath(os.path.join(raiz, a), carpeta).replace(os.sep, "/")
+            if _no_leer(rel) or rel.startswith("pruebas/datos/"):
+                continue
+            try:
+                kb = max(1, round(os.path.getsize(os.path.join(raiz, a)) / 1024))
+            except OSError:
+                continue
+            (piezas_ if rel in de_piezas else propios).append(f"{rel} ({kb} KB)")
+    return propios[:MAX_MAPA], piezas_[:MAX_MAPA]
+
+
+def _historia(p, n):
+    """Lo que hicieron los pasos anteriores que quedaron listos: su resumen y qué archivos tocaron."""
+    lineas = []
+    for i, x in enumerate(p["pasos"][:n]):
+        if x.get("estado") == "listo":
+            tocados = ", ".join((x.get("escritos") or [])[:12])
+            lineas.append(f"{i + 1}. {x['titulo']}: {_texto(x.get('resumen'), 300) or 'listo'}" + (f" (tocó {tocados})" if tocados else ""))
+    return "\n".join(lineas) or "Ninguno todavía."
+
+
 def _prompt_paso(p, n, error=None):
     with open(os.path.join(_guias(), "reglas.md"), encoding="utf-8") as f:
         reglas = f.read()
     plan_ = "\n".join(f"{i + 1}. {x['titulo']} ({x['estado']})" for i, x in enumerate(p["pasos"]))
     x = p["pasos"][n]
+    propios, de_piezas = _mapa(p["carpeta"])
     extra = f"\n\n# Las pruebas fallaron con tu respuesta anterior\nArréglalo. Las últimas líneas:\n```\n{error}\n```" if error else ""
     return f"""{reglas}
 
@@ -286,16 +327,34 @@ def _prompt_paso(p, n, error=None):
 # El plan
 {plan_}
 
+# Lo que ya hicieron los pasos anteriores
+{_historia(p, n)}
+
+# Los archivos de la app
+Propios (los que se cambian): {", ".join(propios) or "ninguno"}
+De piezas (no se cambian; su API está en AGENTS.md): {", ".join(de_piezas) or "ninguno"}
+
 # Este paso ({n + 1})
 {x['titulo']}
 {x['que']}
 Archivos que pensabas tocar: {', '.join(x['archivos']) or 'los que hagan falta'}{extra}
 
 # Cómo responder
-Lee la carpeta de la app antes de escribir. Responde SOLO este JSON, sin texto antes ni después:
+Lee solo lo que necesitas (usa el mapa de arriba). Responde SOLO este JSON, sin texto antes ni después:
 {{"resumen": "qué hiciste, en 1 a 3 frases", "archivos": [{{"ruta": "ruta/relativa", "contenido": "el archivo completo"}}],
  "borrar": ["ruta/que/ya/no/sirve"]}}
 «borrar» es opcional (por ejemplo, el ejemplo de `pieza.py crear` que reemplazas)."""
+
+
+def _gastar(x, uso, estimado):
+    """Suma al paso los tokens reales si la IA los dijo; si no, la estimación. `cache` (lo que la IA reusó, mucho más barato) va
+    aparte y no entra en «gastado»."""
+    if uso.get("entrada") or uso.get("salida"):
+        x["gastado"] = x.get("gastado", 0) + uso.get("entrada", 0) + uso.get("salida", 0)
+        x["cache"] = x.get("cache", 0) + uso.get("cache", 0)
+        x["medido"] = True
+    else:
+        x["gastado"] = x.get("gastado", 0) + estimado
 
 
 def paso(d):
@@ -314,9 +373,11 @@ def paso(d):
             antes = _foto(carpeta)
             pedido = _prompt_editar(p, n, error_prueba)
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
-            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, al_evento=_avisar(carpeta, n, intento))
+            uso = {}
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, no_leer=NO_LEER,
+                                             al_evento=_avisar(carpeta, n, intento, uso))
             nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
-            x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN
+            _gastar(x, uso, tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN)
             if cuidados:
                 x["cuidados"] = sorted(set(x.get("cuidados", [])) | set(cuidados))
             if error:
@@ -331,8 +392,10 @@ def paso(d):
         else:
             pedido = _prompt_paso(p, n, error_prueba)
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
-            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, al_evento=_avisar(carpeta, n, intento))
-            x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto)
+            uso = {}
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, no_leer=NO_LEER,
+                                             al_evento=_avisar(carpeta, n, intento, uso))
+            _gastar(x, uso, tokens(pedido, texto))
             if error:
                 x.update(estado="fallo", error=ia.frase(error), intentos=intento)
                 break
@@ -418,12 +481,30 @@ def _cuidar(carpeta, antes):
             cuidados.append("app.json")
     final = _foto(carpeta)
     escritos = sorted(r for r in set(final) | set(antes) if final.get(r) != antes.get(r))
-    return escritos, cuidados, sum(len(final.get(r, b"")) for r in escritos)
+    return escritos, cuidados, sum(_cambiado(antes.get(r, b""), final.get(r, b"")) for r in escritos)
 
 
-def _avisar(carpeta, n, intento):
-    """En vivo para la interfaz (pieza «trabajos», acción con «progreso»): qué lee y qué escribe la IA, con rutas de la app."""
+def _cambiado(antes, ahora):
+    """Cuántos bytes nuevos hay en `ahora`: sin lo que quedó igual al principio y al final (una edición chica en un archivo grande
+    cuenta poco)."""
+    i, tope = 0, min(len(antes), len(ahora))
+    while i < tope and antes[i] == ahora[i]:
+        i += 1
+    j = 0
+    while j < tope - i and antes[-1 - j] == ahora[-1 - j]:
+        j += 1
+    return len(ahora) - i - j
+
+
+def _avisar(carpeta, n, intento, uso=None):
+    """En vivo para la interfaz (pieza «trabajos», acción con «progreso»): qué lee y qué escribe la IA, con rutas de la app.
+    Los tokens que la IA dice haber usado ({"t": "uso"}) se suman en `uso`."""
     def al_evento(e):
+        if e.get("t") == "uso" and uso is not None:
+            for k in ("entrada", "cache", "salida"):
+                v = e.get(k)
+                uso[k] = uso.get(k, 0) + (v if isinstance(v, int) and v >= 0 else 0)
+            return
         ruta = e.get("ruta") if isinstance(e.get("ruta"), str) else ""
         if ruta.startswith(carpeta):
             ruta = os.path.relpath(ruta, carpeta).replace(os.sep, "/")
@@ -436,7 +517,8 @@ def _prompt_editar(p, n, error=None):
     """El pedido de un paso cuando la IA edita la carpeta: las mismas reglas, sin JSON."""
     base = _prompt_paso(p, n, error)
     return base.split("# Cómo responder")[0] + """# Cómo trabajar en este paso
-1. Lee la carpeta de la app (empieza por AGENTS.md).
+1. Lee solo lo que necesitas: los archivos que vas a cambiar y lo que los usa. Usa el mapa de arriba y busca con Grep en un
+   archivo grande antes de leerlo entero. Lee un archivo de pieza solo si su API no está en AGENTS.md.
 2. Crea o cambia los archivos que el paso necesita, directamente en la carpeta. No toques los archivos de piezas.
 3. Al terminar, responde en 1 a 3 frases qué hiciste. Nada más."""
 

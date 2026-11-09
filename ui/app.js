@@ -198,7 +198,7 @@
     const filas = p.pasos.map((x, i) => `<li class="estado-${esc(x.estado)}">
       <span class="chip-estado">${esc(ESTADOS[x.estado] || x.estado)}</span>
       <b data-sin-traducir>${esc(x.titulo)}</b>
-      <small class="suave" data-sin-traducir>${esc(x.gastado ? Tp("~{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens estimados", { n: miles(x.tokens) }))}</small>
+      <small class="suave" data-sin-traducir>${esc(x.gastado ? (x.medido ? Tp("{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens gastados", { n: miles(x.gastado) })) : Tp("~{n} tokens estimados", { n: miles(x.tokens) }))}</small>
       ${x.resumen ? `<span class="suave" data-sin-traducir>${esc(x.resumen)}</span>` : ""}
       ${x.estado === "fallo" && x.error ? `<details><summary>Ver el error</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
       ${E.ocupado === "paso" && E.enCurso === i ? vivoHTML() : ""}</li>`).join("");

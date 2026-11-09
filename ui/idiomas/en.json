@@ -176,6 +176,7 @@
   "Armando la app…": "Building the app…",
   "~{n} tokens estimados": "~{n} tokens estimated",
   "~{n} tokens gastados": "~{n} tokens spent",
+  "{n} tokens gastados": "{n} tokens spent",
   "Hacer el paso {n}": "Do step {n}",
   "Hacer todo desde el paso {n}": "Do everything from step {n}",
   "Modo": "Mode",

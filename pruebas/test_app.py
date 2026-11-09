@@ -171,6 +171,40 @@ class Proyectos(unittest.TestCase):
         self.assertEqual(self.pedidos[-1][1]["escribir"], carpeta)
         self.assertNotIn('"archivos"', self.pedidos[-1][0])  # sin JSON de archivos: edita directo
 
+    def test_paso_liviano_y_tokens_reales(self):
+        """Cada paso recibe el mapa de archivos y lo que hicieron los anteriores, no lee lo que no sirve y cuenta los tokens reales."""
+        self.plan()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+
+        def edita(pedido, **opciones):
+            self.pedidos.append((pedido, opciones))
+            c = opciones["escribir"]
+            with open(os.path.join(c, "bin", "recetas.py"), "a") as f:
+                f.write("print('recetas')\n")
+            opciones["al_evento"]({"t": "uso", "entrada": 5000, "cache": 40000, "salida": 800})
+            return "Hice la lista de recetas.", None
+        self.p.ia.preguntar_vivo = edita
+        x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
+        self.assertEqual((x["gastado"], x["cache"], x["medido"]), (5800, 40000, True))
+        pedido, opciones = self.pedidos[-1]
+        self.assertIn("escritorio/", opciones["no_leer"])
+        self.assertIn("bin/recetas.py", pedido)  # el mapa
+        self.assertIn("bin/nucleo.py", pedido.split("De piezas")[1].split("\n")[0])
+        self.assertNotIn("escritorio/", pedido.split("# Los archivos de la app")[1].split("# Este paso")[0])
+        proyecto = self.p._leer("recetas")
+        proyecto["pasos"].append({"titulo": "Buscar", "que": "Buscar recetas.", "archivos": [], "tokens": 0, "estado": "pendiente"})
+        pedido = self.p._prompt_editar(proyecto, 1)
+        historia = pedido.split("# Lo que ya hicieron los pasos anteriores")[1].split("#")[0]
+        self.assertIn("Hice la lista de recetas.", historia)
+        self.assertIn("bin/recetas.py", historia)
+
+    def test_cambiado_cuenta_solo_lo_nuevo(self):
+        self.assertEqual(self.p._cambiado(b"x" * 10000 + b"fin", b"x" * 10000 + b"nuevo fin"), 6)
+        self.assertEqual(self.p._cambiado(b"", b"hola"), 4)
+        self.assertEqual(self.p._cambiado(b"hola", b""), 0)
+
     def test_crear_y_paso(self):
         self.plan()
         self.p.ia.puede_escribir = lambda ia=None: False
