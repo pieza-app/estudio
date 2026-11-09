@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.5.0
+- Ahora ves en vivo qué hace tu IA en cada paso (qué lee, qué escribe y cuánto lleva), y el plan arma pasos más chicos. Las versiones nuevas de Pieza vienen firmadas: la app no instala nada sin la firma. · *You now see live what your AI does in each step (what it reads, what it writes and how long it has taken), and the plan makes smaller steps. New Pieza versions are signed: the app installs nothing without the signature.*
+
 ## 0.4.0
 - Ahora «Ver mi app» abre tu app en el navegador, sin terminal. Con Claude o Codex, tu IA edita la carpeta de tu app directamente (más rápido) y Pieza devuelve lo que no le toca. · *“See my app” now opens your app in the browser, no terminal needed. With Claude or Codex, your AI edits your app's folder directly (faster) and Pieza restores what it shouldn't touch.*
 

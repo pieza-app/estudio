@@ -268,6 +268,11 @@
   "Actualiza {ia} para usarla con {app}: tu versión no conoce las protecciones que necesitamos.": "Update {ia} to use it with {app}: your version doesn't know the protections we need.",
   "No encontré {ia} en este computador.": "I couldn't find {ia} on this computer.",
   "{ia} no respondió.": "{ia} didn't answer.",
-  "Detuviste a {ia}.": "You stopped {ia}."
+  "Detuviste a {ia}.": "You stopped {ia}.",
+  "Corriendo las pruebas…": "Running the tests…",
+  "Segundo intento: tu IA arregla lo que falló…": "Second try: your AI is fixing what failed…",
+  "{n} min": "{n} min",
+  "Leyendo {ruta}": "Reading {ruta}",
+  "Escribió: {lista}": "Wrote: {lista}"
  }
 }

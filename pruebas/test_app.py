@@ -100,11 +100,12 @@ class Proyectos(unittest.TestCase):
         def falsa(pedido, **opciones):
             self.pedidos.append((pedido, opciones))
             return self.respuestas.pop(0), None
-        self._original = proyectos.ia.preguntar
+        self._original = (proyectos.ia.preguntar, proyectos.ia.preguntar_vivo)
         proyectos.ia.preguntar = falsa
+        proyectos.ia.preguntar_vivo = falsa
 
     def tearDown(self):
-        self.p.ia.preguntar = self._original
+        self.p.ia.preguntar, self.p.ia.preguntar_vivo = self._original
         self.p.ia.puede_escribir = self._puede
         os.environ.pop("PIEZA_PROYECTOS", None)
         self.tmp.cleanup()
@@ -155,7 +156,7 @@ class Proyectos(unittest.TestCase):
                                                 "responde": "recetasListas", "limite": 30}
             json.dump(app, open(os.path.join(c, "app.json"), "w"))
             return "Hice la lista de recetas.", None
-        self.p.ia.preguntar = edita
+        self.p.ia.preguntar_vivo = edita
         r = self.p.paso({"id": "recetas", "n": 0})
         self.assertTrue(r["ok"], r)
         x = r["proyecto"]["pasos"][0]

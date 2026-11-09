@@ -96,12 +96,13 @@
     "n": {
      "tipo": "entero",
      "min": 0,
-     "max": 11,
+     "max": 15,
      "requerido": true
     }
    },
    "responde": "pasoListo",
    "limite": 3600,
+   "progreso": "pasoAvance",
    "pieza": "app"
   },
   "proyectoPlan": {

@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.4.0",
+ "version": "0.5.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -143,12 +143,13 @@
     "n": {
      "tipo": "entero",
      "min": 0,
-     "max": 11,
+     "max": 15,
      "requerido": true
     }
    },
    "responde": "pasoListo",
-   "limite": 3600
+   "limite": 3600,
+   "progreso": "pasoAvance"
   },
   "publicarExplorar": {
    "script": "publicar.py",
@@ -228,5 +229,10 @@
    "responde": "vistaAbierta",
    "limite": 30
   }
+ },
+ "actualizaciones": {
+  "llaves": [
+   "/WUauirzp6m41Kakg8nWi/XJZtVwssJahr+Ie3xBM/U="
+  ]
  }
 }

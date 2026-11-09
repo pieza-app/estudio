@@ -56,6 +56,8 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   `version`; después Pieza corre `pieza.py acciones`. También puede pedir `borrar` archivos propios (nunca de piezas). Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
 - **Publicar y proponer:** al terminar, «Publicar en GitHub» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
   «Proponer en GitHub» abre en el navegador un issue prellenado en `pieza-app/pieza` (etiqueta `pieza-nueva`).
+- **En vivo:** `proyectoPaso` tiene `"progreso": "pasoAvance"`: `proyectos.py` emite (`trabajos.emitir`) la fase (`ia`,
+  `pruebas`) y lo que la IA lee y escribe; la interfaz lo muestra con el tiempo que lleva (`vivoHTML`).
 - **Tokens:** se estiman con el largo del pedido y de la respuesta (÷ 4). «Todo automático» sigue mientras cada paso quede bien,
   la persona no pida «Detener» y lo gastado no pase el tope (`E.tope`).
 
@@ -64,17 +66,17 @@ Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se
 
 | Pieza | Versión | Archivos | Qué usa Pieza |
 |---|---|---|---|
-| `actualizaciones` | 0.4.0 | `escritorio/src/pieza/actualizaciones.rs` | Revisa los Releases de `pieza-app/estudio` al abrir y cada 6 h. |
+| `actualizaciones` | 0.5.0 | `escritorio/src/pieza/actualizaciones.rs` | Revisa los Releases de `pieza-app/estudio` al abrir y cada 6 h. Exige la firma Ed25519 (`app.json` → `actualizaciones.llaves`; la privada está en el entorno «publicar»). |
 | `bienvenida` | 0.4.1 | `ui/bienvenida.css`, `ui/bienvenida.js` | El primer uso: idioma → `hola` → `ia`. |
 | `componentes` | 0.3.0 | `ui/componentes.css`, `ui/componentes.js` | Botones, diálogos, avisos y «Tu IA» en Ajustes. |
 | `contrato` | 0.1.3 | `pruebas/contrato.py` | Revisa que cada acción tenga quien la atienda. |
-| `empaquetado` | 0.2.1 | `herramientas/python.lock` | Arma la app con su Python portátil (`carpetas`: `datos`). |
+| `empaquetado` | 0.2.2 | `herramientas/python.lock` | Arma la app con su Python portátil (`carpetas`: `datos`). |
 | `esqueleto` | 0.2.0 |  | El punto de partida (`pieza.py crear`). Ya no se actualiza. |
 | `github` | 0.3.1 |  | Workflows, plantillas de issues, Dependabot y la wiki. |
 | `host-tauri` | 0.1.1 | `escritorio/iconos/128x128.png`, `escritorio/iconos/128x128@2x.png`, `escritorio/iconos/32x32.png`, `escritorio/iconos/icon.icns`, `escritorio/iconos/icon.ico`, `escritorio/iconos/icono.png`, `escritorio/src/pieza/enchufe.rs`, `escritorio/src/pieza/host.rs`, `escritorio/src/pieza/mod.rs`, `escritorio/src/pieza/procesador.rs`, `escritorio/src/pieza/protocolo.rs`, `escritorio/src/pieza/sistema.rs`, `escritorio/src/pieza/vigilante.rs` | La ventana, el puente y las acciones declaradas. |
 | `host-ui` | 0.3.0 | `ui/host.js` | `host.enviar` y `host.responder`. |
 | `i18n` | 0.3.1 | `ui/i18n.js` | `T`, `Tp`, `traducirDOM` y `idiomas/en.json`. |
-| `ia` | 0.7.0 | `bin/ia.py` | La IA de la persona: el plan y cada paso (`preguntar`, con `escribir` = la carpeta de la app; con Gemini, `leer`). |
+| `ia` | 0.7.1 | `bin/ia.py` | La IA de la persona: el plan y cada paso (`preguntar`, con `escribir` = la carpeta de la app; con Gemini, `leer`). |
 | `nucleo` | 0.7.1 | `bin/nucleo.py` | `app.json`, la carpeta de datos y la config. |
 | `red` | 0.2.0 | `bin/red.py` | El explorador: solo `pieza-app.github.io`, sin redirecciones y con tope. |
 | `tema` | 0.2.1 | `ui/tema.css`, `ui/tema.js` | Claro y oscuro. |

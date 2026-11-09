@@ -148,6 +148,18 @@
       <label class="pz-campo"><span>Archivos de tu app que la forman</span><input id="pz-archivos" maxlength="300" value="${esc(x.archivos)}" placeholder="bin/recetas.py, ui/recetas.js"></label>
       <div class="pz-pie"><button type="button" class="pz-boton" id="proponer"${x.nombre.trim() && x.que.trim() ? "" : " disabled"}>Proponer en GitHub</button></div>`;
   }
+  // En vivo: cuánto lleva, en qué fase va y qué archivos lee y escribe la IA (eventos de la acción, `pasoAvance`).
+  function vivoHTML() {
+    const v = E.vivo || {};
+    const min = Math.max(0, Math.floor((Date.now() - (v.inicio || Date.now())) / 60000));
+    const fase = v.fase === "pruebas" ? Tp("Corriendo las pruebas…") : v.intento > 1 ? Tp("Segundo intento: tu IA arregla lo que falló…")
+      : Tp("Tu IA está en este paso…");
+    const escritos = [...(v.escritos || [])].slice(-6);
+    return `<div class="vivo" role="status"><p class="trabajando"><span class="pz-giro" aria-hidden="true"></span>
+      <span data-sin-traducir>${esc(fase)} · ${esc(Tp("{n} min", { n: min }))}</span></p>
+      ${v.leyendo ? `<p class="suave" data-sin-traducir>${esc(Tp("Leyendo {ruta}", { ruta: v.leyendo }))}</p>` : ""}
+      ${escritos.length ? `<p class="suave" data-sin-traducir>${esc(Tp("Escribió: {lista}", { lista: escritos.join(", ") }))}</p>` : ""}</div>`;
+  }
   function trabajando(texto) {
     return `<p class="trabajando" role="status"><span class="pz-giro" aria-hidden="true"></span> <span>${esc(texto)}</span></p>`;
   }
@@ -189,7 +201,7 @@
       <small class="suave" data-sin-traducir>${esc(x.gastado ? Tp("~{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens estimados", { n: miles(x.tokens) }))}</small>
       ${x.resumen ? `<span class="suave" data-sin-traducir>${esc(x.resumen)}</span>` : ""}
       ${x.estado === "fallo" && x.error ? `<details><summary>Ver el error</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
-      ${E.ocupado === "paso" && E.enCurso === i ? trabajando("Tu IA está en este paso…") : ""}</li>`).join("");
+      ${E.ocupado === "paso" && E.enCurso === i ? vivoHTML() : ""}</li>`).join("");
     const modos = [["paso", "Paso a paso"], ["auto", "Todo automático"]].map(([m, n]) =>
       `<button type="button" data-modo="${m}" aria-pressed="${E.modo === m}"${E.ocupado ? " disabled" : ""}>${esc(n)}</button>`).join("");
     const fin = siguiente < 0;
@@ -339,7 +351,14 @@
       + "&body=" + encodeURIComponent(cuerpo);
   }
   function ocupar(que) { E.ocupado = que; E.error = ""; E.parar = false; pintar(); }
-  function hacerPaso(n) { E.enCurso = n; ocupar("paso"); host.enviar("proyectoPaso", { id: E.proyecto.id, n }); }
+  function hacerPaso(n) {
+    E.enCurso = n;
+    E.vivo = { inicio: Date.now(), fase: "ia", intento: 1, escritos: new Set(), leyendo: "" };
+    ocupar("paso");
+    host.enviar("proyectoPaso", { id: E.proyecto.id, n });
+  }
+  // Mientras corre un paso, el reloj se pinta cada 20 s (sin tocar nada más).
+  setInterval(() => { if (E.ocupado === "paso" && E.paso === 7) pintar(); }, 20000);
   // Una app que ya se empezó: vuelve al paso donde quedó.
   function seguir(id) {
     const p = E.proyectos.find((x) => x.id === id);
@@ -413,6 +432,17 @@
       pintar();
     },
     fichaLista(r) { E.ficha = r || { ok: false }; if (E.paso === 4) pintar(); },
+    pasoAvance(eventos) {
+      const v = E.vivo;
+      if (!v || !Array.isArray(eventos)) return;
+      for (const e of eventos) {
+        if (!e || typeof e !== "object") continue;
+        if (e.t === "fase") { v.fase = e.fase; v.intento = e.intento || 1; }
+        else if (e.t === "lee" && typeof e.ruta === "string") v.leyendo = e.ruta;
+        else if (e.t === "escribe" && typeof e.ruta === "string") { v.escritos.delete(e.ruta); v.escritos.add(e.ruta); v.leyendo = ""; }
+      }
+      if (E.paso === 7) pintar();
+    },
     vistaAbierta(r) { if (r && r.ok) toast("Abrí tu app en el navegador."); else toast(Tp((r && r.error) || "No se pudo.")); },
     explorarListo(r) { if (r && r.ok) E.apps = r.apps || []; else { E.apps = []; E.error = (r && r.error) || Tp("No se pudo."); } pintar(); },
     publicarRevisado(r) {
@@ -527,7 +557,11 @@
         Object.assign(p, { estado: "creado", carpeta: `~/Pieza/${p.nombre}` });
         c.responder("proyectoCreado", { ok: true, proyecto: p });
       });
-      case "proyectoPaso": return c.luego(900, () => {
+      case "proyectoPaso":
+        c.luego(250, () => c.responder("pasoAvance", [{ t: "fase", fase: "ia", n: d.n, intento: 1 }, { t: "lee", ruta: "AGENTS.md" }]));
+        c.luego(500, () => c.responder("pasoAvance", [{ t: "escribe", ruta: "bin/recetas.py" }, { t: "escribe", ruta: "ui/app.js" }]));
+        c.luego(700, () => c.responder("pasoAvance", [{ t: "fase", fase: "pruebas", n: d.n, intento: 1 }]));
+        return c.luego(900, () => {
         const p = SIM.proyectos.find((x) => x.id === d.id), x = p.pasos[d.n];
         Object.assign(x, { estado: "listo", intentos: 1, gastado: Math.round(x.tokens * 0.9), resumen: Tp("Listo: las pruebas quedaron en verde.") });
         p.estado = "pasos";
