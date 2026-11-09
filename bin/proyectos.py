@@ -37,7 +37,7 @@ INTENTOS = 2
 LIMITE_PRUEBAS = 600
 LIMITE_IA = 1500  # por intento; la acción de la app tiene 3600 s para dos intentos y las pruebas
 # Lo que la IA nunca escribe: lo que arma pieza.py. app.json sí (sus acciones), pero sin tocar lo que la identifica.
-PROTEGIDOS = {"piezas.json", "acciones.json"}
+PROTEGIDOS = {"piezas.json", "acciones.json", "pruebas/correr.sh"}  # correr.sh: la IA no puede aflojar las pruebas
 APP_FIJO = ("id", "nombre", "repo", "datos", "plataformas", "privado", "version")
 
 

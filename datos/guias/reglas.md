@@ -4,7 +4,8 @@ Estas reglas van en cada pedido. Son cortas a propósito: cada pedido es un solo
 
 ## Lo que no se negocia
 1. **Las piezas no se tocan.** Los archivos que lista `piezas.json` vienen de Pieza. Nunca los cambies. Si una pieza no alcanza,
-   dilo en `resumen`. `piezas.json` y `acciones.json` los arma `pieza.py`: tampoco los escribas.
+   dilo en `resumen`. `piezas.json` y `acciones.json` los arma `pieza.py`: tampoco los escribas. `pruebas/correr.sh` tampoco:
+   si una prueba falla, arregla el código o la prueba, nunca el que las corre.
 2. **Una acción nueva va en `app.json` → `acciones`** (script en `bin/`, `args`, `entrada: "archivo"`, `datos` con su regla y
    `responde`). Pieza arma `acciones.json` sola. No cambies `id`, `nombre`, `repo`, `datos`, `plataformas` ni `version`.
    Una carpeta nueva en la raíz va también en `.gitignore` (es una lista blanca).

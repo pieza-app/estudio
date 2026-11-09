@@ -148,6 +148,7 @@ class Proyectos(unittest.TestCase):
             c = opciones["escribir"]
             open(os.path.join(c, "bin", "recetas.py"), "w").write("print('recetas')\n")
             open(os.path.join(c, "bin", "nucleo.py"), "w").write("# roto\n")  # de una pieza: se devuelve
+            open(os.path.join(c, "pruebas", "correr.sh"), "w").write("exit 0\n")  # aflojar las pruebas: se devuelve
             app = json.load(open(os.path.join(c, "app.json")))
             app["id"] = "otra"  # lo que identifica a la app: se devuelve
             app["acciones"]["recetasListar"] = {"script": "recetas.py", "args": ["lista"], "entrada": None, "datos": {},
@@ -161,6 +162,7 @@ class Proyectos(unittest.TestCase):
         self.assertIn("bin/recetas.py", x["escritos"])
         self.assertIn("bin/nucleo.py", x["cuidados"])
         self.assertIn("app.json:id", x["cuidados"])
+        self.assertIn("pruebas/correr.sh", x["cuidados"])
         self.assertEqual(open(os.path.join(carpeta, "bin", "nucleo.py"), encoding="utf-8").read(), nucleo_antes)
         app = json.load(open(os.path.join(carpeta, "app.json")))
         self.assertEqual(app["id"], "recetas")

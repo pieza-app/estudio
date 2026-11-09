@@ -50,7 +50,7 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   escribe la persona llega en el archivo de entrada, nunca como argumento. En el navegador las simula `simular()` (`planSimulado`).
 - **Cómo escribe la IA.** Con Claude o Codex (`ia.puede_escribir()`), edita la carpeta de la app directamente
   (`ia.preguntar(..., escribir=carpeta)`: solo ahí, sin terminal ni internet). Antes del paso Pieza saca una foto (`_foto`) y
-  después `_cuidar` devuelve los archivos de piezas, `piezas.json`, `acciones.json` y lo que identifica a la app en `app.json`.
+  después `_cuidar` devuelve los archivos de piezas, `piezas.json`, `acciones.json`, `pruebas/correr.sh` y lo que identifica a la app en `app.json`.
   Con Gemini, lee la carpeta y responde JSON. `validar_archivos` rechaza rutas que salen de la carpeta, `.git/`, los archivos de piezas, `piezas.json` y `acciones.json`. En
   `app.json` puede sumar acciones y config, pero no cambiar `id`, `nombre`, `repo`, `datos`, `plataformas`, `privado` ni
   `version`; después Pieza corre `pieza.py acciones`. También puede pedir `borrar` archivos propios (nunca de piezas). Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
