@@ -149,7 +149,10 @@ def _detalle(p):
 
 def _prompt_plan(p, ficha):
     cat = piezas.catalogo()
-    hechas = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat)
+    hechas = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat and cat[i].get("estado") == "lista")
+    por_hacer = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat and cat[i].get("estado") != "lista")
+    bloque_por_hacer = ("\n# Lo que la persona pidió y todavía no existe como pieza (inclúyelo en el plan, escrito dentro de la app)\n"
+                        + por_hacer + "\n") if por_hacer else ""
     with open(os.path.join(_guias(), "reglas.md"), encoding="utf-8") as f:
         reglas = f.read()
     return f"""{reglas}
@@ -161,7 +164,7 @@ def _prompt_plan(p, ficha):
 {_detalle(p)}
 # Lo que ya está hecho (piezas de Pieza, 0 tokens: no las planifiques)
 {hechas}
-
+{bloque_por_hacer}
 # Lo que te pido
 Desglosa SOLO lo propio de esta app en pasos CHICOS (entre 3 y {MAX_PASOS}). Un paso chico:
 - hace una sola cosa que se puede probar (un script con su acción, o una pantalla, o una mejora);
@@ -293,9 +296,12 @@ def crear(d):
     if os.path.exists(carpeta) and os.listdir(carpeta):
         raise ValueError(f"Ya hay algo en {carpeta}. Cambia el nombre de la app.")
     os.makedirs(_base_proyectos(), exist_ok=True)
+    # Solo las piezas que ya existen: las «por hacer» las escribe la IA en los pasos (están en el plan), no pieza.py crear.
+    cat = piezas.catalogo()
+    listas = [x for x in p["piezas"] if (cat.get(x) or {}).get("estado") == "lista"]
     r = subprocess.run([sys.executable, _pieza_py(), "crear", carpeta, "--id", p["id"], "--nombre", p["nombre"],
                         "--plataformas", ",".join(x for x in p["plataformas"] if x != "web") or "mac,windows,linux",
-                        "--piezas", ",".join(p["piezas"])], capture_output=True, text=True, timeout=300, env=_entorno())
+                        "--piezas", ",".join(listas)], capture_output=True, text=True, timeout=300, env=_entorno())
     if r.returncode != 0:
         return {"ok": False, "error": (r.stderr or r.stdout).strip()[-500:] or "No pude crear la app."}
     p.update({"estado": "creado", "carpeta": carpeta})

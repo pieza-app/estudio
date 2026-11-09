@@ -265,7 +265,7 @@
   }
   function filaPieza(p, marcada, fija) {
     const lista = p.estado === "lista";
-    const etiqueta = fija ? "Va siempre" : lista ? "0 tokens: ya está hecha" : "Por hacer";
+    const etiqueta = fija ? "Va siempre" : lista ? "0 tokens: ya está hecha" : "Por hacer: la escribe tu IA";
     return `<label class="pieza${lista ? " hecha" : " por-hacer"}"><input type="checkbox" data-pieza="${esc(p.id)}"${marcada ? " checked" : ""}${fija ? " disabled" : ""}>
       <span class="pieza-texto"><b data-sin-traducir>${esc(enIdioma(p, "nombre"))}</b><small data-sin-traducir>${esc(enIdioma(p, "descripcion"))}</small></span>
       <span class="sello${lista ? "" : " sello-falta"}">${lista ? ICONO : ""}${esc(etiqueta)}</span></label>`;
