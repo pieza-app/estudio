@@ -119,8 +119,16 @@
     },
     "frase": {
      "tipo": "texto",
-     "max": 300,
+     "max": 400,
      "requerido": true
+    },
+    "detalle": {
+     "tipo": "texto",
+     "max": 12000
+    },
+    "acuerdos": {
+     "tipo": "lista",
+     "max": 20
     },
     "plataformas": {
      "tipo": "lista",
@@ -134,6 +142,23 @@
    },
    "responde": "planListo",
    "limite": 660,
+   "pieza": "app"
+  },
+  "proyectoRevisar": {
+   "script": "proyectos.py",
+   "args": [
+    "revisar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "revisionLista",
+   "limite": 720,
    "pieza": "app"
   },
   "proyectoVista": {

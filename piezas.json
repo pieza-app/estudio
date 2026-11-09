@@ -13,9 +13,9 @@
    }
   },
   "ia": {
-   "version": "0.7.1",
+   "version": "0.7.2",
    "archivos": {
-    "bin/ia.py": "c8b141c39845646457a5fe5bf8fc5d29eb592e2b3ce1cb5561299a522f31aec8"
+    "bin/ia.py": "519ff39d336e358abc696cd500435f4c00a9aac27186d362c98dcfaf597375ee"
    },
    "ficha": {
     "requiere": [
@@ -236,7 +236,7 @@
     ".github/workflows/publicar.yml": "b4579dcba407c1ae9b56052af7dc4cbc2439b58d5edbd60c7caaea9871deea50",
     "build.sh": "094fb3ede5f22f4304fa09641f7630959ffbfcd2417f1bf5c3499fe3cc34b53f",
     "escritorio/herramientas/preparar.sh": "e73b0a523b37d23a8144a1005f2a355a066de8fd165bbd3e50dd2149ed471067",
-    "herramientas/empaquetar.sh": "2c04e4742f508dd1e563713ddcb6d41a82c99d09250ba1ab922ee430b1084970",
+    "herramientas/empaquetar.sh": "1668a24d9aea59d852f22cadec2b3836883e1ee50b618d953eddd45f7078b00a",
     "instalar.ps1": "0cbe4679aa022ce838855a9910acd42800482750a12b7ee31aa5f0ce2b5374ca",
     "instalar.sh": "167fbfabfd1c674264bccf48cdbf817ccdee7f91f153a70481a42780b36150f5"
    }

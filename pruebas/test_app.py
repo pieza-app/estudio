@@ -116,6 +116,59 @@ class Proyectos(unittest.TestCase):
         return self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"],
                             "piezas": ["ia"]})
 
+    def test_la_idea_completa_va_al_plan_y_a_cada_paso(self):
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": [],
+                         "detalle": "Cada receta tiene porciones.\nLa lista de compras suma por ingrediente."})
+        self.assertTrue(r["ok"], r)
+        self.assertIn("La lista de compras suma por ingrediente.", self.pedidos[-1][0])
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        self.assertTrue(carpeta)
+        pedido = self.p._prompt_editar(self.p._leer("recetas"), 0)
+        self.assertIn("# La idea completa", pedido)
+        self.assertIn("Cada receta tiene porciones.", pedido)
+        sin = self.p._prompt_paso({**self.p._leer("recetas"), "detalle": ""}, 0)
+        self.assertNotIn("# La idea completa", sin)
+
+    def test_revisar_a_ciegas(self):
+        """Tres sesiones nuevas, cada una con su enfoque, sin la conversación del plan; lo aceptado vuelve al plan como acuerdos."""
+        self.plan()
+        for _ in range(3):
+            self.respuestas.append('{"hallazgos": [{"gravedad": "media", "problema": "Falta X.", "propuesta": "Agregar X."},'
+                                   ' {"gravedad": "alta", "problema": "Se pierden datos.", "propuesta": "Guardar con respaldo."},'
+                                   ' {"gravedad": "rara", "problema": "No vale.", "propuesta": "No vale."}]}')
+        antes = len(self.pedidos)
+        r = self.p.revisar({"id": "recetas"})
+        self.assertTrue(r["ok"], r)
+        hs = r["proyecto"]["revision"]["hallazgos"]
+        self.assertEqual(len(hs), 6)  # la gravedad desconocida no entra
+        self.assertEqual(hs[0]["gravedad"], "alta")
+        self.assertEqual(sorted({h["enfoque"] for h in hs}), ["pasos", "riesgos", "uso"])
+        pedidos = [x[0] for x in self.pedidos[antes:]]
+        self.assertEqual(len(pedidos), 3)
+        for x in pedidos:
+            self.assertIn("No participaste en este proyecto", x)
+            self.assertIn("Ordena las recetas de Ana Pérez.", x)
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": [],
+                         "acuerdos": ["Guardar con respaldo.", 7, ""]})
+        self.assertEqual(r["proyecto"]["acuerdos"], ["Guardar con respaldo."])
+        self.assertIsNone(r["proyecto"]["revision"])
+        self.assertIn("# Cambios acordados en la revisión", self.pedidos[-1][0])
+        self.assertIn("Guardar con respaldo.", self.pedidos[-1][0])
+
+    def test_plan_reintenta_si_se_pasa_de_pasos(self):
+        muchos = {"pasos": [{"titulo": f"Paso {i}", "que": "x", "archivos": [], "tokens": 1} for i in range(20)]}
+        self.respuestas.append(json.dumps(muchos))
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": []})
+        self.assertTrue(r["ok"], r)
+        self.assertIn("trajo 20", self.pedidos[-1][0])
+
+    def test_revisar_sin_plan(self):
+        with self.assertRaises(ValueError):
+            self.p.revisar({"id": "nada"})
+
     def test_plan_valida_y_guarda(self):
         r = self.plan()
         self.assertTrue(r["ok"], r)
@@ -126,7 +179,7 @@ class Proyectos(unittest.TestCase):
         self.assertIn("0 tokens", self.pedidos[0][0])  # el pedido dice qué ya está hecho
 
     def test_plan_malo(self):
-        self.respuestas.append("No sé.")
+        self.respuestas += ["No sé.", "Tampoco."]  # dos intentos
         r = self.p.plan({"nombre": "Recetas", "frase": "Ordena recetas.", "plataformas": ["mac"], "piezas": []})
         self.assertFalse(r["ok"])
         self.assertEqual(r["codigo"], "plan")
@@ -170,6 +223,40 @@ class Proyectos(unittest.TestCase):
         self.assertIn("recetasListar", json.load(open(os.path.join(carpeta, "acciones.json")))["acciones"])
         self.assertEqual(self.pedidos[-1][1]["escribir"], carpeta)
         self.assertNotIn('"archivos"', self.pedidos[-1][0])  # sin JSON de archivos: edita directo
+
+    def test_paso_liviano_y_tokens_reales(self):
+        """Cada paso recibe el mapa de archivos y lo que hicieron los anteriores, no lee lo que no sirve y cuenta los tokens reales."""
+        self.plan()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+
+        def edita(pedido, **opciones):
+            self.pedidos.append((pedido, opciones))
+            c = opciones["escribir"]
+            with open(os.path.join(c, "bin", "recetas.py"), "a") as f:
+                f.write("print('recetas')\n")
+            opciones["al_evento"]({"t": "uso", "entrada": 5000, "cache": 40000, "salida": 800})
+            return "Hice la lista de recetas.", None
+        self.p.ia.preguntar_vivo = edita
+        x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
+        self.assertEqual((x["gastado"], x["cache"], x["medido"]), (5800, 40000, True))
+        pedido, opciones = self.pedidos[-1]
+        self.assertIn("escritorio/", opciones["no_leer"])
+        self.assertIn("bin/recetas.py", pedido)  # el mapa
+        self.assertIn("bin/nucleo.py", pedido.split("De piezas")[1].split("\n")[0])
+        self.assertNotIn("escritorio/", pedido.split("# Los archivos de la app")[1].split("# Este paso")[0])
+        proyecto = self.p._leer("recetas")
+        proyecto["pasos"].append({"titulo": "Buscar", "que": "Buscar recetas.", "archivos": [], "tokens": 0, "estado": "pendiente"})
+        pedido = self.p._prompt_editar(proyecto, 1)
+        historia = pedido.split("# Lo que ya hicieron los pasos anteriores")[1].split("#")[0]
+        self.assertIn("Hice la lista de recetas.", historia)
+        self.assertIn("bin/recetas.py", historia)
+
+    def test_cambiado_cuenta_solo_lo_nuevo(self):
+        self.assertEqual(self.p._cambiado(b"x" * 10000 + b"fin", b"x" * 10000 + b"nuevo fin"), 6)
+        self.assertEqual(self.p._cambiado(b"", b"hola"), 4)
+        self.assertEqual(self.p._cambiado(b"hola", b""), 0)
 
     def test_crear_y_paso(self):
         self.plan()

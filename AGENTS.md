@@ -58,7 +58,8 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   «Proponer en GitHub» abre en el navegador un issue prellenado en `pieza-app/pieza` (etiqueta `pieza-nueva`).
 - **En vivo:** `proyectoPaso` tiene `"progreso": "pasoAvance"`: `proyectos.py` emite (`trabajos.emitir`) la fase (`ia`,
   `pruebas`) y lo que la IA lee y escribe; la interfaz lo muestra con el tiempo que lleva (`vivoHTML`).
-- **Tokens:** se estiman con el largo del pedido y de la respuesta (÷ 4). «Todo automático» sigue mientras cada paso quede bien,
+- **Revisión a ciegas** (`proyectos.py revisar`, acción `proyectoRevisar`): el patrón «elefante y pez dorado». Tres sesiones nuevas de la IA (`ENFOQUES`: riesgos, uso, pasos) leen solo la idea y el plan, en paralelo, y devuelven hallazgos validados (`validar_revision`). Lo que la persona acepta vuelve a `plan` como `acuerdos` y va a cada pedido (`_detalle`).
+- **Tokens:** los reales que da la IA (`{"t": "uso"}` de la pieza «ia»: Claude y Codex); con Gemini se estiman con el largo del pedido, de la respuesta y de lo que cambió (÷ 4). Cada paso lleva el mapa de archivos (`_mapa`), lo que hicieron los pasos anteriores (`_historia`) y `no_leer=NO_LEER`. «Todo automático» sigue mientras cada paso quede bien,
   la persona no pida «Detener» y lo gastado no pase el tope (`E.tope`).
 
 ## Piezas (de [Pieza](https://github.com/pieza-app/pieza))

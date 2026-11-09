@@ -8,6 +8,11 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.6.0
+- Nueva «Revisión a ciegas»: tres sesiones nuevas de tu IA leen solo tu idea y el plan, buscan fallas (riesgos, uso y pasos) y tú eliges qué cambios entran al plan. · *New «Blind review»: three new sessions of your AI read only your idea and the plan, look for flaws (risks, use and steps), and you choose which changes go into the plan.*
+- Ahora puedes darle a Pieza la idea completa de tu app (cómo funciona, reglas, pantallas y datos), no solo una frase. Va al plan y a cada paso. · *You can now give Pieza the full idea of your app (how it works, rules, screens and data), not just one sentence. It goes into the plan and every step.*
+- Cada paso gasta menos: tu IA recibe un mapa de la app y lo que hicieron los pasos anteriores, y no lee lo que no sirve para programar. Con Claude o Codex ves los tokens reales, no una estimación. · *Each step spends less: your AI gets a map of the app and what earlier steps did, and does not read what is not useful for coding. With Claude or Codex you see the real tokens, not an estimate.*
+
 ## 0.5.0
 - Ahora ves en vivo qué hace tu IA en cada paso (qué lee, qué escribe y cuánto lleva), y el plan arma pasos más chicos. Las versiones nuevas de Pieza vienen firmadas: la app no instala nada sin la firma. · *You now see live what your AI does in each step (what it reads, what it writes and how long it has taken), and the plan makes smaller steps. New Pieza versions are signed: the app installs nothing without the signature.*
 

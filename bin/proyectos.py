@@ -2,7 +2,8 @@
 """proyectos — crear una app paso a paso con la IA de la persona. Solo biblioteca estándar.
 
   proyectos.py lista <salida.json>
-  proyectos.py plan  <entrada.json {nombre, frase, plataformas, piezas}> <salida.json>
+  proyectos.py plan  <entrada.json {nombre, frase, detalle?, plataformas, piezas}> <salida.json>
+  proyectos.py revisar <entrada.json {id}> <salida.json>
   proyectos.py crear <entrada.json {id}> <salida.json>
   proyectos.py paso  <entrada.json {id, n}> <salida.json>
 
@@ -10,16 +11,24 @@ Un proyecto se guarda en <carpeta de datos>/proyectos/<id>.json. La app queda en
 las pruebas).
 
 - `plan`: la IA desglosa lo propio de la app en pasos chicos (JSON validado). Las piezas ya hechas no entran al plan.
+- `revisar`: la idea y el plan van a 3 sesiones NUEVAS de la IA (sin la conversación que armó el plan), cada una con un enfoque:
+  riesgos y seguridad, uso, y pasos. Es el patrón «elefante y pez dorado»: quien no trae contexto ve lo que el autor ya no ve.
+  Devuelve hallazgos; la persona acepta los que quiere y rehace el plan con ellos (`acuerdos` en `plan`).
 - `crear`: `pieza.py crear` con las piezas elegidas (el Pieza que va dentro de la app, en datos/pieza/). No usa la IA.
 - `paso`: con Claude o Codex (`ia.puede_escribir()`), la IA edita los archivos de la app directamente, SOLO en su carpeta y sin
   terminal. Después Pieza revisa lo que cambió: devuelve a su estado los archivos de piezas, `piezas.json` y `acciones.json`, y lo
   que identifica a la app en `app.json`. Con Gemini, la IA devuelve los archivos en JSON y Pieza los revisa y los escribe. En los
   dos casos Pieza corre `bash pruebas/correr.sh`; si falla, la IA recibe el error y tiene un intento más.
 
-Los tokens se estiman con el largo del pedido, de la respuesta y de lo que la IA escribió (~4 caracteres por token).
+Para gastar menos en cada paso, la IA recibe un mapa de los archivos propios de la app y lo que hicieron los pasos anteriores, y
+no puede leer lo que no le sirve para programar (`NO_LEER`: lo generado, la app de escritorio, la página, las licencias).
+
+Los tokens son los que la IA dice haber usado (Claude y Codex). Si no los dice (Gemini), se estiman con el largo del pedido, de
+la respuesta y de lo que cambió en los archivos (~4 caracteres por token).
 """
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 import re
 import subprocess
 import sys
@@ -32,6 +41,15 @@ import trabajos
 
 CARACTERES_POR_TOKEN = 4
 MAX_PASOS = 16
+MAX_FRASE = 400
+MAX_ACUERDOS = 20  # cambios aceptados de la revisión
+MAX_HALLAZGOS = 6  # por enfoque
+ENFOQUES = {
+    "riesgos": "Riesgos y seguridad: qué puede salir mal, datos o dinero en juego, secretos, casos borde, lo que falta proteger.",
+    "uso": "Uso: si una persona sin conocimientos técnicos entiende y usa la app sin ayuda; pasos de más, textos confusos, lo que falta mostrar.",
+    "pasos": "Plan: si los pasos alcanzan para lo que promete la idea, si alguno es muy grande, si el orden sirve y si algo se contradice.",
+}
+MAX_DETALLE = 12_000  # la idea completa (opcional): reglas, pantallas, datos; va al plan y a cada paso
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
@@ -40,6 +58,10 @@ LIMITE_IA = 1500  # por intento; la acción de la app tiene 3600 s para dos inte
 # Lo que la IA nunca escribe: lo que arma pieza.py. app.json sí (sus acciones), pero sin tocar lo que la identifica.
 PROTEGIDOS = {"piezas.json", "acciones.json", "pruebas/correr.sh"}  # correr.sh: la IA no puede aflojar las pruebas
 APP_FIJO = ("id", "nombre", "repo", "datos", "plataformas", "privado", "version")
+# Lo que la IA no lee en un paso: no le sirve para programar la app y solo gasta tokens. Las piezas sí se pueden leer (su API).
+NO_LEER = ("escritorio/", "docs/", ".github/", "herramientas/", "piezas.json", "acciones.json", "LICENSE", "CODE_OF_CONDUCT.md",
+           "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md", "GEMINI.md", "build.sh", "instalar.sh")
+MAX_MAPA = 80  # archivos en el mapa
 
 
 def _guias():
@@ -104,7 +126,8 @@ def validar_plan(datos):
     """{pasos: [{titulo, que, archivos, tokens}]} → la lista limpia, o ValueError."""
     pasos = datos.get("pasos") if isinstance(datos, dict) else None
     if not isinstance(pasos, list) or not 1 <= len(pasos) <= MAX_PASOS:
-        raise ValueError(f"El plan tiene que traer entre 1 y {MAX_PASOS} pasos.")
+        n = len(pasos) if isinstance(pasos, list) else 0
+        raise ValueError(f"El plan tiene que traer entre 1 y {MAX_PASOS} pasos (trajo {n}).")
     limpio = []
     for x in pasos:
         if not isinstance(x, dict) or not _texto(x.get("titulo"), 80):
@@ -114,6 +137,14 @@ def validar_plan(datos):
         limpio.append({"titulo": _texto(x.get("titulo"), 80), "que": _texto(x.get("que"), 500), "archivos": archivos,
                        "tokens": int(t) if isinstance(t, (int, float)) and 0 <= t <= 500_000 else 0})
     return limpio
+
+
+def _detalle(p):
+    """La idea completa que dio la persona (opcional). Manda sobre lo que la IA suponga."""
+    d = _texto(p.get("detalle"), MAX_DETALLE)
+    acuerdos = "\n".join(f"- {a}" for a in (p.get("acuerdos") or [])[:MAX_ACUERDOS])
+    return (f"\n# La idea completa (manda sobre lo que supongas)\n{d}\n" if d else "") + (
+        f"\n# Cambios acordados en la revisión (también mandan)\n{acuerdos}\n" if acuerdos else "")
 
 
 def _prompt_plan(p, ficha):
@@ -127,7 +158,7 @@ def _prompt_plan(p, ficha):
 - Nombre: {p['nombre']}
 - Qué hace: {p['frase']}
 - Sistemas: {', '.join(p['plataformas'])}
-
+{_detalle(p)}
 # Lo que ya está hecho (piezas de Pieza, 0 tokens: no las planifiques)
 {hechas}
 
@@ -145,7 +176,9 @@ En «tokens», tu estimado de lo que gastará ese paso."""
 
 def plan(d):
     nombre = _texto(d.get("nombre"), 40)
-    frase = _texto(d.get("frase"), 300)
+    frase = _texto(d.get("frase"), MAX_FRASE)
+    detalle = _texto(d.get("detalle"), MAX_DETALLE)
+    acuerdos = [t for t in (_texto(a, 400) for a in (d.get("acuerdos") or [])[:MAX_ACUERDOS] if isinstance(a, str)) if t]
     pid = _id(nombre)
     if not pid or not pid[0].isalpha() or not frase:
         raise ValueError("Falta el nombre o la frase de la app.")
@@ -156,21 +189,97 @@ def plan(d):
         p = {"id": pid, "estado": "nuevo", "pasos": [], "gastado": 0, "gastado_plan": 0}
     if p.get("estado") not in (None, "nuevo", "plan"):
         raise ValueError("Esa app ya está creada: sigue con sus pasos.")
-    p.update({"nombre": nombre, "frase": frase, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
+    p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "acuerdos": acuerdos, "revision": None, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
               if x in ficha["piezas"]], "ahorro": ficha["tokens_ahorrados"]})
-    pedido = _prompt_plan(p, ficha)
-    texto, error = ia.preguntar(pedido, timeout=600)
-    if error:
-        return {"ok": False, "error": ia.frase(error), "codigo": error["codigo"]}
-    gastado = tokens(pedido, texto)
+    pedido, gastado, pasos = _prompt_plan(p, ficha), 0, None
+    for intento in range(INTENTOS):
+        texto, error = ia.preguntar(pedido, timeout=600)
+        if error:
+            return {"ok": False, "error": ia.frase(error), "codigo": error["codigo"]}
+        gastado += tokens(pedido, texto)
+        try:
+            pasos = validar_plan(_json_de(texto))
+            break
+        except ValueError as e:
+            falla = str(e)
+            # Una app grande a veces sale con más pasos de la cuenta o sin JSON: se pide de nuevo diciendo qué falló.
+            pedido = _prompt_plan(p, ficha) + f"\n\n# Tu respuesta anterior no sirvió\n{falla} Junta pasos si te pasaste. Responde solo el JSON."
     p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
     p["gastado"] = p["gastado_plan"]
-    try:
-        pasos = validar_plan(_json_de(texto))
-    except ValueError as e:
+    if pasos is None:
         _guardar(p)
-        return {"ok": False, "error": str(e), "codigo": "plan", "gastado": gastado}
+        return {"ok": False, "error": falla, "codigo": "plan", "gastado": gastado}
     p.update({"estado": "plan", "pasos": [dict(x, estado="pendiente", gastado=0) for x in pasos]})
+    return {"ok": True, "proyecto": _guardar(p)}
+
+
+# ── Revisar a ciegas (elefante y pez dorado) ─────────────────────────────────────────────────────────────────────────────
+
+def _documento(p):
+    pasos = "\n".join(f"{i + 1}. {x['titulo']}: {x['que']}" for i, x in enumerate(p.get("pasos") or []))
+    return f"""# {p['nombre']}
+{p['frase']}
+Sistemas: {', '.join(p.get('plataformas') or [])}
+{_detalle(p)}
+# El plan de pasos
+{pasos}"""
+
+
+def _prompt_revisar(p, enfoque):
+    return f"""Eres un revisor exigente. No participaste en este proyecto y solo conoces el documento de abajo.
+Tu enfoque: {ENFOQUES[enfoque]}
+Busca fallas concretas, no elogios. Si algo está bien, no lo menciones. Como máximo {MAX_HALLAZGOS} hallazgos, de lo más grave a
+lo menos grave. Escribe en el idioma del documento, con frases cortas.
+
+Responde SOLO este JSON, sin texto antes ni después:
+{{"hallazgos": [{{"gravedad": "alta" | "media" | "baja", "problema": "qué falla, en 1 o 2 frases",
+  "propuesta": "qué cambiar, en 1 o 2 frases, lista para agregar a la idea"}}]}}
+
+--- DOCUMENTO ---
+{_documento(p)}"""
+
+
+def validar_revision(datos, enfoque):
+    if not isinstance(datos, dict) or not isinstance(datos.get("hallazgos"), list):
+        raise ValueError("La revisión no trae «hallazgos».")
+    limpio = []
+    for h in datos["hallazgos"][:MAX_HALLAZGOS]:
+        if not isinstance(h, dict) or h.get("gravedad") not in ("alta", "media", "baja"):
+            continue
+        problema, propuesta = _texto(h.get("problema"), 400), _texto(h.get("propuesta"), 400)
+        if problema and propuesta:
+            limpio.append({"enfoque": enfoque, "gravedad": h["gravedad"], "problema": problema, "propuesta": propuesta})
+    return limpio
+
+
+def revisar(d):
+    p = _leer(d.get("id"))
+    if p.get("estado") != "plan" or not p.get("pasos"):
+        raise ValueError("Primero haz el plan.")
+
+    def uno(enfoque):
+        pedido = _prompt_revisar(p, enfoque)
+        texto, error = ia.preguntar(pedido, timeout=600)  # sesión nueva, sin herramientas ni la conversación del plan
+        if error:
+            return enfoque, [], tokens(pedido), error
+        try:
+            return enfoque, validar_revision(_json_de(texto), enfoque), tokens(pedido, texto), None
+        except ValueError:
+            return enfoque, [], tokens(pedido, texto), None
+
+    with ThreadPoolExecutor(max_workers=len(ENFOQUES)) as hilos:
+        resultados = list(hilos.map(uno, ENFOQUES))
+    errores = [e for _, _, _, e in resultados if e]
+    if len(errores) == len(ENFOQUES):
+        return {"ok": False, "error": ia.frase(errores[0]), "codigo": errores[0]["codigo"]}
+    orden = {"alta": 0, "media": 1, "baja": 2}
+    hallazgos = sorted((h for _, hs, _, _ in resultados for h in hs), key=lambda h: orden[h["gravedad"]])
+    for i, h in enumerate(hallazgos):
+        h["id"] = f"h{i + 1}"
+    gastado = sum(g for _, _, g, _ in resultados)
+    p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
+    p["gastado"] = p["gastado_plan"]
+    p["revision"] = {"hallazgos": hallazgos, "gastado": gastado, "enfoques": [e for e, _, _, err in resultados if not err]}
     return {"ok": True, "proyecto": _guardar(p)}
 
 
@@ -272,19 +381,59 @@ def probar(carpeta):
     return r.returncode == 0, salida
 
 
+def _no_leer(rel):
+    return any(rel == x or (x.endswith("/") and rel.startswith(x)) for x in NO_LEER)
+
+
+def _mapa(carpeta):
+    """Los archivos de la app que la IA puede leer, con su tamaño: así va directo a lo que necesita. Las piezas van aparte."""
+    de_piezas = _de_piezas(carpeta)
+    propios, piezas_ = [], []
+    for raiz, dirs, archivos in os.walk(carpeta):
+        dirs[:] = sorted(x for x in dirs if x not in (".git", "node_modules", "target", "__pycache__", "dist"))
+        for a in sorted(archivos):
+            rel = os.path.relpath(os.path.join(raiz, a), carpeta).replace(os.sep, "/")
+            if _no_leer(rel) or rel.startswith("pruebas/datos/"):
+                continue
+            try:
+                kb = max(1, round(os.path.getsize(os.path.join(raiz, a)) / 1024))
+            except OSError:
+                continue
+            (piezas_ if rel in de_piezas else propios).append(f"{rel} ({kb} KB)")
+    return propios[:MAX_MAPA], piezas_[:MAX_MAPA]
+
+
+def _historia(p, n):
+    """Lo que hicieron los pasos anteriores que quedaron listos: su resumen y qué archivos tocaron."""
+    lineas = []
+    for i, x in enumerate(p["pasos"][:n]):
+        if x.get("estado") == "listo":
+            tocados = ", ".join((x.get("escritos") or [])[:12])
+            lineas.append(f"{i + 1}. {x['titulo']}: {_texto(x.get('resumen'), 300) or 'listo'}" + (f" (tocó {tocados})" if tocados else ""))
+    return "\n".join(lineas) or "Ninguno todavía."
+
+
 def _prompt_paso(p, n, error=None):
     with open(os.path.join(_guias(), "reglas.md"), encoding="utf-8") as f:
         reglas = f.read()
     plan_ = "\n".join(f"{i + 1}. {x['titulo']} ({x['estado']})" for i, x in enumerate(p["pasos"]))
     x = p["pasos"][n]
+    propios, de_piezas = _mapa(p["carpeta"])
     extra = f"\n\n# Las pruebas fallaron con tu respuesta anterior\nArréglalo. Las últimas líneas:\n```\n{error}\n```" if error else ""
     return f"""{reglas}
 
 # La app «{p['nombre']}»
 {p['frase']}
-
+{_detalle(p)}
 # El plan
 {plan_}
+
+# Lo que ya hicieron los pasos anteriores
+{_historia(p, n)}
+
+# Los archivos de la app
+Propios (los que se cambian): {", ".join(propios) or "ninguno"}
+De piezas (no se cambian; su API está en AGENTS.md): {", ".join(de_piezas) or "ninguno"}
 
 # Este paso ({n + 1})
 {x['titulo']}
@@ -292,10 +441,21 @@ def _prompt_paso(p, n, error=None):
 Archivos que pensabas tocar: {', '.join(x['archivos']) or 'los que hagan falta'}{extra}
 
 # Cómo responder
-Lee la carpeta de la app antes de escribir. Responde SOLO este JSON, sin texto antes ni después:
+Lee solo lo que necesitas (usa el mapa de arriba). Responde SOLO este JSON, sin texto antes ni después:
 {{"resumen": "qué hiciste, en 1 a 3 frases", "archivos": [{{"ruta": "ruta/relativa", "contenido": "el archivo completo"}}],
  "borrar": ["ruta/que/ya/no/sirve"]}}
 «borrar» es opcional (por ejemplo, el ejemplo de `pieza.py crear` que reemplazas)."""
+
+
+def _gastar(x, uso, estimado):
+    """Suma al paso los tokens reales si la IA los dijo; si no, la estimación. `cache` (lo que la IA reusó, mucho más barato) va
+    aparte y no entra en «gastado»."""
+    if uso.get("entrada") or uso.get("salida"):
+        x["gastado"] = x.get("gastado", 0) + uso.get("entrada", 0) + uso.get("salida", 0)
+        x["cache"] = x.get("cache", 0) + uso.get("cache", 0)
+        x["medido"] = True
+    else:
+        x["gastado"] = x.get("gastado", 0) + estimado
 
 
 def paso(d):
@@ -314,9 +474,11 @@ def paso(d):
             antes = _foto(carpeta)
             pedido = _prompt_editar(p, n, error_prueba)
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
-            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, al_evento=_avisar(carpeta, n, intento))
+            uso = {}
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, no_leer=NO_LEER,
+                                             al_evento=_avisar(carpeta, n, intento, uso))
             nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
-            x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN
+            _gastar(x, uso, tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN)
             if cuidados:
                 x["cuidados"] = sorted(set(x.get("cuidados", [])) | set(cuidados))
             if error:
@@ -331,8 +493,10 @@ def paso(d):
         else:
             pedido = _prompt_paso(p, n, error_prueba)
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
-            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, al_evento=_avisar(carpeta, n, intento))
-            x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto)
+            uso = {}
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, no_leer=NO_LEER,
+                                             al_evento=_avisar(carpeta, n, intento, uso))
+            _gastar(x, uso, tokens(pedido, texto))
             if error:
                 x.update(estado="fallo", error=ia.frase(error), intentos=intento)
                 break
@@ -418,12 +582,30 @@ def _cuidar(carpeta, antes):
             cuidados.append("app.json")
     final = _foto(carpeta)
     escritos = sorted(r for r in set(final) | set(antes) if final.get(r) != antes.get(r))
-    return escritos, cuidados, sum(len(final.get(r, b"")) for r in escritos)
+    return escritos, cuidados, sum(_cambiado(antes.get(r, b""), final.get(r, b"")) for r in escritos)
 
 
-def _avisar(carpeta, n, intento):
-    """En vivo para la interfaz (pieza «trabajos», acción con «progreso»): qué lee y qué escribe la IA, con rutas de la app."""
+def _cambiado(antes, ahora):
+    """Cuántos bytes nuevos hay en `ahora`: sin lo que quedó igual al principio y al final (una edición chica en un archivo grande
+    cuenta poco)."""
+    i, tope = 0, min(len(antes), len(ahora))
+    while i < tope and antes[i] == ahora[i]:
+        i += 1
+    j = 0
+    while j < tope - i and antes[-1 - j] == ahora[-1 - j]:
+        j += 1
+    return len(ahora) - i - j
+
+
+def _avisar(carpeta, n, intento, uso=None):
+    """En vivo para la interfaz (pieza «trabajos», acción con «progreso»): qué lee y qué escribe la IA, con rutas de la app.
+    Los tokens que la IA dice haber usado ({"t": "uso"}) se suman en `uso`."""
     def al_evento(e):
+        if e.get("t") == "uso" and uso is not None:
+            for k in ("entrada", "cache", "salida"):
+                v = e.get(k)
+                uso[k] = uso.get(k, 0) + (v if isinstance(v, int) and v >= 0 else 0)
+            return
         ruta = e.get("ruta") if isinstance(e.get("ruta"), str) else ""
         if ruta.startswith(carpeta):
             ruta = os.path.relpath(ruta, carpeta).replace(os.sep, "/")
@@ -436,7 +618,8 @@ def _prompt_editar(p, n, error=None):
     """El pedido de un paso cuando la IA edita la carpeta: las mismas reglas, sin JSON."""
     base = _prompt_paso(p, n, error)
     return base.split("# Cómo responder")[0] + """# Cómo trabajar en este paso
-1. Lee la carpeta de la app (empieza por AGENTS.md).
+1. Lee solo lo que necesitas: los archivos que vas a cambiar y lo que los usa. Usa el mapa de arriba y busca con Grep en un
+   archivo grande antes de leerlo entero. Lee un archivo de pieza solo si su API no está en AGENTS.md.
 2. Crea o cambia los archivos que el paso necesita, directamente en la carpeta. No toques los archivos de piezas.
 3. Al terminar, responde en 1 a 3 frases qué hiciste. Nada más."""
 
@@ -452,4 +635,4 @@ def lista(_d):
 
 
 if __name__ == "__main__":
-    nucleo.script({"lista": lista, "plan": plan, "crear": crear, "paso": paso}, __doc__)
+    nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso}, __doc__)
