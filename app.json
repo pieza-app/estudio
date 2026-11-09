@@ -103,6 +103,10 @@
      "tipo": "texto",
      "max": 12000
     },
+    "acuerdos": {
+     "tipo": "lista",
+     "max": 20
+    },
     "plataformas": {
      "tipo": "lista",
      "max": 6,
@@ -115,6 +119,22 @@
    },
    "responde": "planListo",
    "limite": 660
+  },
+  "proyectoRevisar": {
+   "script": "proyectos.py",
+   "args": [
+    "revisar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "revisionLista",
+   "limite": 720
   },
   "proyectoCrear": {
    "script": "proyectos.py",

@@ -80,6 +80,15 @@ await page.click("#hacer-plan");
 await page.waitForSelector(".plan li");
 assert.ok(await page.locator(".medidor .ahorro .icono-pieza").count(), "el medidor muestra lo ahorrado con piezas");
 await capturar(page, "3e-plan-en");
+// Revisión a ciegas: lo grave viene marcado; rehacer el plan con lo aceptado.
+await page.click("#revisar");
+await page.waitForSelector(".hallazgos li");
+assert.equal(await page.locator(".hallazgos li").count(), 3, "la revisión trae sus hallazgos");
+assert.ok(await page.isChecked('[data-hallazgo="h1"]'), "lo grave viene marcado");
+await capturar(page, "3e2-revision-en");
+await page.click("#rehacer-con");
+await page.waitForSelector(".hallazgos", { state: "detached" });  // el plan nuevo parte sin revisión
+await page.waitForSelector(".plan li");
 await page.click("#siguiente");
 await page.click("#crear");
 await page.waitForSelector(".pasos li");

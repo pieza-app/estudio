@@ -3,6 +3,7 @@
 
   proyectos.py lista <salida.json>
   proyectos.py plan  <entrada.json {nombre, frase, detalle?, plataformas, piezas}> <salida.json>
+  proyectos.py revisar <entrada.json {id}> <salida.json>
   proyectos.py crear <entrada.json {id}> <salida.json>
   proyectos.py paso  <entrada.json {id, n}> <salida.json>
 
@@ -10,6 +11,9 @@ Un proyecto se guarda en <carpeta de datos>/proyectos/<id>.json. La app queda en
 las pruebas).
 
 - `plan`: la IA desglosa lo propio de la app en pasos chicos (JSON validado). Las piezas ya hechas no entran al plan.
+- `revisar`: la idea y el plan van a 3 sesiones NUEVAS de la IA (sin la conversación que armó el plan), cada una con un enfoque:
+  riesgos y seguridad, uso, y pasos. Es el patrón «elefante y pez dorado»: quien no trae contexto ve lo que el autor ya no ve.
+  Devuelve hallazgos; la persona acepta los que quiere y rehace el plan con ellos (`acuerdos` en `plan`).
 - `crear`: `pieza.py crear` con las piezas elegidas (el Pieza que va dentro de la app, en datos/pieza/). No usa la IA.
 - `paso`: con Claude o Codex (`ia.puede_escribir()`), la IA edita los archivos de la app directamente, SOLO en su carpeta y sin
   terminal. Después Pieza revisa lo que cambió: devuelve a su estado los archivos de piezas, `piezas.json` y `acciones.json`, y lo
@@ -24,6 +28,7 @@ la respuesta y de lo que cambió en los archivos (~4 caracteres por token).
 """
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 import re
 import subprocess
 import sys
@@ -37,6 +42,13 @@ import trabajos
 CARACTERES_POR_TOKEN = 4
 MAX_PASOS = 16
 MAX_FRASE = 400
+MAX_ACUERDOS = 20  # cambios aceptados de la revisión
+MAX_HALLAZGOS = 6  # por enfoque
+ENFOQUES = {
+    "riesgos": "Riesgos y seguridad: qué puede salir mal, datos o dinero en juego, secretos, casos borde, lo que falta proteger.",
+    "uso": "Uso: si una persona sin conocimientos técnicos entiende y usa la app sin ayuda; pasos de más, textos confusos, lo que falta mostrar.",
+    "pasos": "Plan: si los pasos alcanzan para lo que promete la idea, si alguno es muy grande, si el orden sirve y si algo se contradice.",
+}
 MAX_DETALLE = 12_000  # la idea completa (opcional): reglas, pantallas, datos; va al plan y a cada paso
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
@@ -129,7 +141,9 @@ def validar_plan(datos):
 def _detalle(p):
     """La idea completa que dio la persona (opcional). Manda sobre lo que la IA suponga."""
     d = _texto(p.get("detalle"), MAX_DETALLE)
-    return f"\n# La idea completa (manda sobre lo que supongas)\n{d}\n" if d else ""
+    acuerdos = "\n".join(f"- {a}" for a in (p.get("acuerdos") or [])[:MAX_ACUERDOS])
+    return (f"\n# La idea completa (manda sobre lo que supongas)\n{d}\n" if d else "") + (
+        f"\n# Cambios acordados en la revisión (también mandan)\n{acuerdos}\n" if acuerdos else "")
 
 
 def _prompt_plan(p, ficha):
@@ -163,6 +177,7 @@ def plan(d):
     nombre = _texto(d.get("nombre"), 40)
     frase = _texto(d.get("frase"), MAX_FRASE)
     detalle = _texto(d.get("detalle"), MAX_DETALLE)
+    acuerdos = [t for t in (_texto(a, 400) for a in (d.get("acuerdos") or [])[:MAX_ACUERDOS] if isinstance(a, str)) if t]
     pid = _id(nombre)
     if not pid or not pid[0].isalpha() or not frase:
         raise ValueError("Falta el nombre o la frase de la app.")
@@ -173,7 +188,7 @@ def plan(d):
         p = {"id": pid, "estado": "nuevo", "pasos": [], "gastado": 0, "gastado_plan": 0}
     if p.get("estado") not in (None, "nuevo", "plan"):
         raise ValueError("Esa app ya está creada: sigue con sus pasos.")
-    p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
+    p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "acuerdos": acuerdos, "revision": None, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
               if x in ficha["piezas"]], "ahorro": ficha["tokens_ahorrados"]})
     pedido = _prompt_plan(p, ficha)
     texto, error = ia.preguntar(pedido, timeout=600)
@@ -188,6 +203,76 @@ def plan(d):
         _guardar(p)
         return {"ok": False, "error": str(e), "codigo": "plan", "gastado": gastado}
     p.update({"estado": "plan", "pasos": [dict(x, estado="pendiente", gastado=0) for x in pasos]})
+    return {"ok": True, "proyecto": _guardar(p)}
+
+
+# ── Revisar a ciegas (elefante y pez dorado) ─────────────────────────────────────────────────────────────────────────────
+
+def _documento(p):
+    pasos = "\n".join(f"{i + 1}. {x['titulo']}: {x['que']}" for i, x in enumerate(p.get("pasos") or []))
+    return f"""# {p['nombre']}
+{p['frase']}
+Sistemas: {', '.join(p.get('plataformas') or [])}
+{_detalle(p)}
+# El plan de pasos
+{pasos}"""
+
+
+def _prompt_revisar(p, enfoque):
+    return f"""Eres un revisor exigente. No participaste en este proyecto y solo conoces el documento de abajo.
+Tu enfoque: {ENFOQUES[enfoque]}
+Busca fallas concretas, no elogios. Si algo está bien, no lo menciones. Como máximo {MAX_HALLAZGOS} hallazgos, de lo más grave a
+lo menos grave. Escribe en el idioma del documento, con frases cortas.
+
+Responde SOLO este JSON, sin texto antes ni después:
+{{"hallazgos": [{{"gravedad": "alta" | "media" | "baja", "problema": "qué falla, en 1 o 2 frases",
+  "propuesta": "qué cambiar, en 1 o 2 frases, lista para agregar a la idea"}}]}}
+
+--- DOCUMENTO ---
+{_documento(p)}"""
+
+
+def validar_revision(datos, enfoque):
+    if not isinstance(datos, dict) or not isinstance(datos.get("hallazgos"), list):
+        raise ValueError("La revisión no trae «hallazgos».")
+    limpio = []
+    for h in datos["hallazgos"][:MAX_HALLAZGOS]:
+        if not isinstance(h, dict) or h.get("gravedad") not in ("alta", "media", "baja"):
+            continue
+        problema, propuesta = _texto(h.get("problema"), 400), _texto(h.get("propuesta"), 400)
+        if problema and propuesta:
+            limpio.append({"enfoque": enfoque, "gravedad": h["gravedad"], "problema": problema, "propuesta": propuesta})
+    return limpio
+
+
+def revisar(d):
+    p = _leer(d.get("id"))
+    if p.get("estado") != "plan" or not p.get("pasos"):
+        raise ValueError("Primero haz el plan.")
+
+    def uno(enfoque):
+        pedido = _prompt_revisar(p, enfoque)
+        texto, error = ia.preguntar(pedido, timeout=600)  # sesión nueva, sin herramientas ni la conversación del plan
+        if error:
+            return enfoque, [], tokens(pedido), error
+        try:
+            return enfoque, validar_revision(_json_de(texto), enfoque), tokens(pedido, texto), None
+        except ValueError:
+            return enfoque, [], tokens(pedido, texto), None
+
+    with ThreadPoolExecutor(max_workers=len(ENFOQUES)) as hilos:
+        resultados = list(hilos.map(uno, ENFOQUES))
+    errores = [e for _, _, _, e in resultados if e]
+    if len(errores) == len(ENFOQUES):
+        return {"ok": False, "error": ia.frase(errores[0]), "codigo": errores[0]["codigo"]}
+    orden = {"alta": 0, "media": 1, "baja": 2}
+    hallazgos = sorted((h for _, hs, _, _ in resultados for h in hs), key=lambda h: orden[h["gravedad"]])
+    for i, h in enumerate(hallazgos):
+        h["id"] = f"h{i + 1}"
+    gastado = sum(g for _, _, g, _ in resultados)
+    p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
+    p["gastado"] = p["gastado_plan"]
+    p["revision"] = {"hallazgos": hallazgos, "gastado": gastado, "enfoques": [e for e, _, _, err in resultados if not err]}
     return {"ok": True, "proyecto": _guardar(p)}
 
 
@@ -543,4 +628,4 @@ def lista(_d):
 
 
 if __name__ == "__main__":
-    nucleo.script({"lista": lista, "plan": plan, "crear": crear, "paso": paso}, __doc__)
+    nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso}, __doc__)

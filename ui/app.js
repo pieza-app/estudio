@@ -177,12 +177,33 @@
       <span class="suave" data-sin-traducir>${esc(x.que)}</span>
       <small class="suave" data-sin-traducir>${esc(Tp("~{n} tokens", { n: miles(x.tokens) }))}</small></li>`).join("")}</ol>` : "";
     return cabeza() + `<p class="suave">Tu IA desglosa lo propio de tu app en pasos chicos. Las piezas ya hechas no entran al plan.</p>`
-      + sinIA() + (listo ? medidor(p) + filas : "") + errorHTML()
+      + sinIA() + (listo ? medidor(p) + filas + revisionHTML(p) : "") + errorHTML()
       + (E.ocupado === "plan" ? trabajando("Tu IA está armando el plan…") : "")
+      + (E.ocupado === "revisar" ? trabajando("Tres revisores nuevos están leyendo tu idea…") : "")
       + `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
         <button type="button" class="pz-boton${listo ? "" : " pz-principal"}" id="hacer-plan"${E.ocupado || !E.config.ia ? " disabled" : ""}>${
           esc(listo ? "Rehacer el plan" : "Hacer el plan con mi IA")}</button>
         ${listo ? `<button type="button" class="pz-boton pz-principal" id="siguiente"${E.ocupado ? " disabled" : ""}>Siguiente</button>` : ""}</div>`;
+  }
+  // Revisar a ciegas (elefante y pez dorado): 3 sesiones nuevas de tu IA leen solo la idea y el plan, y buscan fallas.
+  const ENFOQUES = { riesgos: "Riesgos y seguridad", uso: "Uso", pasos: "Plan" };
+  const GRAVEDAD = { alta: "Grave", media: "Importante", baja: "Menor" };
+  function revisionHTML(p) {
+    const r = p.revision;
+    const boton = `<button type="button" class="pz-boton" id="revisar"${E.ocupado || !E.config.ia ? " disabled" : ""}>${esc(r ? "Revisar de nuevo" : "Revisar a ciegas")}</button>`;
+    if (!r) return `<section class="revision"><h3>${esc("Revisión a ciegas")}</h3>
+      <p class="suave">${esc("Tres sesiones nuevas de tu IA leen solo tu idea y el plan, sin saber cómo se armó, y buscan fallas: riesgos, uso y pasos.")}</p>${boton}</section>`;
+    if (!r.hallazgos.length) return `<section class="revision"><h3>${esc("Revisión a ciegas")}</h3><p class="suave">${esc("Los revisores no encontraron fallas.")}</p>${boton}</section>`;
+    const elegidos = E.aceptados || [];
+    const filas = r.hallazgos.map((h) => `<li class="gravedad-${esc(h.gravedad)}"><label>
+      <input type="checkbox" data-hallazgo="${esc(h.id)}"${elegidos.includes(h.id) ? " checked" : ""}${E.ocupado ? " disabled" : ""}>
+      <span><small class="chip-estado">${esc(GRAVEDAD[h.gravedad] || h.gravedad)} · ${esc(ENFOQUES[h.enfoque] || h.enfoque)}</small>
+      <b data-sin-traducir>${esc(h.problema)}</b><span class="suave" data-sin-traducir>${esc(h.propuesta)}</span></span></label></li>`).join("");
+    const n = elegidos.length;
+    return `<section class="revision"><h3>${esc("Revisión a ciegas")}</h3>
+      <p class="suave">${esc("Marca los cambios que quieres y rehaz el plan con ellos.")}</p><ul class="hallazgos">${filas}</ul>
+      <div class="pz-pie pz-izq">${boton}<button type="button" class="pz-boton pz-principal" id="rehacer-con"${E.ocupado || !n ? " disabled" : ""} data-sin-traducir>${
+        esc(Tp("Rehacer el plan con {n} cambios", { n }))}</button></div></section>`;
   }
   function pasoCrear() {
     const p = E.proyecto;
@@ -337,7 +358,17 @@
     else if (b.id === "hacer-plan") {
       const n = E.nueva;
       ocupar("plan");
-      host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(), plataformas: n.plataformas, piezas: n.piezas });
+      host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(),
+        acuerdos: (E.proyecto && E.proyecto.acuerdos) || [], plataformas: n.plataformas, piezas: n.piezas });
+    } else if (b.id === "revisar") { E.aceptados = []; ocupar("revisar"); host.enviar("proyectoRevisar", { id: E.proyecto.id }); }
+    else if (b.id === "rehacer-con") {
+      const n = E.nueva, p = E.proyecto;
+      const nuevos = p.revision.hallazgos.filter((h) => (E.aceptados || []).includes(h.id)).map((h) => h.propuesta);
+      const acuerdos = [...(p.acuerdos || []), ...nuevos].slice(-20);
+      E.aceptados = [];
+      ocupar("plan");
+      host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(), acuerdos,
+        plataformas: n.plataformas, piezas: n.piezas });
     } else if (b.id === "crear") { ocupar("crear"); host.enviar("proyectoCrear", { id: E.proyecto.id }); }
     else if (b.id === "hacer-paso") hacerPaso(Number(b.dataset.n));
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
@@ -389,6 +420,11 @@
     } else if (t.dataset.dueno) { E.pub.dueno = t.dataset.dueno; pintar(); }
     else if (t.dataset.vis) { E.pub.visibilidad = t.dataset.vis; pintar(); }
     else if (t.id === "explorador") { E.pub.explorador = t.checked; }
+    else if (t.dataset.hallazgo) {
+      const id = t.dataset.hallazgo, a = E.aceptados || [];
+      E.aceptados = t.checked ? [...new Set([...a, id])] : a.filter((x) => x !== id);
+      pintar();
+    }
     else if (t.dataset.pieza) {
       n.tocadas = [...new Set([...n.tocadas, t.dataset.pieza])];
       n.piezas = t.checked ? [...new Set([...n.piezas, t.dataset.pieza])] : n.piezas.filter((x) => x !== t.dataset.pieza);
@@ -458,6 +494,14 @@
       pintar();
     },
     proyectosListos(r) { if (r && r.ok) { E.proyectos = r.proyectos || []; if (E.paso === 0) pintar(); } },
+    revisionLista(r) {
+      E.ocupado = "";
+      if (r && r.ok) {
+        E.proyecto = r.proyecto;
+        E.aceptados = r.proyecto.revision.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.id);  // lo grave, marcado
+      } else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
     planListo(r) {
       E.ocupado = "";
       if (r && r.ok) E.proyecto = r.proyecto; else E.error = (r && r.error) || Tp("No se pudo.");
@@ -528,9 +572,21 @@
       ["Buscar y ordenar", "Filtrar y ordenar lo guardado, con pruebas de interfaz.", 5000],
       ["La página y el README", "Contar qué hace la app, con capturas de datos ficticios.", 3000],
     ].map(([titulo, que, tokens]) => ({ titulo: Tp(titulo), que: Tp(que), archivos: [], tokens, estado: "pendiente", gastado: 0 }));
-    const p = { id, nombre: d.nombre, frase: d.frase, detalle: d.detalle || "", plataformas: d.plataformas, piezas: d.piezas || [], estado: "plan", pasos,
+    const p = { id, nombre: d.nombre, frase: d.frase, detalle: d.detalle || "", acuerdos: d.acuerdos || [], revision: null, plataformas: d.plataformas, piezas: d.piezas || [], estado: "plan", pasos,
       ahorro: ficha.tokens_ahorrados, gastado_plan: 2400, gastado: 2400 };
     SIM.proyectos = [...SIM.proyectos.filter((x) => x.id !== id), p];
+    return { ok: true, proyecto: p };
+  }
+  function revisionSimulada(d) {
+    const p = SIM.proyectos.find((x) => x.id === d.id);
+    if (!p) return { ok: false, error: Tp("No se pudo.") };
+    const hallazgos = [
+      ["riesgos", "alta", "No dice qué pasa si se corta la luz a mitad de un guardado.", "Guardar en un archivo temporal y renombrarlo al terminar."],
+      ["uso", "media", "La primera pantalla no explica qué hacer si la lista está vacía.", "Mostrar un ejemplo y un botón para agregar el primero."],
+      ["pasos", "baja", "La página y el README quedan para el final.", "Escribir el README junto con el primer paso."],
+    ].map(([enfoque, gravedad, problema, propuesta], i) => ({ id: `h${i + 1}`, enfoque, gravedad, problema: Tp(problema), propuesta: Tp(propuesta) }));
+    p.revision = { hallazgos, gastado: 4200, enfoques: ["riesgos", "uso", "pasos"] };
+    p.gastado_plan += 4200; p.gastado = p.gastado_plan;
     return { ok: true, proyecto: p };
   }
   const COMUNES = PiezaHost.simulacionesComunes();
@@ -554,6 +610,7 @@
       });
       case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos });
       case "proyectoPlan": return c.luego(900, () => c.responder("planListo", planSimulado(d)));
+      case "proyectoRevisar": return c.luego(1200, () => c.responder("revisionLista", revisionSimulada(d)));
       case "proyectoCrear": return c.luego(700, () => {
         const p = SIM.proyectos.find((x) => x.id === d.id);
         Object.assign(p, { estado: "creado", carpeta: `~/Pieza/${p.nombre}` });

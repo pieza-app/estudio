@@ -68,3 +68,14 @@ body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 
 .publicar, .proponer { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--linea); }
 .publicar ol { padding-left: 20px; }
 .vivo p { margin: 4px 0; overflow-wrap: anywhere; }
+
+/* Revisión a ciegas */
+.revision { margin-top: 24px; }
+.revision h3 { margin: 0 0 4px; font-size: 1rem; }
+.revision .hallazgos { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+.hallazgos label { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px solid var(--linea); border-radius: 8px; cursor: pointer; }
+.hallazgos label > span { display: grid; gap: 4px; }
+.hallazgos input { margin-top: 4px; }
+.hallazgos .gravedad-alta label { border-color: var(--rojo); }
+.hallazgos li { margin: 0; }
+.hallazgos input { accent-color: var(--acento); }

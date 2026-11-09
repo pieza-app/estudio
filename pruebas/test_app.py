@@ -130,6 +130,37 @@ class Proyectos(unittest.TestCase):
         sin = self.p._prompt_paso({**self.p._leer("recetas"), "detalle": ""}, 0)
         self.assertNotIn("# La idea completa", sin)
 
+    def test_revisar_a_ciegas(self):
+        """Tres sesiones nuevas, cada una con su enfoque, sin la conversación del plan; lo aceptado vuelve al plan como acuerdos."""
+        self.plan()
+        for _ in range(3):
+            self.respuestas.append('{"hallazgos": [{"gravedad": "media", "problema": "Falta X.", "propuesta": "Agregar X."},'
+                                   ' {"gravedad": "alta", "problema": "Se pierden datos.", "propuesta": "Guardar con respaldo."},'
+                                   ' {"gravedad": "rara", "problema": "No vale.", "propuesta": "No vale."}]}')
+        antes = len(self.pedidos)
+        r = self.p.revisar({"id": "recetas"})
+        self.assertTrue(r["ok"], r)
+        hs = r["proyecto"]["revision"]["hallazgos"]
+        self.assertEqual(len(hs), 6)  # la gravedad desconocida no entra
+        self.assertEqual(hs[0]["gravedad"], "alta")
+        self.assertEqual(sorted({h["enfoque"] for h in hs}), ["pasos", "riesgos", "uso"])
+        pedidos = [x[0] for x in self.pedidos[antes:]]
+        self.assertEqual(len(pedidos), 3)
+        for x in pedidos:
+            self.assertIn("No participaste en este proyecto", x)
+            self.assertIn("Ordena las recetas de Ana Pérez.", x)
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": [],
+                         "acuerdos": ["Guardar con respaldo.", 7, ""]})
+        self.assertEqual(r["proyecto"]["acuerdos"], ["Guardar con respaldo."])
+        self.assertIsNone(r["proyecto"]["revision"])
+        self.assertIn("# Cambios acordados en la revisión", self.pedidos[-1][0])
+        self.assertIn("Guardar con respaldo.", self.pedidos[-1][0])
+
+    def test_revisar_sin_plan(self):
+        with self.assertRaises(ValueError):
+            self.p.revisar({"id": "nada"})
+
     def test_plan_valida_y_guarda(self):
         r = self.plan()
         self.assertTrue(r["ok"], r)
