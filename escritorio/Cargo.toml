@@ -2,7 +2,7 @@
 # los scripts de bin/. Generado por Pieza desde app.json y las piezas instaladas: si lo cambias, desde ahí es de la app.
 [package]
 name = "pieza"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 publish = false
 license = "AGPL-3.0-only"
@@ -25,6 +25,8 @@ trash = "5"
 sys-locale = "0.3"
 ureq = { version = "2", features = ["json"] }
 sha2 = "0.10"
+base64 = "0.22"
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 
 [build-dependencies]
 tauri-build = "2"

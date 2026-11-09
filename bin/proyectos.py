@@ -28,9 +28,10 @@ import unicodedata
 import ia
 import nucleo
 import piezas
+import trabajos
 
 CARACTERES_POR_TOKEN = 4
-MAX_PASOS = 12
+MAX_PASOS = 16
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
@@ -131,8 +132,12 @@ def _prompt_plan(p, ficha):
 {hechas}
 
 # Lo que te pido
-Desglosa SOLO lo propio de esta app en pasos chicos (entre 2 y {MAX_PASOS}). Cada paso se hace en un solo pedido y deja las
-pruebas en verde. El primer paso reemplaza el ejemplo de `pieza.py crear` (ui/app.js, bin/ejemplo.py, la acción «ejemplo»).
+Desglosa SOLO lo propio de esta app en pasos CHICOS (entre 3 y {MAX_PASOS}). Un paso chico:
+- hace una sola cosa que se puede probar (un script con su acción, o una pantalla, o una mejora);
+- toca como máximo 4 archivos propios (sin contar ui/idiomas/en.json, el CHANGELOG ni las pruebas);
+- tu IA lo termina en menos de 10 minutos y deja las pruebas en verde.
+Si algo es grande, pártelo en dos pasos. El primer paso reemplaza el ejemplo de `pieza.py crear` (ui/app.js, bin/ejemplo.py, la
+acción «ejemplo»).
 Responde SOLO este JSON, sin texto antes ni después:
 {{"pasos": [{{"titulo": "…", "que": "qué hace, en 1 a 3 frases", "archivos": ["ruta/relativa"], "tokens": 0}}]}}
 En «tokens», tu estimado de lo que gastará ese paso."""
@@ -308,7 +313,8 @@ def paso(d):
             # La IA edita la carpeta directamente; después Pieza devuelve lo que no le toca.
             antes = _foto(carpeta)
             pedido = _prompt_editar(p, n, error_prueba)
-            texto, error = ia.preguntar(pedido, timeout=LIMITE_IA, escribir=carpeta)
+            trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, al_evento=_avisar(carpeta, n, intento))
             nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
             x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN
             if cuidados:
@@ -324,7 +330,8 @@ def paso(d):
                 continue
         else:
             pedido = _prompt_paso(p, n, error_prueba)
-            texto, error = ia.preguntar(pedido, timeout=LIMITE_IA, leer=carpeta)
+            trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, al_evento=_avisar(carpeta, n, intento))
             x["gastado"] = x.get("gastado", 0) + tokens(pedido, texto)
             if error:
                 x.update(estado="fallo", error=ia.frase(error), intentos=intento)
@@ -349,6 +356,7 @@ def paso(d):
                 error_prueba = "pieza.py acciones falló: " + (r.stderr or r.stdout).strip()[-1500:]
                 x.update(estado="fallo", error=error_prueba, intentos=intento, resumen=resumen, escritos=escritos)
                 continue
+        trabajos.emitir({"t": "fase", "fase": "pruebas", "n": n, "intento": intento})
         ok, salida = probar(carpeta)
         x.update(intentos=intento, resumen=resumen, escritos=escritos)
         if ok:
@@ -411,6 +419,17 @@ def _cuidar(carpeta, antes):
     final = _foto(carpeta)
     escritos = sorted(r for r in set(final) | set(antes) if final.get(r) != antes.get(r))
     return escritos, cuidados, sum(len(final.get(r, b"")) for r in escritos)
+
+
+def _avisar(carpeta, n, intento):
+    """En vivo para la interfaz (pieza «trabajos», acción con «progreso»): qué lee y qué escribe la IA, con rutas de la app."""
+    def al_evento(e):
+        ruta = e.get("ruta") if isinstance(e.get("ruta"), str) else ""
+        if ruta.startswith(carpeta):
+            ruta = os.path.relpath(ruta, carpeta).replace(os.sep, "/")
+        if e.get("t") in ("lee", "escribe") and ruta and not ruta.startswith(".."):
+            trabajos.emitir({"t": e["t"], "ruta": ruta[:200], "n": n, "intento": intento})
+    return al_evento
 
 
 def _prompt_editar(p, n, error=None):
