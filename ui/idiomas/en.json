@@ -175,6 +175,7 @@
   "Pieza arma la app «{nombre}» con {n} piezas ya hechas, en la carpeta Pieza de tu usuario. No gasta tokens.": "Pieza builds the app “{nombre}” with {n} ready-made pieces, in the Pieza folder of your user. It costs no tokens.",
   "Armando la app…": "Building the app…",
   "~{n} tokens estimados": "~{n} tokens estimated",
+  "La idea completa (opcional): cómo funciona, reglas, pantallas y datos": "The full idea (optional): how it works, rules, screens and data",
   "~{n} tokens gastados": "~{n} tokens spent",
   "{n} tokens gastados": "{n} tokens spent",
   "Hacer el paso {n}": "Do step {n}",

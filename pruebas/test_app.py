@@ -116,6 +116,20 @@ class Proyectos(unittest.TestCase):
         return self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"],
                             "piezas": ["ia"]})
 
+    def test_la_idea_completa_va_al_plan_y_a_cada_paso(self):
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": [],
+                         "detalle": "Cada receta tiene porciones.\nLa lista de compras suma por ingrediente."})
+        self.assertTrue(r["ok"], r)
+        self.assertIn("La lista de compras suma por ingrediente.", self.pedidos[-1][0])
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        self.assertTrue(carpeta)
+        pedido = self.p._prompt_editar(self.p._leer("recetas"), 0)
+        self.assertIn("# La idea completa", pedido)
+        self.assertIn("Cada receta tiene porciones.", pedido)
+        sin = self.p._prompt_paso({**self.p._leer("recetas"), "detalle": ""}, 0)
+        self.assertNotIn("# La idea completa", sin)
+
     def test_plan_valida_y_guarda(self):
         r = self.plan()
         self.assertTrue(r["ok"], r)

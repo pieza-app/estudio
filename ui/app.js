@@ -15,7 +15,7 @@
     proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false,
     vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
-  function nuevaApp() { return { plataformas: [], nombre: "", frase: "", piezas: [], tocadas: [] }; }
+  function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
   const raiz = document.getElementById("app");
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
 
@@ -238,7 +238,8 @@
   function pasoIdea() {
     const n = E.nueva;
     return cabeza() + `<label class="pz-campo"><span>Nombre</span><input id="nombre" maxlength="40" value="${esc(n.nombre)}" autocomplete="off"></label>
-      <label class="pz-campo"><span>En una frase: qué hace y para quién</span><textarea id="frase" rows="3" maxlength="400">${esc(n.frase)}</textarea></label>`
+      <label class="pz-campo"><span>En una frase: qué hace y para quién</span><textarea id="frase" rows="3" maxlength="400">${esc(n.frase)}</textarea></label>
+      <label class="pz-campo"><span>${esc("La idea completa (opcional): cómo funciona, reglas, pantallas y datos")}</span><textarea id="detalle" rows="8" maxlength="12000">${esc(n.detalle || "")}</textarea></label>`
       + pie({ puede: n.nombre.trim().length > 0 && n.frase.trim().length > 0 });
   }
   function filaPieza(p, marcada, fija) {
@@ -336,7 +337,7 @@
     else if (b.id === "hacer-plan") {
       const n = E.nueva;
       ocupar("plan");
-      host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), plataformas: n.plataformas, piezas: n.piezas });
+      host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(), plataformas: n.plataformas, piezas: n.piezas });
     } else if (b.id === "crear") { ocupar("crear"); host.enviar("proyectoCrear", { id: E.proyecto.id }); }
     else if (b.id === "hacer-paso") hacerPaso(Number(b.dataset.n));
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
@@ -364,7 +365,7 @@
     const p = E.proyectos.find((x) => x.id === id);
     if (!p) return;
     E.proyecto = p;
-    E.nueva = { plataformas: p.plataformas, nombre: p.nombre, frase: p.frase, piezas: p.piezas, tocadas: p.piezas };
+    E.nueva = { plataformas: p.plataformas, nombre: p.nombre, frase: p.frase, detalle: p.detalle || "", piezas: p.piezas, tocadas: p.piezas };
     irA(p.estado === "plan" ? 5 : p.estado === "nuevo" ? 5 : 7);
   }
   function irA(paso) {
@@ -373,7 +374,7 @@
     E.paso = Math.max(0, Math.min(PASOS.length, paso));
     E.error = "";
     // El plan nace de la idea: si la persona vuelve y la cambia, el plan de antes no sirve.
-    if (E.paso === 5 && E.proyecto && E.proyecto.estado === "plan" && (E.proyecto.nombre !== n.nombre.trim() || E.proyecto.frase !== n.frase.trim()))
+    if (E.paso === 5 && E.proyecto && E.proyecto.estado === "plan" && (E.proyecto.nombre !== n.nombre.trim() || E.proyecto.frase !== n.frase.trim() || (E.proyecto.detalle || "") !== (n.detalle || "").trim()))
       E.proyecto = null;
     if (E.paso === 4) { E.ficha = null; host.enviar("piezasFicha", { plataformas: n.plataformas, piezas: n.piezas }); }
     pintar();
@@ -404,6 +405,7 @@
       if (antes !== !!(x.nombre.trim() && x.que.trim())) pintar();
       return;
     }
+    if (id === "detalle") { E.nueva.detalle = ev.target.value; return; }
     if (id !== "nombre" && id !== "frase") return;
     const antes = !!(E.nueva.nombre.trim() && E.nueva.frase.trim());
     E.nueva[id] = ev.target.value;
@@ -526,7 +528,7 @@
       ["Buscar y ordenar", "Filtrar y ordenar lo guardado, con pruebas de interfaz.", 5000],
       ["La página y el README", "Contar qué hace la app, con capturas de datos ficticios.", 3000],
     ].map(([titulo, que, tokens]) => ({ titulo: Tp(titulo), que: Tp(que), archivos: [], tokens, estado: "pendiente", gastado: 0 }));
-    const p = { id, nombre: d.nombre, frase: d.frase, plataformas: d.plataformas, piezas: d.piezas || [], estado: "plan", pasos,
+    const p = { id, nombre: d.nombre, frase: d.frase, detalle: d.detalle || "", plataformas: d.plataformas, piezas: d.piezas || [], estado: "plan", pasos,
       ahorro: ficha.tokens_ahorrados, gastado_plan: 2400, gastado: 2400 };
     SIM.proyectos = [...SIM.proyectos.filter((x) => x.id !== id), p];
     return { ok: true, proyecto: p };

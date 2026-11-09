@@ -2,7 +2,7 @@
 """proyectos — crear una app paso a paso con la IA de la persona. Solo biblioteca estándar.
 
   proyectos.py lista <salida.json>
-  proyectos.py plan  <entrada.json {nombre, frase, plataformas, piezas}> <salida.json>
+  proyectos.py plan  <entrada.json {nombre, frase, detalle?, plataformas, piezas}> <salida.json>
   proyectos.py crear <entrada.json {id}> <salida.json>
   proyectos.py paso  <entrada.json {id, n}> <salida.json>
 
@@ -36,6 +36,8 @@ import trabajos
 
 CARACTERES_POR_TOKEN = 4
 MAX_PASOS = 16
+MAX_FRASE = 400
+MAX_DETALLE = 12_000  # la idea completa (opcional): reglas, pantallas, datos; va al plan y a cada paso
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
@@ -124,6 +126,12 @@ def validar_plan(datos):
     return limpio
 
 
+def _detalle(p):
+    """La idea completa que dio la persona (opcional). Manda sobre lo que la IA suponga."""
+    d = _texto(p.get("detalle"), MAX_DETALLE)
+    return f"\n# La idea completa (manda sobre lo que supongas)\n{d}\n" if d else ""
+
+
 def _prompt_plan(p, ficha):
     cat = piezas.catalogo()
     hechas = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat)
@@ -135,7 +143,7 @@ def _prompt_plan(p, ficha):
 - Nombre: {p['nombre']}
 - Qué hace: {p['frase']}
 - Sistemas: {', '.join(p['plataformas'])}
-
+{_detalle(p)}
 # Lo que ya está hecho (piezas de Pieza, 0 tokens: no las planifiques)
 {hechas}
 
@@ -153,7 +161,8 @@ En «tokens», tu estimado de lo que gastará ese paso."""
 
 def plan(d):
     nombre = _texto(d.get("nombre"), 40)
-    frase = _texto(d.get("frase"), 300)
+    frase = _texto(d.get("frase"), MAX_FRASE)
+    detalle = _texto(d.get("detalle"), MAX_DETALLE)
     pid = _id(nombre)
     if not pid or not pid[0].isalpha() or not frase:
         raise ValueError("Falta el nombre o la frase de la app.")
@@ -164,7 +173,7 @@ def plan(d):
         p = {"id": pid, "estado": "nuevo", "pasos": [], "gastado": 0, "gastado_plan": 0}
     if p.get("estado") not in (None, "nuevo", "plan"):
         raise ValueError("Esa app ya está creada: sigue con sus pasos.")
-    p.update({"nombre": nombre, "frase": frase, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
+    p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
               if x in ficha["piezas"]], "ahorro": ficha["tokens_ahorrados"]})
     pedido = _prompt_plan(p, ficha)
     texto, error = ia.preguntar(pedido, timeout=600)
@@ -323,7 +332,7 @@ def _prompt_paso(p, n, error=None):
 
 # La app «{p['nombre']}»
 {p['frase']}
-
+{_detalle(p)}
 # El plan
 {plan_}
 

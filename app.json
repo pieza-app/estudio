@@ -96,8 +96,12 @@
     },
     "frase": {
      "tipo": "texto",
-     "max": 300,
+     "max": 400,
      "requerido": true
+    },
+    "detalle": {
+     "tipo": "texto",
+     "max": 12000
     },
     "plataformas": {
      "tipo": "lista",
