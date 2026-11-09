@@ -82,18 +82,49 @@
     return E.catalogo.filter((p) => !p.recomendar.siempre && (p.recomendar.palabras || []).some((w) => new RegExp(`\\b${w}`, "u").test(t))).map((p) => p.id);
   }
 
+  // El inicio: una frase basta para empezar; debajo, las apps empezadas («Seguir donde quedaste») y algunas hechas con Pieza.
   function inicio() {
-    const seguir = E.proyectos.length ? `<h3>Tus apps</h3><ul class="proyectos">${E.proyectos.map((p) => `<li>
-      <span><b data-sin-traducir>${esc(p.nombre)}</b><small class="suave" data-sin-traducir>${esc(Tp("{n} de {total} pasos listos",
-        { n: (p.pasos || []).filter((x) => x.estado === "listo").length, total: (p.pasos || []).length }))}</small></span>
-      <button type="button" class="pz-boton" data-seguir="${esc(p.id)}">Seguir</button></li>`).join("")}</ul>` : "";
+    const tarjetas = E.proyectos.map((p) => {
+      const listos = (p.pasos || []).filter((x) => x.estado === "listo").length, total = (p.pasos || []).length;
+      const pct = total ? Math.round(listos * 100 / total) : 0;
+      const estado = p.estado === "plan" ? Tp("Plan listo") : total && listos === total ? Tp("Lista") : p.estado === "nuevo" ? Tp("Empezada") : Tp("En construcción");
+      const menu = E.menuApp === p.id ? `<div class="menu-app" role="menu">
+        <button type="button" role="menuitem" data-seguir="${esc(p.id)}">${esc("Seguir")}</button>
+        <button type="button" role="menuitem" data-quitar="${esc(p.id)}">${esc("Quitar de la lista")}</button>
+        <button type="button" role="menuitem" class="peligro" data-borrar="${esc(p.id)}">${esc("Borrar la app…")}</button></div>` : "";
+      return `<li class="tarjeta-app">
+        <div class="tarjeta-cabeza"><button type="button" class="tarjeta-nombre" data-seguir="${esc(p.id)}" data-sin-traducir>${esc(p.nombre)}</button>
+          <span class="chip-estado${total && listos === total ? " chip-ok" : ""}" data-sin-traducir>${esc(estado)}</span>
+          <button type="button" class="boton-icono" data-menu-app="${esc(p.id)}" aria-expanded="${E.menuApp === p.id}" aria-label="${esc(Tp("Más acciones de {app}", { app: p.nombre }))}" data-sin-traducir>⋯</button></div>
+        <span class="suave" data-sin-traducir>${esc(total ? Tp("{n} de {total} pasos listos", { n: listos, total }) : Tp("Sin plan todavía"))}</span>
+        <progress class="barra-avance" max="100" value="${pct}" aria-hidden="true"></progress>${menu}</li>`;
+    }).join("");
     return `<section class="inicio">
-      <h2>Crea una app</h2>
-      <p class="suave">Paso a paso, con piezas ya hechas. Lo que ya existe no gasta tokens de tu IA.</p>
-      <div class="pz-pie"><button type="button" class="pz-boton" id="explorar">Explorar apps hechas con Pieza</button>
-        <button type="button" class="pz-boton pz-principal" id="nueva">Crear una app nueva</button></div>
-      ${seguir}
+      <h2>¿Qué quieres crear hoy?</h2>
+      <p class="suave">Cuéntalo en una frase. Pieza arma tu app paso a paso con piezas ya hechas, y lo que ya existe no gasta tokens de tu IA.</p>
+      <div class="caja-idea">
+        <label for="frase-rapida" class="etiqueta">Tu idea</label>
+        <textarea id="frase-rapida" rows="2" maxlength="400" placeholder="Por ejemplo: guarda mis recetas y arma la lista de compras de la semana">${esc(E.fraseRapida || "")}</textarea>
+        <div class="caja-idea-pie"><button type="button" class="pz-boton" id="explorar">Explorar apps hechas con Pieza</button>
+          <button type="button" class="pz-boton pz-principal" id="nueva">Empezar</button></div>
+      </div>
+      ${tarjetas ? `<h3>Seguir donde quedaste</h3><ul class="proyectos">${tarjetas}</ul>` : ""}
     </section>`;
+  }
+  // La barra lateral: siempre a mano «App nueva», tus apps, el explorador, tu IA y Ajustes. En el celular queda arriba.
+  function lateral() {
+    const apps = E.proyectos.slice(0, 8).map((p) => `<li><button type="button" data-seguir="${esc(p.id)}"${E.proyecto && E.proyecto.id === p.id ? ' aria-current="true"' : ""}>
+      <span class="punto${(p.pasos || []).length && (p.pasos || []).every((x) => x.estado === "listo") ? " punto-ok" : ""}"></span><span data-sin-traducir>${esc(p.nombre)}</span></button></li>`).join("");
+    const ia = (E.ias || []).find((x) => x.id === E.config.ia);
+    return `<nav class="lateral" aria-label="Principal">
+      <button type="button" class="marca" id="ir-inicio"><img src="pieza.svg" alt="" width="28" height="28"><span data-sin-traducir>${esc(NOMBRE)}</span></button>
+      <button type="button" class="pz-boton pz-principal" id="app-nueva">App nueva</button>
+      ${apps ? `<p class="lateral-titulo">Tus apps</p><ul class="lateral-apps">${apps}</ul>` : ""}
+      <button type="button" class="lateral-enlace" id="explorar-lateral">Explorar apps</button>
+      <div class="lateral-pie">
+        <button type="button" class="lateral-ia" id="ia-lateral"><small>Tu IA</small><span data-sin-traducir>${esc(ia ? ia.nombre || ia.id : Tp("Elegir mi IA"))}</span></button>
+        <button type="button" class="lateral-enlace" id="abrir-ajustes">Ajustes</button>
+      </div></nav>`;
   }
   // Lo que se gasta y lo que se ahorra: siempre a la vista desde el plan.
   function medidor(p) {
@@ -127,7 +158,15 @@
       <div class="pz-pie"><button type="button" class="pz-boton" data-abrir="https://cli.github.com/">Abrir cli.github.com</button>
       <button type="button" class="pz-boton pz-principal" id="revisar-publicar">Revisar de nuevo</button></div>`;
     const pub = E.pub;
-    const duenos = g.duenos.map((d) => `<label class="opcion"><input type="radio" name="dueno" data-dueno="${esc(d)}"${pub.dueno === d ? " checked" : ""}> <span data-sin-traducir>${esc(d)}/${esc(p.id)}</span></label>`).join("");
+    const org = pub.orgNueva || `${p.id}-app`;
+    const nueva = pub.dueno === "__nueva__";
+    const duenos = g.duenos.map((d) => `<label class="opcion"><input type="radio" name="dueno" data-dueno="${esc(d)}"${pub.dueno === d ? " checked" : ""}> <span data-sin-traducir>${esc(d)}/${esc(p.id)}</span></label>`).join("")
+      + `<label class="opcion"><input type="radio" name="dueno" data-dueno="__nueva__"${nueva ? " checked" : ""}> <span>${esc("En una organización nueva")}</span></label>`
+      + (nueva ? `<div class="guia-org">
+        <label class="pz-campo"><span>Nombre de la organización</span><input id="org-nueva" maxlength="39" value="${esc(org)}" autocomplete="off"></label>
+        <ol><li>${esc("Toca «Abrir GitHub» y escribe ese nombre.")}</li><li>${esc("Elige el plan gratis y toca «Create organization».")}</li><li>${esc("Vuelve aquí y toca «Ya la creé: revisar».")}</li></ol>
+        <div class="pz-pie pz-izq"><button type="button" class="pz-boton" data-abrir="https://github.com/account/organizations/new?plan=free">Abrir GitHub</button>
+        <button type="button" class="pz-boton pz-principal" id="revisar-publicar">Ya la creé: revisar</button></div></div>` : "");
     const vis = [["publico", "Pública: cualquiera la ve y la puede usar"], ["privado", "Privada: solo tú"]].map(([v, n]) =>
       `<label class="opcion"><input type="radio" name="vis" data-vis="${v}"${pub.visibilidad === v ? " checked" : ""}> <span>${esc(n)}</span></label>`).join("");
     return `<h3>Publicar en GitHub</h3>
@@ -136,7 +175,7 @@
         <label class="opcion"><input type="checkbox" id="explorador"${pub.explorador && pub.visibilidad === "publico" ? " checked" : ""}${pub.visibilidad === "publico" ? "" : " disabled"}> <span>${esc("Sumarla al explorador de Pieza (topic «hecho-con-pieza»)")}</span></label></fieldset>
       <p class="suave">Antes de subir, Pieza revisa que no vayan nombres, correos ni rutas reales.</p>
       ${E.ocupado === "publicar" ? trabajando("Publicando…") : ""}
-      <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="publicar"${pub.dueno && !E.ocupado ? "" : " disabled"}>Publicar</button></div>`;
+      <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="publicar"${pub.dueno && pub.dueno !== "__nueva__" && !E.ocupado ? "" : " disabled"}>Publicar</button></div>`;
   }
   // Proponer una pieza: abre un issue prellenado en pieza-app/pieza (en el navegador, con la cuenta de la persona).
   function proponerHTML() {
@@ -160,6 +199,17 @@
       ${v.leyendo ? `<p class="suave" data-sin-traducir>${esc(Tp("Leyendo {ruta}", { ruta: v.leyendo }))}</p>` : ""}
       ${escritos.length ? `<p class="suave" data-sin-traducir>${esc(Tp("Escribió: {lista}", { lista: escritos.join(", ") }))}</p>` : ""}</div>`;
   }
+  // La consola en vivo: lo que tu IA lee y escribe en el paso actual (o un resumen si no hay nada corriendo).
+  function consolaHTML() {
+    const v = E.ocupado === "paso" ? E.vivo || {} : null;
+    if (!v) return `<div class="consola"><p class="consola-titulo">En vivo</p><p class="consola-linea">${esc("Aquí ves lo que lee y escribe tu IA mientras trabaja.")}</p></div>`;
+    const lineas = [];
+    if (v.leyendo) lineas.push(["lee", v.leyendo]);
+    for (const r of [...(v.escritos || [])].slice(-8)) lineas.push(["escribe", r]);
+    if (v.fase === "pruebas") lineas.push(["prueba", Tp("Corriendo las pruebas…")]);
+    return `<div class="consola" role="log"><p class="consola-titulo">En vivo</p>${lineas.map(([t, x]) =>
+      `<p class="consola-linea"><span class="consola-${t}">${t}</span><span data-sin-traducir>${esc(x)}</span></p>`).join("")}</div>`;
+  }
   function trabajando(texto) {
     return `<p class="trabajando" role="status"><span class="pz-giro" aria-hidden="true"></span> <span>${esc(texto)}</span></p>`;
   }
@@ -177,7 +227,7 @@
       <span class="suave" data-sin-traducir>${esc(x.que)}</span>
       <small class="suave" data-sin-traducir>${esc(Tp("~{n} tokens", { n: miles(x.tokens) }))}</small></li>`).join("")}</ol>` : "";
     return cabeza() + `<p class="suave">Tu IA desglosa lo propio de tu app en pasos chicos. Las piezas ya hechas no entran al plan.</p>`
-      + sinIA() + (listo ? medidor(p) + filas + revisionHTML(p) : "") + errorHTML()
+      + sinIA() + (listo ? medidor(p) + `<div class="dos-columnas"><div class="columna-principal">${filas}</div><aside class="columna-lado">${revisionHTML(p)}</aside></div>` : "") + errorHTML()
       + (E.ocupado === "plan" ? trabajando("Tu IA está armando el plan…") : "")
       + (E.ocupado === "revisar" ? trabajando("Tres revisores nuevos están leyendo tu idea…") : "")
       + `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
@@ -234,7 +284,8 @@
       + `<div class="modo"><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
         ${E.modo === "auto" ? `<label class="pz-campo tope"><span>Detener al llegar a (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>` : ""}</div>
       <p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola. Se detiene si un paso falla dos veces o al llegar al tope." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
-      + sinIA() + errorHTML() + `<ol class="pasos">${filas}</ol>`
+      + sinIA() + errorHTML() + `<div class="dos-columnas"><div class="columna-principal"><ol class="pasos">${filas}</ol></div>
+        <aside class="columna-lado">${consolaHTML()}</aside></div>`
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
         <p class="suave">Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.</p></div>
@@ -242,8 +293,15 @@
       + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>
         <button type="button" class="pz-boton" id="ver-app">Ver mi app</button>${accion}</div>`;
   }
+  // Las etapas que ve la persona: los 7 pasos del asistente, agrupados en 4.
+  const ETAPAS = [["Tu idea", [1, 2]], ["Piezas", [3, 4]], ["Plan", [5, 6]], ["Construir", [7]]];
+  function etapas() {
+    const actual = ETAPAS.findIndex(([, ps]) => ps.includes(E.paso));
+    return `<ol class="etapas" aria-label="Etapas">${ETAPAS.map(([n], i) =>
+      `<li class="${i < actual ? "hecha" : i === actual ? "actual" : ""}"${i === actual ? ' aria-current="step"' : ""}><span class="etapa-n">${i < actual ? "✓" : i + 1}</span>${esc(n)}</li>`).join("")}</ol>`;
+  }
   function cabeza() {
-    return `<p class="paso-n" data-sin-traducir>${esc(Tp("Paso {n} de {total}", { n: E.paso, total: PASOS.length }))}</p><h2>${esc(PASOS[E.paso - 1])}</h2>`;
+    return etapas() + `<p class="paso-n" data-sin-traducir>${esc(Tp("Paso {n} de {total}", { n: E.paso, total: PASOS.length }))}</p><h2>${esc(PASOS[E.paso - 1])}</h2>`;
   }
   function pie({ puede = true, siguiente = "Siguiente" } = {}) {
     return `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
@@ -258,10 +316,25 @@
   }
   function pasoIdea() {
     const n = E.nueva;
-    return cabeza() + `<label class="pz-campo"><span>Nombre</span><input id="nombre" maxlength="40" value="${esc(n.nombre)}" autocomplete="off"></label>
+    return cabeza() + `<div class="dos-columnas"><div class="columna-principal">
+      <label class="pz-campo"><span>Nombre</span><input id="nombre" maxlength="40" value="${esc(n.nombre)}" autocomplete="off"></label>
       <label class="pz-campo"><span>En una frase: qué hace y para quién</span><textarea id="frase" rows="3" maxlength="400">${esc(n.frase)}</textarea></label>
-      <label class="pz-campo"><span>${esc("La idea completa (opcional): cómo funciona, reglas, pantallas y datos")}</span><textarea id="detalle" rows="8" maxlength="12000">${esc(n.detalle || "")}</textarea></label>`
+      <div class="caja-detalle"><div class="caja-detalle-cabeza"><label for="detalle">La idea completa</label><span class="chip-estado">Opcional</span>
+        <span class="contador" id="contador-detalle" data-sin-traducir>${esc(miles((n.detalle || "").length))} / 12.000</span></div>
+        <textarea id="detalle" rows="10" maxlength="12000" placeholder="Cómo funciona, reglas, pantallas y datos. Va al plan y a cada paso.">${esc(n.detalle || "")}</textarea></div>
+      </div><aside class="columna-lado" id="piezas-vivo">${piezasVivo()}</aside></div>`
       + pie({ puede: n.nombre.trim().length > 0 && n.frase.trim().length > 0 });
+  }
+  // Mientras se escribe la frase: las piezas ya hechas que calzan y lo que se ahorra (bytes ÷ 4, como la ficha).
+  function piezasVivo() {
+    const n = E.nueva;
+    const ids = new Set([...sugeridas(n.frase + " " + (n.detalle || "")), ...E.catalogo.filter((p) => p.recomendar.siempre).map((p) => p.id)]);
+    const listas = E.catalogo.filter((p) => ids.has(p.id) && p.estado === "lista" && (!n.plataformas.length || sirve(p, n.plataformas)));
+    const ahorro = Math.floor(listas.reduce((s, p) => s + (p.bytes || 0), 0) / 4);
+    const propias = E.catalogo.filter((p) => ids.has(p.id) && !p.recomendar.siempre);
+    return `<div class="ahorro-vivo"><small>${esc("Te ahorras con piezas")}</small><b data-sin-traducir>~${esc(miles(ahorro))}</b><small data-sin-traducir>${esc(Tp("tokens · {n} piezas ya hechas", { n: listas.length }))}</small></div>
+      ${propias.length ? `<div class="calzan"><p class="etiqueta">Calzan con tu idea</p><ul>${propias.map((p) =>
+        `<li class="${p.estado === "lista" ? "" : "falta"}"><span data-sin-traducir>${esc(enIdioma(p, "nombre"))}</span><small>${esc(p.estado === "lista" ? "Ya hecha" : "Por hacer")}</small></li>`).join("")}</ul></div>` : `<p class="suave">${esc(n.frase.trim() ? "Ninguna pieza más calza todavía. Cuenta un poco más en la idea completa." : "Escribe tu idea y aquí aparecen las piezas que ya están hechas.")}</p>`}`;
   }
   function filaPieza(p, marcada, fija) {
     const lista = p.estado === "lista";
@@ -302,9 +375,7 @@
   }
   function principal() {
     const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha, pasoPlan, pasoCrear, pasoPasos];
-    return `<header class="barra"><h1 data-sin-traducir><img src="pieza.svg" alt="">${esc(NOMBRE)}</h1>
-      <button type="button" class="pz-boton" id="abrir-ajustes">Ajustes</button></header>
-      <main class="contenido">${E.vista === "explorar" ? explorar() : pasos[E.paso]()}</main>`;
+    return `<div class="marco">${lateral()}<main class="contenido">${E.vista === "explorar" ? explorar() : pasos[E.paso]()}</main></div>`;
   }
   function ajustes() {
     const idiomas = [["es", "Español"], ["en", "English"]].map(([c, n]) =>
@@ -336,17 +407,32 @@
     if (tema.manejarClic(ev)) return pintar();
     const b = ev.target.closest("button");
     if (!b) return;
-    if (b.id === "abrir-ajustes" || b.id === "elegir-ia") { E.ajustes = true; pintar(); }
+    if (b.dataset.menuApp) { E.menuApp = E.menuApp === b.dataset.menuApp ? "" : b.dataset.menuApp; pintar(); return; }
+    if (E.menuApp && !b.closest(".menu-app")) E.menuApp = "";
+    if (b.id === "abrir-ajustes" || b.id === "elegir-ia" || b.id === "ia-lateral") { E.ajustes = true; pintar(); }
+    else if (b.dataset.quitar) { E.menuApp = ""; host.enviar("proyectoBorrar", { id: b.dataset.quitar, carpeta: "no" }); }
+    else if (b.dataset.borrar) {
+      const p = E.proyectos.find((x) => x.id === b.dataset.borrar);
+      E.menuApp = "";
+      if (!p) return;
+      const si = await ui.confirmar({ titulo: "¿Borrar «{app}»?", valores: { app: p.nombre }, peligro: true, si: "Borrar",
+        texto: p.carpeta ? "Se borran su plan y su carpeta en tu computador. Lo que ya publicaste en GitHub queda allá." : "Se borra su plan." });
+      if (si) host.enviar("proyectoBorrar", { id: p.id, carpeta: "si" });
+    }
     else if (b.dataset.idioma) {
       E.config.idioma_ui = b.dataset.idioma;
       host.enviar("config", { idioma_ui: b.dataset.idioma });
       await cargarIdioma(b.dataset.idioma);
       pintar();
-    } else if (b.id === "nueva") { E.nueva = nuevaApp(); E.ficha = null; irA(1); }
+    } else if (b.id === "nueva" || b.id === "app-nueva") {
+      E.nueva = nuevaApp(); E.ficha = null; E.proyecto = null; E.vista = "";
+      if (b.id === "nueva") E.nueva.frase = (E.fraseRapida || "").trim();
+      irA(1);
+    }
     else if (b.id === "atras") irA(E.paso - 1);
     else if (b.id === "siguiente") irA(E.paso + 1);
-    else if (b.id === "inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
-    else if (b.id === "explorar") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
+    else if (b.id === "inicio" || b.id === "ir-inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
+    else if (b.id === "explorar" || b.id === "explorar-lateral") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
     else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }
     else if (b.id === "revisar-publicar") { ocupar("revisar"); host.enviar("publicarRevisar", { id: E.proyecto.id }); }
     else if (b.id === "publicar") {
@@ -431,7 +517,21 @@
       pintar();
     }
   });
-  document.addEventListener("keydown", (ev) => { if (ui.manejarTecla(ev)) return; bv.manejarTecla(ev); });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && E.menuApp) { E.menuApp = ""; pintar(); return; }
+    if (ui.manejarTecla(ev)) return; bv.manejarTecla(ev);
+  });
+  // Solo el panel de piezas (no toda la pantalla: el campo donde se escribe no pierde el cursor). Con un pequeño respiro.
+  let piezasEspera = 0;
+  function refrescarPiezasVivo() {
+    clearTimeout(piezasEspera);
+    piezasEspera = setTimeout(() => {
+      const caja = document.getElementById("piezas-vivo");
+      if (!caja) return;
+      caja.innerHTML = piezasVivo();
+      i18n.traducirDOM(caja);
+    }, 250);
+  }
   document.addEventListener("input", (ev) => {
     const id = ev.target.id;
     if (id === "tope") { E.tope = Math.max(1000, Number(ev.target.value) || 0); return; }
@@ -441,10 +541,19 @@
       if (antes !== !!(x.nombre.trim() && x.que.trim())) pintar();
       return;
     }
-    if (id === "detalle") { E.nueva.detalle = ev.target.value; return; }
+    if (id === "frase-rapida") { E.fraseRapida = ev.target.value; return; }
+    if (id === "detalle") {
+      E.nueva.detalle = ev.target.value;
+      const c = document.getElementById("contador-detalle");
+      if (c) c.textContent = `${miles(E.nueva.detalle.length)} / 12.000`;
+      refrescarPiezasVivo();
+      return;
+    }
+    if (id === "org-nueva") { E.pub.orgNueva = ev.target.value.trim(); return; }
     if (id !== "nombre" && id !== "frase") return;
     const antes = !!(E.nueva.nombre.trim() && E.nueva.frase.trim());
     E.nueva[id] = ev.target.value;
+    if (id === "frase") refrescarPiezasVivo();
     if (antes !== !!(E.nueva.nombre.trim() && E.nueva.frase.trim())) pintar();   // solo cambia «Siguiente»
   });
 
@@ -485,12 +594,23 @@
     explorarListo(r) { if (r && r.ok) E.apps = r.apps || []; else { E.apps = []; E.error = (r && r.error) || Tp("No se pudo."); } pintar(); },
     publicarRevisado(r) {
       E.ocupado = "";
-      if (r && r.ok) { E.gh = r; if (r.duenos && !E.pub.dueno) E.pub.dueno = r.duenos[0]; } else E.error = (r && r.error) || Tp("No se pudo.");
+      if (r && r.ok) {
+        E.gh = r;
+        const org = E.pub.dueno === "__nueva__" ? (E.pub.orgNueva || `${E.proyecto.id}-app`) : "";
+        if (org && (r.duenos || []).includes(org)) { E.pub.dueno = org; toast("Encontré tu organización. Ya puedes publicar."); }
+        else if (org) E.error = Tp("Todavía no veo la organización «{org}». Revisa que la creaste con ese nombre.", { org });
+        else if (r.duenos && !E.pub.dueno) E.pub.dueno = r.duenos[0];
+      } else E.error = (r && r.error) || Tp("No se pudo.");
       pintar();
     },
     publicado(r) {
       E.ocupado = "";
       if (r && r.ok) { E.proyecto = r.proyecto; toast("Tu app está en GitHub."); } else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
+    proyectoBorrado(r) {
+      if (r && r.ok) { E.proyectos = E.proyectos.filter((x) => x.id !== r.id); toast(r.carpeta ? "Borré la app y su carpeta." : "La quité de la lista."); }
+      else toast((r && r.error) || "No se pudo.", { error: true });
       pintar();
     },
     proyectosListos(r) { if (r && r.ok) { E.proyectos = r.proyectos || []; if (E.paso === 0) pintar(); } },
@@ -609,6 +729,8 @@
         c.responder("publicado", { ok: true, proyecto: p, url: `https://github.com/${p.repo}` });
       });
       case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos });
+      case "proyectoBorrar": SIM.proyectos = SIM.proyectos.filter((x) => x.id !== d.id);
+        return c.luego(150, () => c.responder("proyectoBorrado", { ok: true, id: d.id, carpeta: d.carpeta === "si" }));
       case "proyectoPlan": return c.luego(900, () => c.responder("planListo", planSimulado(d)));
       case "proyectoRevisar": return c.luego(1200, () => c.responder("revisionLista", revisionSimulada(d)));
       case "proyectoCrear": return c.luego(700, () => {

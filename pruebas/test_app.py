@@ -270,6 +270,26 @@ class Proyectos(unittest.TestCase):
         self.assertTrue(r["ok"], r)
         self.assertNotIn("comentarios", json.load(open(os.path.join(r["proyecto"]["carpeta"], "piezas.json")))["piezas"])
 
+    def test_borrar_una_app(self):
+        """Quitar de la lista deja la carpeta; borrar la quita también, pero solo si es la de esa app dentro de la carpeta Pieza."""
+        self.plan()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        p = self.p._leer("recetas")
+        p["carpeta"] = os.path.expanduser("~")  # una carpeta que no es de la app: nunca se borra
+        self.p._guardar(p)
+        with self.assertRaises(ValueError):
+            self.p.borrar({"id": "recetas", "carpeta": "si"})
+        p["carpeta"] = carpeta
+        self.p._guardar(p)
+        r = self.p.borrar({"id": "recetas", "carpeta": "si"})
+        self.assertEqual((r["ok"], r["carpeta"]), (True, True))
+        self.assertFalse(os.path.exists(carpeta))
+        with self.assertRaises(ValueError):
+            self.p._leer("recetas")
+        self.plan()
+        r = self.p.borrar({"id": "recetas", "carpeta": "no"})
+        self.assertEqual((r["ok"], r["carpeta"]), (True, False))
+
     def test_crear_y_paso(self):
         self.plan()
         self.p.ia.puede_escribir = lambda ia=None: False

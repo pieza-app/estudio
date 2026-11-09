@@ -21,10 +21,13 @@ Cada instalador baja la última versión de los Releases de este repo y revisa s
 6. Pieza crea la app en `~/Pieza/<Nombre>` con las piezas ya hechas. Este paso no gasta tokens.
 7. Tu IA hace cada paso. Después de cada uno, Pieza corre las pruebas. Eliges «Paso a paso» (apruebas cada uno) o «Todo
    automático» (con un tope de tokens).
-8. Publicas tu app en GitHub con tu cuenta (`gh`). Si quieres, se suma al explorador de apps hechas con Pieza.
+8. Publicas tu app en GitHub con tu cuenta (`gh`). Puedes publicarla en tu cuenta o en una organización. Si la organización no
+   existe, Pieza te guía para crearla en GitHub y sigue cuando le dices que está lista. Si quieres, tu app se suma al explorador
+   de apps hechas con Pieza.
 9. Si algo de tu app le sirve a otras, lo propones como pieza nueva.
 
-Desde el inicio también puedes explorar las apps que otras personas hicieron con Pieza.
+En el inicio escribes tu idea en una frase y sigues las apps que empezaste. Una app que ya no quieres la quitas de la lista o la
+borras con su carpeta (menú «⋯»). Desde el inicio también puedes explorar las apps que otras personas hicieron con Pieza.
 
 Tu IA (Claude Code, Codex o Gemini) usa tu cuenta. Edita solo la carpeta de tu app, sin terminal. Después de cada paso, Pieza
 devuelve lo que no le toca (las piezas) y corre las pruebas. El plan

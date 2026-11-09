@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.6.2",
+ "version": "0.7.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -151,6 +151,30 @@
    },
    "responde": "proyectoCreado",
    "limite": 330
+  },
+  "proyectoBorrar": {
+   "script": "proyectos.py",
+   "args": [
+    "borrar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "carpeta": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ],
+     "requerido": true
+    }
+   },
+   "responde": "proyectoBorrado",
+   "limite": 120
   },
   "proyectoPaso": {
    "script": "proyectos.py",

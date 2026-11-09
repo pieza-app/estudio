@@ -44,7 +44,7 @@ const sinDesborde = async (page, donde) => assert.ok(await page.evaluate(() => d
 // 1. Primer uso: el idioma va primero y solo (nada de la app detrás).
 let page = await abrir("?bienvenida");
 await page.waitForSelector(".opciones-idioma");
-assert.equal(await page.locator(".barra").count(), 0, "detrás del idioma no se pinta la app");
+assert.equal(await page.locator(".marco").count(), 0, "detrás del idioma no se pinta la app");
 await capturar(page, "1-idioma");
 await page.click('[data-bv-idioma="en"]');
 await page.waitForSelector(".pieza-bv:not(.pieza-bv-idioma)");
@@ -103,6 +103,11 @@ await capturar(page, "3g-lista-en");
 await page.click("#revisar-publicar");
 await page.waitForSelector("[data-dueno]");
 assert.ok(await page.isChecked('[data-dueno="ana-perez"]'), "el dueño parte en el usuario");
+// Una organización nueva: la guía, y Publicar espera hasta que la persona la crea y se revisa.
+await page.click('[data-dueno="__nueva__"]');
+await page.waitForSelector(".guia-org #org-nueva");
+assert.ok(await page.isDisabled("#publicar"), "con una organización por crear no se publica todavía");
+await capturar(page, "3h0-organizacion-en");
 await page.click('[data-dueno="ana-app"]');
 await page.click("#publicar");
 await page.waitForSelector(".publicar .listo");
@@ -111,11 +116,11 @@ await page.fill("#pz-nombre", "Lista de compras");
 await page.fill("#pz-que", "Arma una lista de compras desde recetas.");
 assert.ok(!(await page.isDisabled("#proponer")), "con nombre y qué resuelve, se puede proponer");
 await capturar(page, "3h-publicada-en");
-await page.click("#inicio");
+await page.click("#ir-inicio");
 await page.click("#explorar");
 await page.waitForSelector(".apps li");
 await capturar(page, "3i-explorar-en");
-await page.click("#inicio");
+await page.click("#ir-inicio");
 await page.waitForSelector("#nueva");
 await page.click("#abrir-ajustes");
 await page.waitForSelector("[role=dialog]");
@@ -148,8 +153,21 @@ await page.waitForSelector(".pasos .estado-listo");
 await sinDesborde(page, "pasos a 390 px");
 await capturar(page, "4b-pasos-390");
 await page.click("#inicio");
-await page.waitForSelector("[data-seguir]");
+await page.waitForSelector(".proyectos [data-seguir]");
 await sinDesborde(page, "inicio a 390 px");
+await capturar(page, "4c-inicio-390");
+// Quitar una app de la lista (sin borrar su carpeta).
+const antes = await page.locator(".proyectos li").count();
+await page.click(".proyectos [data-menu-app]");
+await page.click(".menu-app [data-quitar]");
+await page.waitForFunction((n) => document.querySelectorAll(".proyectos li").length === n - 1, antes);
+// La frase del inicio pasa a la idea.
+await page.fill("#frase-rapida", "Ordena mis fotos");
+await page.click("#nueva");
+await page.check('[data-sistema="web"]');
+await page.click("#siguiente");
+assert.equal(await page.inputValue("#frase"), "Ordena mis fotos", "la frase del inicio llega a «Tu idea»");
+await page.click("#ir-inicio");
 await page.click("#abrir-ajustes");
 await page.waitForSelector("[role=dialog]");
 await sinDesborde(page, "Ajustes a 390 px");
