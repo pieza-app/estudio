@@ -8,7 +8,7 @@
   const host = PiezaHost.crearHost({ nombre: "pieza", global: "Pieza", simular: (accion, d, c) => simular(accion, d, c) });
   const NOMBRE = "Pieza";
   const REPO = "pieza-app/estudio";
-  const ENLACES = { sitio: "https://pieza-app.github.io/estudio/", codigo: `https://github.com/${REPO}`, comunidad: `https://github.com/${REPO}/discussions`,
+  const ENLACES = { sitio: "https://pieza-app.github.io/pieza/", codigo: `https://github.com/${REPO}`, comunidad: `https://github.com/${REPO}/discussions`,
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false };
@@ -41,6 +41,7 @@
 
   // ── Bienvenida: pieza «bienvenida». El idioma siempre primero y solo en la pantalla; después, los pasos de la app. ──
   const bv = PiezaBienvenida.crear({
+    logo: '<img src="pieza.svg" alt="" width="56" height="56">',
     i18n, pintar, mostrarAviso: (...a) => toast(...a),
     guardarIdioma: (c) => { E.config.idioma_ui = c; host.enviar("config", { idioma_ui: c }); },
     cargarIdioma: (c) => cargarIdioma(c),
@@ -143,7 +144,7 @@
   }
   function principal() {
     const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha];
-    return `<header class="barra"><h1 data-sin-traducir>${esc(NOMBRE)}</h1>
+    return `<header class="barra"><h1 data-sin-traducir><img src="pieza.svg" alt="">${esc(NOMBRE)}</h1>
       <button type="button" class="pz-boton" id="abrir-ajustes">Ajustes</button></header>
       <main class="contenido">${pasos[E.paso]()}</main>`;
   }

@@ -24,7 +24,7 @@ app con la IA de la persona llega en la próxima versión (plan en `docs/program
 | `bin/` | Python **solo biblioteca estándar**: lo que corren las apps. El último argumento siempre es el JSON de salida; lo que escribe la persona llega en un JSON de entrada, nunca como argumento. |
 | `ui/` | La interfaz única (`index.html` con CSP, `app.js`, `app.css`), las piezas de interfaz (ver «Piezas») e `idiomas/en.json`. |
 | `escritorio/` | App de escritorio para Mac, Windows y Linux (Rust + Tauri): `src/main.rs` es lo propio; `src/pieza/` es de la pieza «host-tauri». `Cargo.toml`, `tauri.conf.json` y `pruebas/arranque.sh` los genera la pieza. |
-| `docs/` | La página pública (GitHub Pages). |
+| `docs/` | `favicon.svg` (el logo de Pieza: de ahí salen los íconos con `herramientas/iconos.mjs`) y `wiki/`. La página es una sola, la de [Pieza](https://pieza-app.github.io/pieza/): ahí va la vista previa (`/app/`). |
 | `pruebas/` | `correr.sh` (todo lo que revisa GitHub en cada cambio) y las pruebas. |
 | `herramientas/` | `revisar_privacidad.sh` (antes de cada commit), `empaquetar.sh` (arma la app de Mac). |
 | `app.json`, `piezas.json`, `acciones.json` | **Pieza** (ver «Piezas»): `app.json` describe la app (id, nombre, versión, datos, plataformas, config y sus acciones); `piezas.json` y `acciones.json` los escribe `pieza.py`. |
@@ -60,7 +60,6 @@ Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se
 | `i18n` | 0.3.1 | `ui/i18n.js` | `T`, `Tp`, `traducirDOM` y `idiomas/en.json`. |
 | `ia` | 0.6.3 | `bin/ia.py` | La IA de la persona. Hoy solo se elige y se prueba; la fase 2 la usa para crear. |
 | `nucleo` | 0.7.1 | `bin/nucleo.py` | `app.json`, la carpeta de datos y la config. |
-| `pagina` | 0.1.2 | `docs/pagina-comunes.json`, `docs/pagina.css`, `docs/pagina.js`, `docs/sello-en.svg`, `docs/sello.svg`, `docs/tema.css`, `herramientas/pagina_capturas.mjs` | La página pública desde `docs/pagina.json`. |
 | `tema` | 0.2.1 | `ui/tema.css`, `ui/tema.js` | Claro y oscuro. |
 | `trabajos` | 0.2.2 | `bin/trabajos.py`, `escritorio/src/pieza/progreso.rs` | Para la fase 2: los pasos largos de crear una app, con su avance. |
 
@@ -96,7 +95,7 @@ revisa cada fila ("no aplica" se decide, no se supone):
 
 | Si el cambio… | Deja al día |
 |---|---|
-| agrega o cambia una función | la página (`docs/`: funciones, «cómo funciona», comparación, preguntas frecuentes), el README y la guía si la hay |
+| agrega o cambia una función | la página de Pieza (`docs/` de pieza-app/pieza: el programa, «cómo funciona», comparación, preguntas frecuentes), el README y la guía si la hay |
 | cambia lo que se ve | capturas de la página y del README (datos ficticios, español e inglés, normal y celular) e imagen para compartir si sale esa vista |
 | cambia un flujo o un paso | instrucciones paso a paso, preguntas frecuentes, textos de la bienvenida e instalación si la toca |
 | quita algo | bórralo de la página, el README y las guías: nada que prometa lo que ya no hace |

@@ -19,8 +19,6 @@ python3 -W ignore -m unittest discover -q -s pruebas -p 'test_*.py'
 if PLAYWRIGHT="${PLAYWRIGHT:-playwright}" node -e 'require(process.env.PLAYWRIGHT)' 2>/dev/null; then
   echo "Interfaz (Chromium)"
   node pruebas/interfaz.mjs
-  echo "Página pública (pieza «pagina»)"
-  node herramientas/pagina_capturas.mjs revisar ${CAPTURAS:+"$CAPTURAS/pagina"}
 else
   echo "Interfaz: sin Playwright, no la pruebo aquí (PLAYWRIGHT=/ruta/a/playwright)"
 fi
