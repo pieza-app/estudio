@@ -12,7 +12,8 @@
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
-    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false };
+    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false,
+    vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", piezas: [], tocadas: [] }; }
   const raiz = document.getElementById("app");
@@ -65,6 +66,8 @@
   const miles = (n) => Math.round(n || 0).toLocaleString(i18n.idioma);
   const CATEGORIAS = { base: "Base", plataforma: "Plataforma", interfaz: "Interfaz", ia: "IA", datos: "Datos", conexiones: "Conexiones",
     medios: "Medios", repo: "El repo" };
+  // El nombre y la descripción de una pieza en el idioma elegido (pieza.json → "en"; si no lo trae, el español).
+  const enIdioma = (p, campo) => (i18n.idioma === "en" && p.en && typeof p.en[campo] === "string" ? p.en[campo] : p[campo]) || "";
   const ICONO = '<img class="icono-pieza" src="pieza.svg" alt="" width="18" height="18">';
 
   // La misma regla que bin/piezas.py (_sirve): la vista previa web usa las piezas que corren en escritorio y en celular.
@@ -87,7 +90,8 @@
     return `<section class="inicio">
       <h2>Crea una app</h2>
       <p class="suave">Paso a paso, con piezas ya hechas. Lo que ya existe no gasta tokens de tu IA.</p>
-      <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="nueva">Crear una app nueva</button></div>
+      <div class="pz-pie"><button type="button" class="pz-boton" id="explorar">Explorar apps hechas con Pieza</button>
+        <button type="button" class="pz-boton pz-principal" id="nueva">Crear una app nueva</button></div>
       ${seguir}
     </section>`;
   }
@@ -98,6 +102,51 @@
       <p><b data-sin-traducir>~${esc(miles(p.gastado))}</b> <span>${esc("tokens gastados")}</span></p>
       <p><b data-sin-traducir>~${esc(miles(estimado))}</b> <span>${esc("estimado del plan")}</span></p>
       <p class="ahorro"><b data-sin-traducir>${ICONO}~${esc(miles(p.ahorro))}</b> <span>${esc("ahorrados con piezas")}</span></p></div>`;
+  }
+  // El explorador: las apps públicas con el topic «hecho-con-pieza» (las lista la página de Pieza).
+  function explorar() {
+    const apps = E.apps;
+    const filas = !apps ? trabajando("Buscando apps…") : !apps.length ? `<p class="suave">Todavía no hay apps en el explorador.</p>`
+      : `<ul class="apps">${apps.map((a) => `<li class="pz-vidrio"><b data-sin-traducir>${esc(a.nombre)}</b>
+        ${a.revisada ? `<span class="chip-estado">${esc("Revisada")}</span>` : ""}
+        <span class="suave" data-sin-traducir>${esc(a.descripcion)}</span>
+        <span class="enlaces"><button type="button" class="pz-enlace" data-abrir="https://github.com/${esc(a.repo)}">Código</button>${
+          a.pagina ? `<button type="button" class="pz-enlace" data-abrir="${esc(a.pagina)}">Página</button>` : ""}</span></li>`).join("")}</ul>`;
+    return `<h2>Apps hechas con Pieza</h2>
+      <p class="suave">Aparecen solas: cada persona elige sumarse al publicar su app. Nadie da permisos a nadie.</p>
+      ${errorHTML()}${filas}<div class="pz-pie"><button type="button" class="pz-boton" id="inicio">Volver al inicio</button></div>`;
+  }
+  function publicarHTML(p) {
+    if (p.repo) return `<div class="listo"><h3>Publicada</h3><p><button type="button" class="pz-enlace" data-abrir="https://github.com/${esc(p.repo)}" data-sin-traducir>github.com/${esc(p.repo)}</button></p>
+      <p class="suave">${esc(p.explorador ? "Aparece en el explorador de Pieza." : "No aparece en el explorador de Pieza.")}</p></div>`;
+    const g = E.gh;
+    if (!g) return `<h3>Publicar en GitHub</h3><p class="suave">Con tu cuenta de GitHub. Pieza no guarda tu clave ni pide permisos.</p>
+      <div class="pz-pie"><button type="button" class="pz-boton" id="revisar-publicar"${E.ocupado ? " disabled" : ""}>Publicar en GitHub</button></div>`;
+    if (!g.gh || !g.sesion) return `<h3>Publicar en GitHub</h3><p class="suave">Para publicar necesitas GitHub CLI con tu sesión iniciada.</p>
+      <ol class="suave"><li>Instálalo desde cli.github.com.</li><li>En la terminal, corre este comando:</li><li><code data-sin-traducir>gh auth login</code></li><li>Vuelve aquí y toca «Revisar de nuevo».</li></ol>
+      <div class="pz-pie"><button type="button" class="pz-boton" data-abrir="https://cli.github.com/">Abrir cli.github.com</button>
+      <button type="button" class="pz-boton pz-principal" id="revisar-publicar">Revisar de nuevo</button></div>`;
+    const pub = E.pub;
+    const duenos = g.duenos.map((d) => `<label class="opcion"><input type="radio" name="dueno" data-dueno="${esc(d)}"${pub.dueno === d ? " checked" : ""}> <span data-sin-traducir>${esc(d)}/${esc(p.id)}</span></label>`).join("");
+    const vis = [["publico", "Pública: cualquiera la ve y la puede usar"], ["privado", "Privada: solo tú"]].map(([v, n]) =>
+      `<label class="opcion"><input type="radio" name="vis" data-vis="${v}"${pub.visibilidad === v ? " checked" : ""}> <span>${esc(n)}</span></label>`).join("");
+    return `<h3>Publicar en GitHub</h3>
+      <fieldset class="grupo"><legend>Dónde</legend>${duenos}</fieldset>
+      <fieldset class="grupo"><legend>Cómo</legend>${vis}
+        <label class="opcion"><input type="checkbox" id="explorador"${pub.explorador && pub.visibilidad === "publico" ? " checked" : ""}${pub.visibilidad === "publico" ? "" : " disabled"}> <span>${esc("Sumarla al explorador de Pieza (topic «hecho-con-pieza»)")}</span></label></fieldset>
+      <p class="suave">Antes de subir, Pieza revisa que no vayan nombres, correos ni rutas reales.</p>
+      ${E.ocupado === "publicar" ? trabajando("Publicando…") : ""}
+      <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="publicar"${pub.dueno && !E.ocupado ? "" : " disabled"}>Publicar</button></div>`;
+  }
+  // Proponer una pieza: abre un issue prellenado en pieza-app/pieza (en el navegador, con la cuenta de la persona).
+  function proponerHTML() {
+    const x = E.propuesta;
+    return `<h3>¿Algo de tu app le sirve a otras?</h3>
+      <p class="suave">Propónlo como pieza. Así la próxima app no gasta tokens en hacerlo de nuevo.</p>
+      <label class="pz-campo"><span>Nombre de la pieza</span><input id="pz-nombre" maxlength="60" value="${esc(x.nombre)}"></label>
+      <label class="pz-campo"><span>Qué resuelve</span><textarea id="pz-que" rows="2" maxlength="500">${esc(x.que)}</textarea></label>
+      <label class="pz-campo"><span>Archivos de tu app que la forman</span><input id="pz-archivos" maxlength="300" value="${esc(x.archivos)}" placeholder="bin/recetas.py, ui/recetas.js"></label>
+      <div class="pz-pie"><button type="button" class="pz-boton" id="proponer"${x.nombre.trim() && x.que.trim() ? "" : " disabled"}>Proponer en GitHub</button></div>`;
   }
   function trabajando(texto) {
     return `<p class="trabajando" role="status"><span class="pz-giro" aria-hidden="true"></span> <span>${esc(texto)}</span></p>`;
@@ -155,7 +204,8 @@
       + sinIA() + errorHTML() + `<ol class="pasos">${filas}</ol>`
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">Para armarla e instalarla, abre esa carpeta en la terminal y corre:</p><p><code data-sin-traducir>bash build.sh</code></p>
-        <p class="suave">Para verla en el navegador:</p><p><code data-sin-traducir>cd ui &amp;&amp; python3 -m http.server</code></p></div>` : "")
+        <p class="suave">Para verla en el navegador:</p><p><code data-sin-traducir>cd ui &amp;&amp; python3 -m http.server</code></p></div>
+        <section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "")
       + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>${accion}</div>`;
   }
   function cabeza() {
@@ -182,7 +232,7 @@
     const lista = p.estado === "lista";
     const etiqueta = fija ? "Va siempre" : lista ? "0 tokens: ya está hecha" : "Por hacer";
     return `<label class="pieza${lista ? " hecha" : " por-hacer"}"><input type="checkbox" data-pieza="${esc(p.id)}"${marcada ? " checked" : ""}${fija ? " disabled" : ""}>
-      <span class="pieza-texto"><b data-sin-traducir>${esc(p.nombre)}</b><small data-sin-traducir>${esc(p.descripcion)}</small></span>
+      <span class="pieza-texto"><b data-sin-traducir>${esc(enIdioma(p, "nombre"))}</b><small data-sin-traducir>${esc(enIdioma(p, "descripcion"))}</small></span>
       <span class="sello${lista ? "" : " sello-falta"}">${lista ? ICONO : ""}${esc(etiqueta)}</span></label>`;
   }
   function pasoPiezas() {
@@ -200,7 +250,7 @@
     const f = E.ficha;
     if (!f) return cabeza() + `<p class="suave">Armando la ficha…</p>`;
     if (!f.ok) return cabeza() + `<p class="pz-error-texto" data-sin-traducir>${esc(f.error || "")}</p>` + pie({ puede: false });
-    const nombres = Object.fromEntries(E.catalogo.map((p) => [p.id, p.nombre]));
+    const nombres = Object.fromEntries(E.catalogo.map((p) => [p.id, enIdioma(p, "nombre")]));
     const lista = (xs) => `<ul>${xs.map((x) => `<li data-sin-traducir>${x}</li>`).join("")}</ul>`;
     const permisos = Object.entries(f.permisos);
     return cabeza() + `<div class="cifras">
@@ -219,7 +269,7 @@
     const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha, pasoPlan, pasoCrear, pasoPasos];
     return `<header class="barra"><h1 data-sin-traducir><img src="pieza.svg" alt="">${esc(NOMBRE)}</h1>
       <button type="button" class="pz-boton" id="abrir-ajustes">Ajustes</button></header>
-      <main class="contenido">${pasos[E.paso]()}</main>`;
+      <main class="contenido">${E.vista === "explorar" ? explorar() : pasos[E.paso]()}</main>`;
   }
   function ajustes() {
     const idiomas = [["es", "Español"], ["en", "English"]].map(([c, n]) =>
@@ -260,7 +310,15 @@
     } else if (b.id === "nueva") { E.nueva = nuevaApp(); E.ficha = null; irA(1); }
     else if (b.id === "atras") irA(E.paso - 1);
     else if (b.id === "siguiente") irA(E.paso + 1);
-    else if (b.id === "inicio") { E.proyecto = null; irA(0); host.enviar("proyectosLista"); }
+    else if (b.id === "inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
+    else if (b.id === "explorar") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
+    else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }
+    else if (b.id === "revisar-publicar") { ocupar("revisar"); host.enviar("publicarRevisar", { id: E.proyecto.id }); }
+    else if (b.id === "publicar") {
+      ocupar("publicar");
+      host.enviar("publicarSubir", { id: E.proyecto.id, dueno: E.pub.dueno, visibilidad: E.pub.visibilidad,
+        explorador: E.pub.visibilidad === "publico" && E.pub.explorador ? "si" : "no" });
+    } else if (b.id === "proponer") host.enviar("abrirEnlace", { url: urlPropuesta() });
     else if (b.dataset.seguir) seguir(b.dataset.seguir);
     else if (b.id === "hacer-plan") {
       const n = E.nueva;
@@ -271,6 +329,13 @@
     else if (b.id === "parar") { E.parar = true; pintar(); }
     else if (b.dataset.modo) { E.modo = b.dataset.modo; pintar(); }
   });
+  function urlPropuesta() {
+    const x = E.propuesta, p = E.proyecto || {};
+    const cuerpo = [`## ${Tp("Qué resuelve")}`, x.que.trim(), "", `## ${Tp("Archivos")}`, x.archivos.trim() || "-", "",
+      `## ${Tp("App")}`, p.repo ? `https://github.com/${p.repo}` : p.nombre || "-", "", Tp("Propuesta desde el programa Pieza.")].join("\n");
+    return "https://github.com/pieza-app/pieza/issues/new?labels=pieza-nueva&title=" + encodeURIComponent(Tp("Pieza nueva: {x}", { x: x.nombre.trim() }))
+      + "&body=" + encodeURIComponent(cuerpo);
+  }
   function ocupar(que) { E.ocupado = que; E.error = ""; E.parar = false; pintar(); }
   function hacerPaso(n) { E.enCurso = n; ocupar("paso"); host.enviar("proyectoPaso", { id: E.proyecto.id, n }); }
   // Una app que ya se empezó: vuelve al paso donde quedó.
@@ -299,7 +364,10 @@
     if (t.dataset.sistema) {
       n.plataformas = t.checked ? [...new Set([...n.plataformas, t.dataset.sistema])] : n.plataformas.filter((x) => x !== t.dataset.sistema);
       pintar();
-    } else if (t.dataset.pieza) {
+    } else if (t.dataset.dueno) { E.pub.dueno = t.dataset.dueno; pintar(); }
+    else if (t.dataset.vis) { E.pub.visibilidad = t.dataset.vis; pintar(); }
+    else if (t.id === "explorador") { E.pub.explorador = t.checked; }
+    else if (t.dataset.pieza) {
       n.tocadas = [...new Set([...n.tocadas, t.dataset.pieza])];
       n.piezas = t.checked ? [...new Set([...n.piezas, t.dataset.pieza])] : n.piezas.filter((x) => x !== t.dataset.pieza);
       pintar();
@@ -309,6 +377,12 @@
   document.addEventListener("input", (ev) => {
     const id = ev.target.id;
     if (id === "tope") { E.tope = Math.max(1000, Number(ev.target.value) || 0); return; }
+    if (id === "pz-nombre" || id === "pz-que" || id === "pz-archivos") {
+      const x = E.propuesta, antes = !!(x.nombre.trim() && x.que.trim());
+      x[{ "pz-nombre": "nombre", "pz-que": "que", "pz-archivos": "archivos" }[id]] = ev.target.value;
+      if (antes !== !!(x.nombre.trim() && x.que.trim())) pintar();
+      return;
+    }
     if (id !== "nombre" && id !== "frase") return;
     const antes = !!(E.nueva.nombre.trim() && E.nueva.frase.trim());
     E.nueva[id] = ev.target.value;
@@ -337,6 +411,17 @@
       pintar();
     },
     fichaLista(r) { E.ficha = r || { ok: false }; if (E.paso === 4) pintar(); },
+    explorarListo(r) { if (r && r.ok) E.apps = r.apps || []; else { E.apps = []; E.error = (r && r.error) || Tp("No se pudo."); } pintar(); },
+    publicarRevisado(r) {
+      E.ocupado = "";
+      if (r && r.ok) { E.gh = r; if (r.duenos && !E.pub.dueno) E.pub.dueno = r.duenos[0]; } else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
+    publicado(r) {
+      E.ocupado = "";
+      if (r && r.ok) { E.proyecto = r.proyecto; toast("Tu app está en GitHub."); } else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
     proyectosListos(r) { if (r && r.ok) { E.proyectos = r.proyectos || []; if (E.paso === 0) pintar(); } },
     planListo(r) {
       E.ocupado = "";
@@ -422,6 +507,15 @@
       case "piezasLista": return c.responder("piezasListas", { ok: true, piezas: CATALOGO });
       case "piezasFicha": return c.luego(200, () => c.responder("fichaLista", fichaSimulada(d)));
       case "listaIA": return c.responder("iaLista", { ias: DEMO.ias, elegida: DEMO.config.ia });
+      case "publicarExplorar": return c.luego(400, () => c.responder("explorarListo", { ok: true, apps: [
+        { nombre: "Recetas de Ana", repo: "ana-perez/recetas", descripcion: Tp("Guarda recetas y arma la lista de compras."), pagina: "https://ana-perez.github.io/recetas/", revisada: true },
+        { nombre: "Gastos de la casa", repo: "matias-soto/gastos", descripcion: Tp("Cuentas compartidas, sin servidores."), pagina: "", revisada: false }] }));
+      case "publicarRevisar": return c.luego(300, () => c.responder("publicarRevisado", { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] }));
+      case "publicarSubir": return c.luego(800, () => {
+        const p = SIM.proyectos.find((x) => x.id === d.id);
+        Object.assign(p, { repo: `${d.dueno}/${p.id}`, publicado: d.visibilidad, explorador: d.explorador === "si" });
+        c.responder("publicado", { ok: true, proyecto: p, url: `https://github.com/${p.repo}` });
+      });
       case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos });
       case "proyectoPlan": return c.luego(900, () => c.responder("planListo", planSimulado(d)));
       case "proyectoCrear": return c.luego(700, () => {

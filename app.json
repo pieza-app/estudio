@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.2.0",
+ "version": "0.3.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -148,6 +148,68 @@
    },
    "responde": "pasoListo",
    "limite": 2400
+  },
+  "publicarExplorar": {
+   "script": "publicar.py",
+   "args": [
+    "explorar"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "explorarListo",
+   "limite": 45
+  },
+  "publicarRevisar": {
+   "script": "publicar.py",
+   "args": [
+    "revisar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "publicarRevisado",
+   "limite": 60
+  },
+  "publicarSubir": {
+   "script": "publicar.py",
+   "args": [
+    "subir"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "dueno": {
+     "tipo": "texto",
+     "max": 39,
+     "requerido": true
+    },
+    "visibilidad": {
+     "tipo": "enum",
+     "valores": [
+      "publico",
+      "privado"
+     ],
+     "requerido": true
+    },
+    "explorador": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
+    }
+   },
+   "responde": "publicado",
+   "limite": 900
   }
  }
 }

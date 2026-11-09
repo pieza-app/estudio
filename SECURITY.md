@@ -42,7 +42,9 @@ ya necesitan control total del computador; o encabezados que GitHub Pages no dej
 - Las actualizaciones se bajan solo de los Releases de `pieza-app/estudio` y se instalan si su SHA-256 coincide; todo lo que se descarga al
   armar la app tiene su huella fija.
 - El catálogo (`datos/catalogo.json`) es solo datos: se valida y se escapa. Nunca se ejecuta nada de él.
-- Pieza no sale a internet salvo para buscar actualizaciones. Crea las apps con su copia de Pieza (`datos/pieza/`).
+- Pieza sale a internet solo para buscar actualizaciones y para el explorador de apps (pieza-app.github.io). Crea las apps con su copia de Pieza (`datos/pieza/`).
+- Publicar usa el `gh` de la persona: Pieza no guarda claves ni tokens. Antes de subir corre la revisión de privacidad de la app.
+  El explorador solo lee `pieza-app.github.io` (pieza «red») y valida cada app (repo de GitHub y página https).
 - La IA de la persona lee la carpeta de la app (solo leer, nunca los secretos) y responde archivos en JSON. No tiene herramientas.
   Pieza revisa cada ruta: nada fuera de la carpeta, nada en `.git/`, ningún archivo de pieza ni `app.json`, `acciones.json`,
   `piezas.json` o `.gitignore`. Después corre las pruebas de la app (`bash pruebas/correr.sh`) sin las variables de Pieza.

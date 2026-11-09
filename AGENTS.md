@@ -34,6 +34,7 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 | `ui/pieza.svg` | El ícono de Pieza que marca las piezas ya hechas («0 tokens»). |
 | `bin/proyectos.py` | Crear una app: `plan` (la IA desglosa lo propio en pasos, JSON validado), `crear` (`pieza.py crear`, sin IA), `paso` (la IA lee la carpeta y devuelve archivos; Pieza los revisa, los escribe y corre las pruebas; dos intentos) y `lista`. Registro en `<datos>/proyectos/<id>.json`; la app en `~/Pieza/<Nombre>`. |
 | `datos/pieza/` | Una copia de Pieza (`pieza.py`, `piezas/`, la guía para la IA): con ella se crean las apps sin internet. La pone al día `herramientas/catalogo_de_pieza.py`; `VERSION` dice el commit. No se edita aquí. |
+| `bin/publicar.py` | `explorar` (las apps con el topic «hecho-con-pieza», de la página de Pieza, pieza «red»), `revisar` (`gh` y su sesión, dueños posibles) y `subir` (con el `gh` de la persona: repo en `app.json` + `pieza.py generar`, revisión de privacidad, primer commit, `gh repo create`, Pages y el topic si elige el explorador). |
 | `datos/guias/reglas.md` | Las reglas que van en cada pedido a la IA (cortas: un paso por pedido). |
 
 ## Cómo funciona
@@ -43,11 +44,14 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 - **La ficha** la calcula `bin/piezas.py ficha` (acción `piezasFicha` → `fichaLista`). En el navegador la calcula `fichaSimulada`
   con la misma regla: si cambias la regla, cambia los dos lados y `pruebas/test_app.py` (clase `Piezas`).
 - **Acciones** (`app.json` → `acciones`): `piezasLista` → `piezasListas`, `piezasFicha` → `fichaLista`, `proyectosLista` →
-  `proyectosListos`, `proyectoPlan` → `planListo`, `proyectoCrear` → `proyectoCreado` y `proyectoPaso` → `pasoListo`. Lo que
+  `proyectosListos`, `proyectoPlan` → `planListo`, `proyectoCrear` → `proyectoCreado`, `proyectoPaso` → `pasoListo`,
+  `publicarExplorar` → `explorarListo`, `publicarRevisar` → `publicarRevisado` y `publicarSubir` → `publicado`. Lo que
   escribe la persona llega en el archivo de entrada, nunca como argumento. En el navegador las simula `simular()` (`planSimulado`).
 - **La IA nunca escribe por su cuenta.** Lee la carpeta de la app (solo leer, `ia.preguntar(..., leer=carpeta)`) y responde JSON.
   `validar_archivos` rechaza rutas que salen de la carpeta, `.git/`, los archivos de piezas (`piezas.json`) y `app.json`,
   `acciones.json`, `piezas.json` y `.gitignore`. Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
+- **Publicar y proponer:** al terminar, «Publicar en GitHub» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
+  «Proponer en GitHub» abre en el navegador un issue prellenado en `pieza-app/pieza` (etiqueta `pieza-nueva`).
 - **Tokens:** se estiman con el largo del pedido y de la respuesta (÷ 4). «Todo automático» sigue mientras cada paso quede bien,
   la persona no pida «Detener» y lo gastado no pase el tope (`E.tope`).
 
@@ -68,6 +72,7 @@ Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se
 | `i18n` | 0.3.1 | `ui/i18n.js` | `T`, `Tp`, `traducirDOM` y `idiomas/en.json`. |
 | `ia` | 0.6.3 | `bin/ia.py` | La IA de la persona: el plan y cada paso (`preguntar`, con `leer` = la carpeta de la app). |
 | `nucleo` | 0.7.1 | `bin/nucleo.py` | `app.json`, la carpeta de datos y la config. |
+| `red` | 0.2.0 | `bin/red.py` | El explorador: solo `pieza-app.github.io`, sin redirecciones y con tope. |
 | `tema` | 0.2.1 | `ui/tema.css`, `ui/tema.js` | Claro y oscuro. |
 | `trabajos` | 0.2.2 | `bin/trabajos.py`, `escritorio/src/pieza/progreso.rs` | Todavía no se usa: los pasos corren con su límite de tiempo (`limite` en `app.json`). |
 

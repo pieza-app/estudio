@@ -209,11 +209,11 @@
     "red": []
    },
    "generados": {
-    "escritorio/Cargo.toml": "99c4d0421cd060057c79da3f04c304789869fa2b9a9d9fddd9a8510f6996a4df",
+    "escritorio/Cargo.toml": "424e2e9db67e32c2652360b1c1e2f3b3708648ba5ceadea0ca5ffbcf53eb7314",
     "escritorio/Info.plist": "caced4288d0950352371b370e923ab85f8620d694948429b3f4c01130a089c4f",
     "escritorio/build.rs": "8af41c0062014fc594e4bb9899e60ee9930ab57d4cf0c73041ff557d6ec736e6",
     "escritorio/pruebas/arranque.sh": "010c2d4b4d6329ecc98c661e35974271ef5fdad57e66c18a79830417aedd2aab",
-    "escritorio/tauri.conf.json": "e935bf50c969d451cb9b44e04c30bc9a91d78cfe83e96e5370eb2c848b81fa11",
+    "escritorio/tauri.conf.json": "7f70654a643d7a44935ee2f4edcfc265d0b44b6e464364fbaadcc916ebe67b56",
     "escritorio/vacio/index.html": "7bcf3f155d8e0139c9b300a61c12bbb42fbde92d8e08267bbd8d694321672ea9"
    },
    "una_vez": [
@@ -236,7 +236,7 @@
     ".github/workflows/publicar.yml": "33888cb82ca4eace57d8c8d9819a778e3af9cfaf2a6fc49d958a194174a89dc4",
     "build.sh": "094fb3ede5f22f4304fa09641f7630959ffbfcd2417f1bf5c3499fe3cc34b53f",
     "escritorio/herramientas/preparar.sh": "e73b0a523b37d23a8144a1005f2a355a066de8fd165bbd3e50dd2149ed471067",
-    "herramientas/empaquetar.sh": "9253b20ccd0ef9d0eda874c54e3b776bffd4904b1692fec3f64e993dd4fea6e8",
+    "herramientas/empaquetar.sh": "cb26ac8b10dea70edea255a90a801de520ef76c88c151e63ca8bbd09722234ce",
     "instalar.ps1": "0cbe4679aa022ce838855a9910acd42800482750a12b7ee31aa5f0ce2b5374ca",
     "instalar.sh": "167fbfabfd1c674264bccf48cdbf817ccdee7f91f153a70481a42780b36150f5"
    }
@@ -309,6 +309,19 @@
     "docs/wiki/Primeros-pasos.md",
     "docs/wiki/_Sidebar.md"
    ]
+  },
+  "red": {
+   "version": "0.2.0",
+   "archivos": {
+    "bin/red.py": "2f593085c352e52383fa4982e367827e2a794495cf29076d25085ec8349c6a6f"
+   },
+   "ficha": {
+    "requiere": [
+     "nucleo"
+    ],
+    "permisos": {},
+    "red": []
+   }
   }
  }
 }

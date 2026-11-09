@@ -8,6 +8,10 @@
    "estado": "lista",
    "categoria": "plataforma",
    "descripcion": "Avisa dentro de la app, descarga solo de los Releases del repo, verifica sha256 y actualiza en un clic sin tocar los datos.",
+   "en": {
+    "nombre": "Updates",
+    "descripcion": "Tells you inside the app, downloads only from the repo's Releases, checks sha256 and updates in one click without touching the data."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -45,6 +49,10 @@
    "estado": "lista",
    "categoria": "interfaz",
    "descripcion": "Primer uso por pasos, con el idioma SIEMPRE primero; cada pieza puede sumar su paso.",
+   "en": {
+    "nombre": "Welcome",
+    "descripcion": "First use in steps, with the language ALWAYS first; each piece can add its own step."
+   },
    "requiere": [
     "i18n"
    ],
@@ -83,6 +91,10 @@
    "estado": "planeada",
    "categoria": "conexiones",
    "descripcion": "Leer las reuniones del calendario (EventKit en Mac, archivo .ics en el resto) para avisar y nombrar.",
+   "en": {
+    "nombre": "Calendar",
+    "descripcion": "Reads the meetings in the calendar (EventKit on Mac, an .ics file elsewhere) to remind and name them."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -126,6 +138,10 @@
    "estado": "lista",
    "categoria": "datos",
    "descripcion": "Contenido de la comunidad (plantillas, efectos, temas…) desde un repo de solo datos: dominio fijo, sin redirecciones, tamaño máximo y SHA-256 obligatorio; cada app pone su validador.",
+   "en": {
+    "nombre": "Community catalog",
+    "descripcion": "Community content (templates, effects, themes…) from a data-only repo: fixed domain, no redirects, size limit and required SHA-256; each app sets its validator."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -168,6 +184,10 @@
    "estado": "planeada",
    "categoria": "datos",
    "descripcion": "El computador es la fuente; el celular lee una copia cifrada en una carpeta de la nube de la persona.",
+   "en": {
+    "nombre": "Copy to your phone",
+    "descripcion": "The computer is the source; the phone reads an encrypted copy in a cloud folder of the person."
+   },
    "requiere": [
     "cifrado"
    ],
@@ -199,6 +219,10 @@
    "estado": "lista",
    "categoria": "datos",
    "descripcion": "Cifrar con una frase de la persona (PBKDF2-SHA256 600.000 + AES-256-GCM con AAD), nombres de archivo opacos con HMAC, verificador de frase y archivos con versión.",
+   "en": {
+    "nombre": "Encryption",
+    "descripcion": "Encrypts with the person's passphrase (PBKDF2-SHA256 600,000 + AES-256-GCM with AAD), opaque file names with HMAC, a passphrase check and versioned files."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -223,6 +247,10 @@
    "estado": "planeada",
    "categoria": "interfaz",
    "descripcion": "Formulario que abre un issue en GitHub prellenado con versión, sistema e IA. Nunca obligatorio.",
+   "en": {
+    "nombre": "Send feedback",
+    "descripcion": "A form that opens a GitHub issue prefilled with version, system and AI. Never required."
+   },
    "requiere": [
     "componentes"
    ],
@@ -257,6 +285,10 @@
    "estado": "lista",
    "categoria": "interfaz",
    "descripcion": "Diálogo accesible, confirmar, avisos (toast) en cola, filas de Tu IA, actualizaciones «Paso n de 3», Acerca de y comentarios a GitHub.",
+   "en": {
+    "nombre": "Components",
+    "descripcion": "Accessible dialog, confirm, queued notices (toast), Your AI rows, updates «Step n of 3», About and feedback to GitHub."
+   },
    "requiere": [
     "i18n",
     "tema"
@@ -306,6 +338,10 @@
    "estado": "planeada",
    "categoria": "conexiones",
    "descripcion": "Contrato para conectar servicios externos (bancos, billeteras, APIs) con credencial en el llavero y por la entrada estándar.",
+   "en": {
+    "nombre": "Service connectors",
+    "descripcion": "A contract to connect outside services (banks, wallets, APIs) with the credential in the keychain and through standard input."
+   },
    "requiere": [
     "red",
     "nucleo"
@@ -352,6 +388,10 @@
    "estado": "lista",
    "categoria": "datos",
    "descripcion": "El texto de un .md, .txt, .pdf, .docx, .odt, .epub o .html solo con la biblioteca estándar, con topes contra zip bombas y XML sin entidades; y partir un libro en capítulos sin IA.",
+   "en": {
+    "nombre": "Read files",
+    "descripcion": "The text of a .md, .txt, .pdf, .docx, .odt, .epub or .html with the standard library only, with limits against zip bombs and XML without entities; and splitting a book into chapters without AI."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -384,6 +424,10 @@
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "Una prueba que revisa que la interfaz y cada plataforma (Mac, Windows/Linux, celular, vista previa) digan lo mismo: cada acción atendida (registrada, del host o declarada), acciones.json al día, las respuestas existen y la seguridad común. Lo propio de la app va en un archivo chico.",
+   "en": {
+    "nombre": "Bridge contract",
+    "descripcion": "A test that checks the interface and each platform (Mac, Windows/Linux, phone, preview) say the same: every action handled, acciones.json up to date, the responses exist and the common security."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -410,6 +454,10 @@
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "Arma, firma, publica e instala la app desde app.json con su host de Tauri: empaquetar.sh para Mac, Windows y Linux con un solo Python portátil, build.sh (desarrollo en el Mac), preparar.sh, instalar.sh/ps1 y publicar.yml.",
+   "en": {
+    "nombre": "Packaging",
+    "descripcion": "Builds, signs, publishes and installs the app from app.json with its Tauri host: empaquetar.sh for Mac, Windows and Linux with one portable Python, build.sh, preparar.sh, instalar.sh/ps1 and publicar.yml."
+   },
    "requiere": [
     "host-tauri"
    ],
@@ -435,6 +483,10 @@
    "estado": "lista",
    "categoria": "base",
    "descripcion": "Lo propio de una app nueva, mínimo y andando de punta a punta: interfaz con bienvenida (idioma primero), una pantalla de ejemplo, un script declarado, la app de Mac y la de Windows/Linux sobre el host, demo y pruebas. Se escribe una vez y desde ahí es de la app.",
+   "en": {
+    "nombre": "New app starter",
+    "descripcion": "What is unique to a new app, minimal and working end to end: interface with welcome (language first), a sample screen, a declared script, the desktop app, demo and tests. Written once; from then on it belongs to the app."
+   },
    "requiere": [
     "nucleo",
     "host-ui",
@@ -478,6 +530,10 @@
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "El repo listo para la comunidad desde app.json: plantillas de issues y PR, dependabot, revisar.yml, Pieza al día, AGENTS/CONTRIBUTING/SECURITY con lo que llena la IA marcado, agentes, revisión de privacidad, .gitignore de lista blanca y pieza.py repo configurar.",
+   "en": {
+    "nombre": "Repo ready for the community",
+    "descripcion": "The repo ready for the community from app.json: issue and PR templates, dependabot, revisar.yml, Pieza up to date, AGENTS/CONTRIBUTING/SECURITY, agents, privacy check, allow-list .gitignore and the wiki."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -505,6 +561,10 @@
    "estado": "planeada",
    "categoria": "medios",
    "descripcion": "Pantalla + cámara + voz, con recorte, pausa y atajos globales.",
+   "en": {
+    "nombre": "Screen recording",
+    "descripcion": "Screen + camera + voice, with trimming, pause and global shortcuts."
+   },
    "requiere": [
     "microfono"
    ],
@@ -568,6 +628,10 @@
    "estado": "lista",
    "categoria": "plataforma",
    "descripcion": "Host genérico en Swift para iPhone (WKWebView a pantalla completa): la misma interfaz de ui/ con plataforma «movil», puente con las guardas de host-mac, config e idioma desde app.json, apariencia, pantalla encendida y unos segundos extra en segundo plano mientras algo está en curso, y el proyecto de Xcode generado desde app.json.",
+   "en": {
+    "nombre": "iPhone app",
+    "descripcion": "A generic Swift host for iPhone (full-screen WKWebView): the same ui/ with the «movil» platform, a guarded bridge, config and language from app.json, appearance and the Xcode project generated from app.json."
+   },
    "requiere": [
     "nucleo",
     "host-ui"
@@ -603,6 +667,10 @@
    "estado": "planeada",
    "categoria": "plataforma",
    "descripcion": "Capacitor con la misma interfaz; las acciones corren en un motor JS.",
+   "en": {
+    "nombre": "Phone app",
+    "descripcion": "Capacitor with the same interface; actions run in a JS engine."
+   },
    "requiere": [
     "host-ui"
    ],
@@ -635,6 +703,10 @@
    "estado": "lista",
    "categoria": "plataforma",
    "descripcion": "Un solo host en Rust (Tauri) para Mac, Windows y Linux, con la misma API que host-mac y host-escritorio: ventana con el WebView del sistema (liviana, sin Chromium adentro), protocolo propio solo para ui/ y los medios que la app aprueba, puente con guardas, acciones declaradas con datos validados y límite de tiempo, config, idioma, menús, bandeja, apariencia, carpeta, vigilante, secretos en el llavero del sistema, avisos, diálogos y una sola instancia.",
+   "en": {
+    "nombre": "Mac, Windows and Linux app",
+    "descripcion": "One Rust (Tauri) host for Mac, Windows and Linux: window with the system WebView (light, no Chromium inside), a guarded bridge, declared actions with validated data and time limits, config, language, menus, tray, appearance, folder, watcher, keychain secrets, notices, dialogs and a single instance."
+   },
    "requiere": [
     "nucleo",
     "host-ui"
@@ -694,6 +766,10 @@
    "estado": "lista",
    "categoria": "interfaz",
    "descripcion": "host.enviar(accion, datos) y las respuestas window.<App>.*, igual en Mac, Electron, móvil y navegador (modo demo).",
+   "en": {
+    "nombre": "Interface bridge",
+    "descripcion": "host.enviar(accion, datos) and the window.<App>.* responses, the same on desktop, phone and browser (demo mode)."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -718,6 +794,10 @@
    "estado": "lista",
    "categoria": "interfaz",
    "descripcion": "Traducciones con la frase en español como clave, plantillas {n}, escape seguro y traducir la página entera.",
+   "en": {
+    "nombre": "Languages",
+    "descripcion": "Translations with the Spanish phrase as key, {n} templates, safe escaping and translating the whole page."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -749,6 +829,10 @@
    "estado": "lista",
    "categoria": "ia",
    "descripcion": "La IA de la persona (Claude Code, Codex o Gemini) con su propia cuenta: sin herramientas, sin su memoria, el pedido nunca como argumento, material y revisión a fondo de solo lectura, y en vivo (lo que lee y «Detener»).",
+   "en": {
+    "nombre": "Your AI",
+    "descripcion": "The person's AI (Claude Code, Codex or Gemini) with their own account: no tools, no memory, the request never as an argument, read-only material and deep review, and live (what it reads and «Stop»)."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -792,6 +876,10 @@
    "estado": "planeada",
    "categoria": "ia",
    "descripcion": "Servidor MCP local para que la persona converse con sus datos desde su IA, y alta en Claude, Codex, Gemini y Claude Desktop.",
+   "en": {
+    "nombre": "Talk to your AI (MCP)",
+    "descripcion": "A local MCP server so the person can talk with their data from their AI, set up in Claude, Codex, Gemini and Claude Desktop."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -825,6 +913,10 @@
    "estado": "planeada",
    "categoria": "medios",
    "descripcion": "Grabar o escuchar el micrófono (y el audio del sistema en Mac) con permiso explicado.",
+   "en": {
+    "nombre": "Microphone",
+    "descripcion": "Records or listens to the microphone (and system audio on Mac) with an explained permission."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -885,6 +977,10 @@
    "estado": "planeada",
    "categoria": "datos",
    "descripcion": "Guarda los datos de la persona en un repo suyo de GitHub o GitLab, nunca en un servidor nuestro.",
+   "en": {
+    "nombre": "Data in your git",
+    "descripcion": "Saves the person's data in their own GitHub or GitLab repo, never on a server of ours."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -926,6 +1022,10 @@
    "estado": "planeada",
    "categoria": "plataforma",
    "descripcion": "Avisos programados del sistema (pagos, repasos, recordatorios), con permiso y opción de apagarlos.",
+   "en": {
+    "nombre": "Notices",
+    "descripcion": "Scheduled system notices (payments, reviews, reminders), with permission and a way to turn them off."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -975,6 +1075,10 @@
    "estado": "lista",
    "categoria": "base",
    "descripcion": "Lo que todo script necesita: app.json, carpeta de datos, config validada, escritura atómica y el contrato «el último argumento es la salida».",
+   "en": {
+    "nombre": "Core",
+    "descripcion": "What every script needs: app.json, data folder, validated config, atomic writes and the contract «the last argument is the output»."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -991,10 +1095,14 @@
   {
    "id": "pagina",
    "nombre": "Página pública",
-   "version": "0.1.2",
+   "version": "0.1.3",
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "La página pública bilingüe (GitHub Pages) generada desde docs/pagina.json: descarga según el sistema, demo, permisos e internet que salen de sus piezas, preguntas frecuentes con su JSON-LD, SEO y el sello «Hecho con Pieza».",
+   "en": {
+    "nombre": "Public website",
+    "descripcion": "The bilingual public website (GitHub Pages) generated from docs/pagina.json: download by system, demo, permissions and internet from its pieces, FAQ with JSON-LD, SEO and the «Made with Pieza» badge."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -1029,7 +1137,7 @@
     "cuando": "Siempre.",
     "palabras": []
    },
-   "bytes": 71842
+   "bytes": 74520
   },
   {
    "id": "privacidad",
@@ -1038,6 +1146,10 @@
    "estado": "planeada",
    "categoria": "repo",
    "descripcion": "Antes de cada commit busca nombres, correos y rutas reales (lista local nunca versionada).",
+   "en": {
+    "nombre": "Privacy check",
+    "descripcion": "Before each commit it looks for real names, emails and paths (a local list, never committed)."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -1063,6 +1175,10 @@
    "estado": "lista",
    "categoria": "conexiones",
    "descripcion": "Pedidos HTTPS desde los scripts: solo a dominios permitidos, sin redirecciones, con tope de tamaño y de tiempo, y la credencial nunca en un error.",
+   "en": {
+    "nombre": "Safe network",
+    "descripcion": "HTTPS requests from the scripts: only to allowed domains, no redirects, with size and time limits, and the credential never in an error."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -1082,11 +1198,15 @@
   },
   {
    "id": "tema",
-   "nombre": "Tema claro y oscuro",
-   "version": "0.2.1",
+   "nombre": "Temas: claro, oscuro y vidrio",
+   "version": "0.3.0",
    "estado": "lista",
    "categoria": "interfaz",
-   "descripcion": "Sistema, claro u oscuro con un solo juego de tokens CSS y light-dark(): cada color se escribe una vez.",
+   "descripcion": "Sistema, claro, oscuro o vidrio (paneles esmerilados) con un solo juego de tokens CSS y light-dark(). Suma temas de afuera (universos, comunidad) validados: solo colores.",
+   "en": {
+    "nombre": "Themes: light, dark and glass",
+    "descripcion": "System, light, dark or glass (frosted panels) with one set of CSS tokens and light-dark(). Adds outside themes (universes, community), validated: colors only."
+   },
    "requiere": [],
    "plataformas": [
     "mac",
@@ -1099,7 +1219,7 @@
     {
      "donde": "Ajustes",
      "nombre": "Apariencia",
-     "que": "sistema, claro u oscuro"
+     "que": "sistema, claro, oscuro o vidrio"
     }
    ],
    "permisos": {},
@@ -1109,7 +1229,7 @@
     "cuando": "Siempre.",
     "palabras": []
    },
-   "bytes": 11638
+   "bytes": 17352
   },
   {
    "id": "trabajos",
@@ -1118,6 +1238,10 @@
    "estado": "lista",
    "categoria": "datos",
    "descripcion": "Lo que tarda minutos corre por etapas en segundo plano: estado en disco, avance en vivo, latido, «Detener», «Seguir donde quedó» y trabajos que esperan respuestas.",
+   "en": {
+    "nombre": "Long jobs",
+    "descripcion": "What takes minutes runs in stages in the background: state on disk, live progress, heartbeat, «Stop», «Continue where it left off» and jobs that wait for answers."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -1156,6 +1280,10 @@
    "estado": "lista",
    "categoria": "medios",
    "descripcion": "Audio a texto en el computador con whisper.cpp: modelos con huella fija, vocabulario por archivo privado (nunca como argumento), VAD y filtro de inventos y bucles.",
+   "en": {
+    "nombre": "Transcribe",
+    "descripcion": "Audio to text on the computer with whisper.cpp: models with fixed fingerprints, vocabulary in a private file (never as an argument), VAD and a filter for made-up text and loops."
+   },
    "requiere": [
     "nucleo"
    ],
@@ -1203,12 +1331,15 @@
   {
    "id": "universos",
    "nombre": "Universos",
-   "version": "0.0.0",
-   "estado": "planeada",
-   "categoria": "datos",
-   "descripcion": "Mundos temáticos que cambian textos, colores y juego de la app; se descargan, se votan y se crean con la IA.",
+   "version": "0.1.0",
+   "estado": "lista",
+   "categoria": "interfaz",
+   "descripcion": "Mundos que cambian los colores (un tema) y los textos que la app deja cambiar. Tres de base (Espacio, Bosque, Neón) y los de la comunidad por el catálogo, validados: solo datos.",
+   "en": {
+    "nombre": "Universes",
+    "descripcion": "Worlds that change the colors (a theme) and the texts the app lets you change. Three to start (Space, Forest, Neon) and the community's through the catalog, validated: data only."
+   },
    "requiere": [
-    "catalogo",
     "tema"
    ],
    "plataformas": [
@@ -1220,27 +1351,26 @@
    ],
    "pantallas": [
     {
-     "donde": "Galería",
-     "nombre": "Universos",
-     "que": "elegir, previsualizar, votar y descargar"
-    },
-    {
      "donde": "Ajustes",
-     "nombre": "Crear universo",
-     "que": "pedírselo a tu IA"
+     "nombre": "Universos",
+     "que": "elegir un universo (cambia colores y textos)"
     }
    ],
+   "permisos": {},
+   "red": [],
    "recomendar": {
     "siempre": false,
     "cuando": "Quieres que la app sea entretenida y personalizable por temas.",
     "palabras": [
      "universos",
+     "universo",
      "juego",
      "gamificar",
-     "temas"
+     "temas",
+     "personalizar"
     ]
    },
-   "bytes": 0
+   "bytes": 21210
   },
   {
    "id": "youtube",
@@ -1249,6 +1379,10 @@
    "estado": "planeada",
    "categoria": "conexiones",
    "descripcion": "Conectar el canal de la persona con OAuth y subir videos directo.",
+   "en": {
+    "nombre": "Upload to YouTube",
+    "descripcion": "Connects the person's channel with OAuth and uploads videos directly."
+   },
    "requiere": [
     "red"
    ],
