@@ -1,0 +1,143 @@
+{
+ "formato": 1,
+ "id": "componentes",
+ "version": "0.3.0",
+ "estado": "lista",
+ "nombre": "Componentes",
+ "icono": "icono.svg",
+ "licencia": "MPL-2.0",
+ "categoria": "interfaz",
+ "descripcion": "Diálogo accesible, confirmar, avisos (toast) en cola, filas de Tu IA, actualizaciones «Paso n de 3», Acerca de y comentarios a GitHub.",
+ "recomendar": {
+  "siempre": true,
+  "cuando": "Siempre."
+ },
+ "requiere": [
+  "i18n",
+  "tema"
+ ],
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux",
+  "ios",
+  "android"
+ ],
+ "pantallas": [
+  {
+   "donde": "Ajustes",
+   "nombre": "Tu IA",
+   "que": "probar y elegir la IA de la persona"
+  },
+  {
+   "donde": "Ajustes",
+   "nombre": "Actualizaciones",
+   "que": "buscar, ver las notas e instalar, paso a paso"
+  },
+  {
+   "donde": "Ajustes",
+   "nombre": "Acerca de",
+   "que": "versión, licencia y enlaces: código, comunidad, cómo aportar"
+  },
+  {
+   "donde": "Ajustes",
+   "nombre": "Enviar comentarios",
+   "que": "contar un error o una idea en un issue de GitHub, sin cuenta en la app"
+  }
+ ],
+ "origen": "esquema/ui (diálogos con aria-modal, data-autofoco, hoja desde abajo a 760 px, filas de IA y de actualización, selector segmentado, giro) + alcancia (IA no instalada con «Cómo instalarla», error de la IA traducido, toast que deja espacio a la barra inferior) + minuta (formulario de comentarios → issue prellenado con versión, idioma y sistema; nunca obligatorio) + corta y esquema (avisos que esperan a que se elija el idioma). Nuevo: el foco queda dentro del diálogo (Tab y Mayús+Tab) y vuelve a donde estaba al cerrarlo aunque la app pinte todo de nuevo, Esc y el velo cierran lo de más arriba, confirmar() devuelve una promesa, los avisos van en cola sin repetirse (antes uno pisaba al otro), la fila de actualización usa la forma de la pieza actualizaciones con una barra de avance, y clases con prefijo pz- para no chocar con las de cada app.",
+ "archivos": {
+  "ui/componentes.js": "ui/componentes.js",
+  "ui/componentes.css": "ui/componentes.css"
+ },
+ "config": {},
+ "acciones": {},
+ "textos": {
+  "Cerrar": "Close",
+  "Aceptar": "OK",
+  "Cancelar": "Cancel",
+  "No encontré ninguna IA instalada. Puedes instalar Claude Code, Codex o Gemini y probarla aquí.": "I couldn't find any AI installed. You can install Claude Code, Codex or Gemini and test it here.",
+  "No está instalada": "Not installed",
+  "Cómo instalarla": "How to install it",
+  "En uso": "In use",
+  "Instalada": "Installed",
+  "Lista": "Ready",
+  "Probando…": "Testing…",
+  "Probar otra vez": "Test again",
+  "Usar y probar": "Use and test",
+  "Lista para usar": "Ready to use",
+  "No respondió.": "It didn't answer.",
+  "Buscando…": "Checking…",
+  "Estás en la última versión": "You're on the latest version",
+  "No pude revisar: sin conexión": "I couldn't check: no connection",
+  "{app} revisa sola si hay versiones nuevas.": "{app} checks for new versions on its own.",
+  "Hay una versión nueva de {app}": "There's a new version of {app}",
+  "Tus datos no se tocan al actualizar.": "Updating never touches your data.",
+  "Actualizar ahora": "Update now",
+  "Buscar actualizaciones": "Check for updates",
+  "Buscar de nuevo": "Check again",
+  "Paso {n} de {total}": "Step {n} of {total}",
+  "No se pudo actualizar": "The update didn't work",
+  "{app} {v} · Gratis y abierto ({licencia}). Sin cuentas ni telemetría.": "{app} {v} · Free and open ({licencia}). No accounts, no telemetry.",
+  "Sitio": "Website",
+  "Código": "Code",
+  "Comunidad": "Community",
+  "Cómo aportar": "How to contribute",
+  "Enviar comentarios": "Send feedback",
+  "Se abre GitHub con tu mensaje listo; lo revisas y lo publicas tú. Es público, así que no incluyas datos personales.": "GitHub opens with your message ready; you review it and post it yourself. It's public, so don't include personal data.",
+  "Tipo": "Type",
+  "Algo falla": "Something's wrong",
+  "Una idea": "An idea",
+  "Otro": "Other",
+  "Título": "Title",
+  "Escribe un título.": "Write a title.",
+  "Cuéntanos": "Tell us",
+  "Incluir la versión de la app, el idioma y el sistema": "Include the app version, language and system",
+  "Ayuda a entender el contexto. Nunca se incluye nada tuyo.": "It helps us understand the context. Nothing of yours is ever included.",
+  "Abrir en GitHub": "Open in GitHub",
+  "Se abrió GitHub: revisa y publica": "GitHub is open: review and post",
+  "Revisar de nuevo": "Check again",
+  "Hay cambios nuevos en el código de {app}": "There are new changes in {app}'s code"
+ },
+ "permisos": {},
+ "red": [],
+ "red_nota": "Los comentarios abren github.com en el navegador de la persona; la app no sale a internet.",
+ "compatible": {
+  "i18n": ">=0.2.0 <1.0.0",
+  "tema": ">=0.2.0 <1.0.0"
+ },
+ "cambios": [
+  {
+   "version": "0.3.0",
+   "tipo": "rompe",
+   "resumen": "Lo que salió al pasar las seis apps a 0.2. En táctil y a 760 px o menos, --pz-tactil sube solo los componentes de la pieza (diálogos, filas de Ajustes, avisos), no el :root de toda la app (un editor compacto como el de Corta crecía solo). confirmar sin peligro pone el foco en el título, como todo diálogo (antes en «sí»: un Enter apurado confirmaba). La fila de actualización solo dice «cambios nuevos en el código» con desarrollo: true (un hay sin versión anunciaba un Release como commits). Arreglos: el título de una ventana aria-modal propia de la app ya no lleva anillo de foco; .pz-cerrar no baja de 36 px aunque la app ponga --pz-boton-alto: 0 (o --pz-cerrar-ancho); el error de probar una IA no repite la «ayuda» de la app. Nuevo: al volver a pintar, el cursor de un campo queda donde estaba (o al final) y crear({mantenerCampos: true}) lo hace también fuera de un diálogo (un buscador); filasIA con revisable: false por fila (una IA «muy pronto», sin «Revisar de nuevo»); dialogo({claseTitulo, claseCapa}) y envolver(html, {claseCapa}).",
+   "migrar": [
+    "Táctil: si querías que TODOS tus .pz-boton/.pz-chip crecieran a 44 px en táctil (no solo los de diálogos, filas y avisos), agrega en tu app.css `@media (pointer: coarse), (max-width: 760px) { :root { --pz-boton-alto: var(--pz-tactil); --pz-chip-alto: var(--pz-tactil); } }`. Si contrarrestabas el :root de la pieza (Corta), bórralo.",
+    "confirmar sin peligro: el foco empieza en el título, no en «sí». Si tus pruebas esperaban document.activeElement en [data-pz-confirmar=\"si\"], ajústalas (Enter ya no confirma; Tab llega a los botones).",
+    "Actualizaciones de una instalación de desarrollo: manda desarrollo: true en actualizacionRevisada/estado.actualizacion. Un hay: true sin version ahora se muestra como «Hay una versión nueva».",
+    "Si quitabas a mano la «ayuda» del error de iaProbada (o la usabas en la fila de Tu IA), ya no hace falta: la fila no la muestra.",
+    "Si en tu app.css quitabas el anillo del título de tus ventanas aria-modal o le dabas ancho a .pz-cerrar con --pz-boton-alto: 0, bórralo.",
+    "Si guardabas y devolvías a mano el cursor de un buscador al repintar, pasa a crear({mantenerCampos: true})."
+   ]
+  },
+  {
+   "version": "0.2.0",
+   "tipo": "rompe",
+   "seguridad": true,
+   "resumen": "Seguridad: confirmar({peligro: true}) pone el foco en «Cancelar», así un Enter apurado ya no borra (lo encontró Graba). Lo que encontraron las cinco apps al migrar. Arreglos: el texto de error (.pz-error-texto) ya no sale gris dentro de un diálogo (las reglas sobre p y h2 van con :where() y solo para los p directos); el aviso y el botón de peligro usan --sobre-texto y --sobre-rojo (se leen con fondos transparentes); el foco al abrir va al título (no al pie, que desplazaba el diálogo) y, si la app vuelve a pintar con el diálogo abierto, vuelve al control donde estaba; pasos con el mismo título pero otra `clave` mueven el foco; un enlace en una fila de IA ya no deja un hueco a 390 px; .pz-boton parte el texto en vez de salirse; .pz-seg no se parte en varias líneas y se ve sobre --panel-2. Nuevo: ui.envolver(html, {id}) para un diálogo con su propio <h2>; dialogo({antes, tituloHTML}) y sin título; ui.aviso con botón ({accion: {texto, f}}) y con frases ya armadas (tr); acercaDe({extra}); filasIA con `detalle`, «Revisar de nuevo» para una no instalada y un solo botón principal (`principal`); crear({version}) acepta una función; actualizacionRevisada/Disponible aceptan `detalle` y {pintar: false}; fila de actualización en modo desarrollo; confirmar({sinElegir}) para que Esc no sea «no»; --pz-boton-alto, --pz-chip-alto y --pz-tactil para el alto de lo que se toca.",
+   "migrar": [
+    "El foco al abrir un diálogo va al título. Si pusiste data-autofoco en un botón del pie solo para que el foco entrara, quítalo (déjalo solo en un campo donde se escribe).",
+    "filasIA: ahora solo la primera IA instalada lleva pz-principal cuando ninguna está en uso. Para la forma de antes: filasIA({…, principal: \"todas\"}). Una no instalada muestra «Revisar de nuevo» (pz-plano): si tus pruebas contaban los botones, ajústalas.",
+    "Si tu app.css forzaba 44 px sobre .pz-boton/.pz-chip/.pz-seg button, cámbialo por `:root { --pz-boton-alto: 44px }` (o --pz-tactil); si les ponía `white-space: normal` o `flex-wrap: nowrap`, ya no hace falta.",
+    "Si tu app.css corregía `.pz-dialogo p` (margen o gris) o el color de .pz-error-texto en un diálogo, bórralo.",
+    "Si convertías `detalle` en `notas` antes de llamar ui.actualizacionRevisada (Repasa, Esquema), ya no hace falta.",
+    "Si armabas tu propio diálogo para tener un <h2> propio, puntos antes del título o un título bilingüe, pasa a ui.envolver(html, {id}) o a dialogo({antes, tituloHTML})."
+   ]
+  },
+  {
+   "version": "0.1.0",
+   "tipo": "inicial",
+   "resumen": "Primera versión: diálogo con foco atrapado y Esc, confirmar con promesa, avisos en cola, filas de Tu IA (probarIA {ia}), fila de actualización «Paso n de 3», Acerca de y comentarios a GitHub. Lo que cada app tenía repetido en su app.js."
+  }
+ ]
+}

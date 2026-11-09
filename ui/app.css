@@ -38,3 +38,26 @@ body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 
 .contenido ul { margin: 4px 0; padding-left: 20px; }
 .plataforma { margin: 8px 0 0; font-weight: 600; text-transform: capitalize; }
 @media (max-width: 520px) { .pieza { flex-wrap: wrap; } .sello { margin-left: 30px; } }
+/* Crear la app: el plan, el medidor de tokens y los pasos. */
+.medidor .ahorro b { color: var(--acento); display: inline-flex; align-items: center; gap: 6px; }
+.trabajando { display: flex; align-items: center; gap: 10px; margin: 12px 0; color: var(--texto-suave); }
+.aviso-ia { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px; margin: 12px 0;
+  border: 1px solid var(--linea); border-radius: 12px; background: var(--panel); }
+.plan, .pasos { padding: 0; margin: 12px 0; list-style: none; counter-reset: paso; }
+.plan li, .pasos li { counter-increment: paso; display: grid; gap: 4px; padding: 12px 12px 12px 44px; position: relative;
+  border: 1px solid var(--linea); border-radius: 12px; margin: 8px 0; background: var(--panel); }
+.plan li::before, .pasos li::before { content: counter(paso); position: absolute; left: 12px; top: 12px; width: 22px; height: 22px;
+  display: grid; place-items: center; border-radius: 6px; background: var(--acento-suave); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; }
+.pasos .estado-listo::before { background: var(--acento); color: var(--sobre-acento); }
+.chip-estado { justify-self: start; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--linea); color: var(--texto-suave); }
+.estado-listo .chip-estado { border-color: var(--acento); color: var(--acento); }
+.estado-fallo .chip-estado { border-color: var(--rojo, #c62828); color: var(--rojo, #c62828); }
+.pasos pre { white-space: pre-wrap; max-height: 240px; overflow: auto; font-size: 12px; background: var(--fondo); padding: 8px; border-radius: 8px; }
+.modo { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin: 12px 0 0; }
+.modo .tope { margin: 0; max-width: 220px; }
+.proyectos { list-style: none; padding: 0; margin: 8px 0; }
+.proyectos li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--linea); }
+.proyectos li span { display: grid; }
+.listo { padding: 16px; border: 1px solid var(--acento); border-radius: 12px; margin: 12px 0; }
+.listo code { overflow-wrap: anywhere; }

@@ -63,6 +63,88 @@
    "responde": "iaProbada",
    "limite": 150,
    "pieza": "ia"
+  },
+  "proyectoCrear": {
+   "script": "proyectos.py",
+   "args": [
+    "crear"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "proyectoCreado",
+   "limite": 330,
+   "pieza": "app"
+  },
+  "proyectoPaso": {
+   "script": "proyectos.py",
+   "args": [
+    "paso"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "n": {
+     "tipo": "entero",
+     "min": 0,
+     "max": 11,
+     "requerido": true
+    }
+   },
+   "responde": "pasoListo",
+   "limite": 2400,
+   "pieza": "app"
+  },
+  "proyectoPlan": {
+   "script": "proyectos.py",
+   "args": [
+    "plan"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "nombre": {
+     "tipo": "texto",
+     "max": 40,
+     "requerido": true
+    },
+    "frase": {
+     "tipo": "texto",
+     "max": 300,
+     "requerido": true
+    },
+    "plataformas": {
+     "tipo": "lista",
+     "max": 6,
+     "requerido": true
+    },
+    "piezas": {
+     "tipo": "lista",
+     "max": 60
+    }
+   },
+   "responde": "planListo",
+   "limite": 660,
+   "pieza": "app"
+  },
+  "proyectosLista": {
+   "script": "proyectos.py",
+   "args": [
+    "lista"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "proyectosListos",
+   "limite": 30,
+   "pieza": "app"
   }
  }
 }

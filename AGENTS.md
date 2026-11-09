@@ -4,9 +4,9 @@
 > importan este archivo: la guía es una sola.
 
 Pieza es el programa de escritorio para crear apps paso a paso, como un asistente «siguiente, siguiente». Es para personas que
-quieren su propia app y no saben programar, o que quieren gastar menos en su IA. Hoy hace cuatro pasos: los sistemas, la idea, las
-piezas y la ficha de la app. Las piezas de [Pieza](https://github.com/pieza-app/pieza) ya están hechas y no gastan tokens. Crear la
-app con la IA de la persona llega en la próxima versión (plan en `docs/programa.md` de Pieza).
+quieren su propia app y no saben programar, o que quieren gastar menos en su IA. Tiene siete pasos: los sistemas, la idea, las
+piezas, la ficha, el plan, crear la app y lo propio paso a paso. Las piezas de [Pieza](https://github.com/pieza-app/pieza) ya están
+hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (plan en `docs/programa.md` de Pieza).
 
 **Principios que no se negocian**
 
@@ -32,16 +32,24 @@ app con la IA de la persona llega en la próxima versión (plan en `docs/program
 | `bin/piezas.py` | `lista` (el catálogo) y `ficha {plataformas, piezas}`: suma las piezas que van siempre, el host de cada sistema y lo que cada pieza requiere; devuelve lo hecho, lo que falta, pantallas, permisos, red, tareas y tokens ahorrados (bytes ÷ 4). |
 | `datos/catalogo.json` | El catálogo de piezas (solo datos). Lo arma `herramientas/catalogo_de_pieza.py <carpeta de pieza>`, que también escribe `ui/demo-catalogo.json` para la vista previa. |
 | `ui/pieza.svg` | El ícono de Pieza que marca las piezas ya hechas («0 tokens»). |
+| `bin/proyectos.py` | Crear una app: `plan` (la IA desglosa lo propio en pasos, JSON validado), `crear` (`pieza.py crear`, sin IA), `paso` (la IA lee la carpeta y devuelve archivos; Pieza los revisa, los escribe y corre las pruebas; dos intentos) y `lista`. Registro en `<datos>/proyectos/<id>.json`; la app en `~/Pieza/<Nombre>`. |
+| `datos/pieza/` | Una copia de Pieza (`pieza.py`, `piezas/`, la guía para la IA): con ella se crean las apps sin internet. La pone al día `herramientas/catalogo_de_pieza.py`; `VERSION` dice el commit. No se edita aquí. |
+| `datos/guias/reglas.md` | Las reglas que van en cada pedido a la IA (cortas: un paso por pedido). |
 
 ## Cómo funciona
-- **El asistente** (`ui/app.js`, `E.paso`): `inicio` → `sistemas` → `idea` → `piezas` → `ficha`. Cada paso tiene su función
-  (`pasoSistemas`, `pasoIdea`, `pasoPiezas`, `pasoFicha`) y se cambia con `irA()`.
+- **El asistente** (`ui/app.js`, `E.paso`): `inicio` → `sistemas` → `idea` → `piezas` → `ficha` → `plan` → `crear` → `pasos`. Cada
+  paso tiene su función (`pasoSistemas` … `pasoPasos`) y se cambia con `irA()`. El inicio lista las apps empezadas («Seguir»).
 - **Sugerencias:** una pieza se sugiere si la frase trae una de sus `recomendar.palabras`. Las de `recomendar.siempre` van siempre.
 - **La ficha** la calcula `bin/piezas.py ficha` (acción `piezasFicha` → `fichaLista`). En el navegador la calcula `fichaSimulada`
   con la misma regla: si cambias la regla, cambia los dos lados y `pruebas/test_app.py` (clase `Piezas`).
-- **Acciones** (`app.json` → `acciones`): `piezasLista` → `piezasListas` y `piezasFicha` → `fichaLista`. Lo que escribe la
-  persona llega en el archivo de entrada, nunca como argumento.
-- **Crear la app** (botón `#crear`) todavía no está: va en la fase 2 del plan.
+- **Acciones** (`app.json` → `acciones`): `piezasLista` → `piezasListas`, `piezasFicha` → `fichaLista`, `proyectosLista` →
+  `proyectosListos`, `proyectoPlan` → `planListo`, `proyectoCrear` → `proyectoCreado` y `proyectoPaso` → `pasoListo`. Lo que
+  escribe la persona llega en el archivo de entrada, nunca como argumento. En el navegador las simula `simular()` (`planSimulado`).
+- **La IA nunca escribe por su cuenta.** Lee la carpeta de la app (solo leer, `ia.preguntar(..., leer=carpeta)`) y responde JSON.
+  `validar_archivos` rechaza rutas que salen de la carpeta, `.git/`, los archivos de piezas (`piezas.json`) y `app.json`,
+  `acciones.json`, `piezas.json` y `.gitignore`. Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
+- **Tokens:** se estiman con el largo del pedido y de la respuesta (÷ 4). «Todo automático» sigue mientras cada paso quede bien,
+  la persona no pida «Detener» y lo gastado no pase el tope (`E.tope`).
 
 ## Piezas (de [Pieza](https://github.com/pieza-app/pieza))
 Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se copia a la app (modelo «copiar y adueñarse»).
@@ -58,10 +66,10 @@ Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se
 | `host-tauri` | 0.1.1 | `escritorio/iconos/128x128.png`, `escritorio/iconos/128x128@2x.png`, `escritorio/iconos/32x32.png`, `escritorio/iconos/icon.icns`, `escritorio/iconos/icon.ico`, `escritorio/iconos/icono.png`, `escritorio/src/pieza/enchufe.rs`, `escritorio/src/pieza/host.rs`, `escritorio/src/pieza/mod.rs`, `escritorio/src/pieza/procesador.rs`, `escritorio/src/pieza/protocolo.rs`, `escritorio/src/pieza/sistema.rs`, `escritorio/src/pieza/vigilante.rs` | La ventana, el puente y las acciones declaradas. |
 | `host-ui` | 0.3.0 | `ui/host.js` | `host.enviar` y `host.responder`. |
 | `i18n` | 0.3.1 | `ui/i18n.js` | `T`, `Tp`, `traducirDOM` y `idiomas/en.json`. |
-| `ia` | 0.6.3 | `bin/ia.py` | La IA de la persona. Hoy solo se elige y se prueba; la fase 2 la usa para crear. |
+| `ia` | 0.6.3 | `bin/ia.py` | La IA de la persona: el plan y cada paso (`preguntar`, con `leer` = la carpeta de la app). |
 | `nucleo` | 0.7.1 | `bin/nucleo.py` | `app.json`, la carpeta de datos y la config. |
 | `tema` | 0.2.1 | `ui/tema.css`, `ui/tema.js` | Claro y oscuro. |
-| `trabajos` | 0.2.2 | `bin/trabajos.py`, `escritorio/src/pieza/progreso.rs` | Para la fase 2: los pasos largos de crear una app, con su avance. |
+| `trabajos` | 0.2.2 | `bin/trabajos.py`, `escritorio/src/pieza/progreso.rs` | Todavía no se usa: los pasos corren con su límite de tiempo (`limite` en `app.json`). |
 
 - **No edites a mano los archivos de una pieza.** Se actualizan con «Pieza al día» (`.github/workflows/pieza-al-dia.yml`, una vez por
   semana abre un PR o un issue) o con `python3 <pieza>/herramientas/pieza.py actualizar .`. Si hay que cambiar algo, el cambio va

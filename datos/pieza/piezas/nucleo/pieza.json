@@ -1,0 +1,76 @@
+{
+ "formato": 1,
+ "id": "nucleo",
+ "version": "0.7.1",
+ "estado": "lista",
+ "nombre": "Núcleo",
+ "icono": "icono.svg",
+ "licencia": "MPL-2.0",
+ "categoria": "base",
+ "descripcion": "Lo que todo script necesita: app.json, carpeta de datos, config validada, escritura atómica y el contrato «el último argumento es la salida».",
+ "recomendar": {
+  "siempre": true,
+  "cuando": "Siempre: es la base de cualquier script de la app."
+ },
+ "origen": "esquema/bin/comun.py + lo mejor de alcancia/bin/datos.py y repasa/bin/datos.py",
+ "requiere": [],
+ "plataformas": [
+  "mac",
+  "windows",
+  "linux"
+ ],
+ "archivos": {
+  "python/nucleo.py": "bin/nucleo.py"
+ },
+ "config": {},
+ "acciones": {},
+ "textos": {},
+ "cambios": [
+  {
+   "version": "0.7.1",
+   "tipo": "arreglo",
+   "seguridad": true,
+   "resumen": "Seguridad: `ruta_en(base, relativa)` devuelve None si `base` está vacía, es relativa o no es una carpeta que existe. Antes `ruta_en(\"\", \"a.md\")` daba `<carpeta de trabajo>/a.md`: con el inyector `carpetaActual` que manda \"\" sin carpeta, una acción declarada de leer o escribir caía en la carpeta temporal del script.",
+   "migrar": [
+    "Nada obligatorio. Si llamabas a ruta_en con una carpeta que todavía no existe (para crearla después), créala antes: ahora devuelve None."
+   ]
+  },
+  {
+   "version": "0.7.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Corta: un texto de config con patrón ({\"tipo\": \"texto\", \"patron\": \"auto|[a-z]{2,3}\"}): el valor entero tiene que calzar, así un valor que va a otro programa (el idioma del transcriptor) no necesita validarse a mano."
+  },
+  {
+   "version": "0.6.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Minuta: \"datos\": {\"carpeta\": \"~/minuta\"} para una app cuya carpeta de datos es propia (o es también su checkout): se usa tal cual, sin crearla ni cambiarle permisos, y solo dentro de ~."
+  },
+  {
+   "version": "0.5.0",
+   "tipo": "mejora",
+   "seguridad": true,
+   "resumen": "Lo que pidió Repasa: con \"datos\": \"visible\" la carpeta ~/<Nombre> recién creada queda 0700, <ID>_CARPETA la mueve entera en las pruebas, y \"privado\": true en app.json deja todo archivo en 0600 siempre."
+  },
+  {
+   "version": "0.4.0",
+   "tipo": "mejora",
+   "resumen": "Lo que pidió Graba: un texto de config con su propio máximo ({\"tipo\": \"texto\", \"max\": 200000}) y guardar_config conserva las claves que no conoce (las que escribe el host)."
+  },
+  {
+   "version": "0.3.0",
+   "tipo": "mejora",
+   "resumen": "Claves de config que la interfaz nunca puede cambiar (\"interfaz\": false en app.json) y escribir_atomico con modo DOCUMENTO para archivos de la persona (lo pidió Esquema al migrar)."
+  },
+  {
+   "version": "0.2.0",
+   "tipo": "arreglo",
+   "resumen": "Seguridad: la app se reconoce primero por el app.json junto al script; la variable <ID>_RECURSOS solo vale si su prefijo es el id de esa app (otra app ya no puede hacerse pasar por esta). El id solo acepta a-z y 0-9.",
+   "seguridad": true
+  },
+  {
+   "version": "0.1.0",
+   "tipo": "inicial",
+   "resumen": "Primera versión: app.json, carpeta de datos, config validada, escritura atómica y contrato de scripts."
+  }
+ ]
+}

@@ -81,3 +81,76 @@ class Piezas(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Proyectos(unittest.TestCase):
+    """bin/proyectos.py en el mismo proceso, con una IA falsa (sin red ni CLI) y una carpeta temporal."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        os.environ["PIEZA_DATOS"] = os.path.join(self.tmp.name, "datos")
+        os.environ["PIEZA_PROYECTOS"] = os.path.join(self.tmp.name, "Pieza")
+        sys.path.insert(0, os.path.join(RAIZ, "bin"))
+        import proyectos
+        self.p = proyectos
+        self.respuestas = []
+        self.pedidos = []
+
+        def falsa(pedido, **opciones):
+            self.pedidos.append((pedido, opciones))
+            return self.respuestas.pop(0), None
+        self._original = proyectos.ia.preguntar
+        proyectos.ia.preguntar = falsa
+
+    def tearDown(self):
+        self.p.ia.preguntar = self._original
+        os.environ.pop("PIEZA_PROYECTOS", None)
+        self.tmp.cleanup()
+
+    def plan(self):
+        self.respuestas.append('```json\n{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": ["bin/recetas.py",'
+                               ' "../fuera"], "tokens": 900}]}\n```')
+        return self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"],
+                            "piezas": ["ia"]})
+
+    def test_plan_valida_y_guarda(self):
+        r = self.plan()
+        self.assertTrue(r["ok"], r)
+        paso = r["proyecto"]["pasos"][0]
+        self.assertEqual(paso["archivos"], ["bin/recetas.py"])  # la ruta que se sale no entra
+        self.assertEqual(paso["estado"], "pendiente")
+        self.assertGreater(r["proyecto"]["gastado"], 0)
+        self.assertIn("0 tokens", self.pedidos[0][0])  # el pedido dice qué ya está hecho
+
+    def test_plan_malo(self):
+        self.respuestas.append("No sé.")
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena recetas.", "plataformas": ["mac"], "piezas": []})
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["codigo"], "plan")
+
+    def test_rutas(self):
+        for mala in ("/etc/x", "../x", "a/../../x", ".git/config", "C:/x", "a\\b", ""):
+            self.assertFalse(self.p._ruta_valida(mala), mala)
+        self.assertTrue(self.p._ruta_valida("ui/app.js"))
+
+    def test_crear_y_paso(self):
+        self.plan()
+        r = self.p.crear({"id": "recetas"})
+        self.assertTrue(r["ok"], r)
+        carpeta = r["proyecto"]["carpeta"]
+        self.assertTrue(os.path.isfile(os.path.join(carpeta, "app.json")))
+        # Un archivo de pieza nunca se escribe; uno propio sí.
+        with self.assertRaises(ValueError):
+            self.p.validar_archivos({"archivos": [{"ruta": "bin/nucleo.py", "contenido": "x"}]}, carpeta)
+        pruebas = []
+        self.p.probar = lambda c: (pruebas.append(c) or (len(pruebas) > 1, "falló algo"))
+        respuesta = json.dumps({"resumen": "Listo.", "archivos": [{"ruta": "bin/recetas.py", "contenido": "print('hola')\n"}]})
+        self.respuestas += [respuesta, respuesta]
+        r = self.p.paso({"id": "recetas", "n": 0})
+        self.assertTrue(r["ok"], r)
+        paso = r["proyecto"]["pasos"][0]
+        self.assertEqual((paso["estado"], paso["intentos"]), ("listo", 2))  # el segundo intento recibió el error
+        self.assertIn("falló algo", self.pedidos[-1][0])
+        self.assertEqual(self.pedidos[-1][1]["leer"], carpeta)  # la IA solo lee la carpeta
+        with open(os.path.join(carpeta, "bin", "recetas.py"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "print('hola')\n")
