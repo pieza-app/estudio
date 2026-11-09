@@ -1,0 +1,53 @@
+# Catálogo al día: cada día arma datos/pieza/ y el catálogo desde pieza-app/pieza. Si cambió algo y las pruebas pasan, sube la
+# versión, lo deja en main y lanza «Publicar versión». Así una pieza nueva o arreglada llega sola a quien usa Pieza.
+# Actions fijadas por SHA, permisos mínimos, sin credenciales guardadas y ninguna expresión de GitHub dentro de `run:`.
+name: Catálogo al día
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+concurrency:
+  group: catalogo-al-dia
+  cancel-in-progress: false
+permissions:
+  contents: write
+  actions: write
+jobs:
+  catalogo:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { repository: pieza-app/pieza, path: .pieza, persist-credentials: false }
+      - name: Armar el catálogo
+        id: armar
+        run: |
+          antes=$(cat datos/pieza/VERSION)
+          python3 herramientas/catalogo_de_pieza.py .pieza
+          rm -rf .pieza
+          if git diff --quiet; then echo "Sin cambios ($antes)."; echo "cambio=no" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "cambio=si" >> "$GITHUB_OUTPUT"
+          echo "desde=$antes" >> "$GITHUB_OUTPUT"
+      - name: Playwright para las pruebas de la interfaz
+        if: steps.armar.outputs.cambio == 'si'
+        run: |
+          npm i --no-save --ignore-scripts --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Pruebas (no se publica nada roto)
+        if: steps.armar.outputs.cambio == 'si'
+        env: { PLAYWRIGHT: "${{ runner.temp }}/pw/node_modules/playwright" }
+        run: SIN_RUST=1 bash pruebas/correr.sh
+      - name: Subir la versión, dejarla en main y publicar
+        if: steps.armar.outputs.cambio == 'si'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 herramientas/subir_version.py --nota "Piezas al día: las piezas nuevas o arregladas de Pieza ya se pueden usar al crear una app. · *Pieces up to date: new or fixed Pieza pieces can now be used when creating an app.*"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Catálogo al día (Pieza $(cat datos/pieza/VERSION))"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" HEAD:main
+          gh workflow run publicar.yml --ref main

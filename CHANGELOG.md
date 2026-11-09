@@ -8,6 +8,10 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.6.2
+- Arreglado: las piezas ya hechas, como el servidor MCP, se pueden usar al crear una app (el catálogo de Pieza estaba desactualizado y ahora se pone al día solo cada día). · *Fixed: finished pieces, like the MCP server, can be used when creating an app (Pieza's catalog was out of date and now updates itself every day).*
+- Arreglado: si marcas una pieza que todavía no existe (por ejemplo «Enviar comentarios»), crear la app ya no falla. Tu IA la escribe como parte del plan. · *Fixed: if you check a piece that does not exist yet (for example «Send feedback»), creating the app no longer fails. Your AI writes it as part of the plan.*
+
 ## 0.6.1
 - La ventana ya no parpadea mientras Pieza se actualiza, y si la abriste desde Descargas te pide moverla a Aplicaciones para poder actualizar. · *The window no longer flickers while Pieza updates, and if you opened it from Downloads it asks you to move it to Applications so it can update.*
 

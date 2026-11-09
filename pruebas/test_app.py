@@ -258,6 +258,18 @@ class Proyectos(unittest.TestCase):
         self.assertEqual(self.p._cambiado(b"", b"hola"), 4)
         self.assertEqual(self.p._cambiado(b"hola", b""), 0)
 
+    def test_una_pieza_por_hacer_no_rompe_crear(self):
+        """Marcar una pieza que todavía no existe («comentarios») la manda al plan; crear la app sigue funcionando."""
+        self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"],
+                         "piezas": ["comentarios"]})
+        self.assertTrue(r["ok"], r)
+        self.assertIn("todavía no existe como pieza", self.pedidos[-1][0])
+        self.assertIn("- comentarios:", self.pedidos[-1][0].split("todavía no existe como pieza")[1])
+        r = self.p.crear({"id": "recetas"})
+        self.assertTrue(r["ok"], r)
+        self.assertNotIn("comentarios", json.load(open(os.path.join(r["proyecto"]["carpeta"], "piezas.json")))["piezas"])
+
     def test_crear_y_paso(self):
         self.plan()
         self.p.ia.puede_escribir = lambda ia=None: False

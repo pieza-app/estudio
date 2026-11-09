@@ -196,6 +196,7 @@
   "La página y el README quedan para el final.": "The page and the README are left for the end.",
   "Escribir el README junto con el primer paso.": "Write the README with the first step.",
   "Para actualizar, mueve {app} a la carpeta Aplicaciones y ábrela desde ahí. Ahora macOS la abre desde una copia temporal que no se puede cambiar.": "To update, move {app} to the Applications folder and open it from there. Right now macOS runs it from a temporary copy that cannot be changed.",
+  "Por hacer: la escribe tu IA": "To do: your AI writes it",
   "~{n} tokens gastados": "~{n} tokens spent",
   "{n} tokens gastados": "{n} tokens spent",
   "Hacer el paso {n}": "Do step {n}",
