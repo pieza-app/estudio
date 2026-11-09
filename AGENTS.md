@@ -35,6 +35,7 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 | `bin/proyectos.py` | Crear una app: `plan` (la IA desglosa lo propio en pasos, JSON validado), `crear` (`pieza.py crear`, sin IA), `paso` (la IA lee la carpeta y devuelve archivos; Pieza los revisa, los escribe y corre las pruebas; dos intentos) y `lista`. Registro en `<datos>/proyectos/<id>.json`; la app en `~/Pieza/<Nombre>`. |
 | `datos/pieza/` | Una copia de Pieza (`pieza.py`, `piezas/`, la guía para la IA): con ella se crean las apps sin internet. La pone al día `herramientas/catalogo_de_pieza.py`; `VERSION` dice el commit. No se edita aquí. |
 | `bin/publicar.py` | `explorar` (las apps con el topic «hecho-con-pieza», de la página de Pieza, pieza «red»), `revisar` (`gh` y su sesión, dueños posibles) y `subir` (con el `gh` de la persona: repo en `app.json` + `pieza.py generar`, revisión de privacidad, primer commit, `gh repo create`, Pages y el topic si elige el explorador). |
+| `bin/vista.py` | «Ver mi app»: sirve la carpeta `ui/` de la app creada en `127.0.0.1` (un servidor aparte que se apaga a los 30 minutos) y abre el navegador. |
 | `datos/guias/reglas.md` | Las reglas que van en cada pedido a la IA (cortas: un paso por pedido). |
 
 ## Cómo funciona
@@ -45,11 +46,12 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   con la misma regla: si cambias la regla, cambia los dos lados y `pruebas/test_app.py` (clase `Piezas`).
 - **Acciones** (`app.json` → `acciones`): `piezasLista` → `piezasListas`, `piezasFicha` → `fichaLista`, `proyectosLista` →
   `proyectosListos`, `proyectoPlan` → `planListo`, `proyectoCrear` → `proyectoCreado`, `proyectoPaso` → `pasoListo`,
-  `publicarExplorar` → `explorarListo`, `publicarRevisar` → `publicarRevisado` y `publicarSubir` → `publicado`. Lo que
+  `proyectoVista` → `vistaAbierta`, `publicarExplorar` → `explorarListo`, `publicarRevisar` → `publicarRevisado` y `publicarSubir` → `publicado`. Lo que
   escribe la persona llega en el archivo de entrada, nunca como argumento. En el navegador las simula `simular()` (`planSimulado`).
 - **La IA nunca escribe por su cuenta.** Lee la carpeta de la app (solo leer, `ia.preguntar(..., leer=carpeta)`) y responde JSON.
-  `validar_archivos` rechaza rutas que salen de la carpeta, `.git/`, los archivos de piezas (`piezas.json`) y `app.json`,
-  `acciones.json`, `piezas.json` y `.gitignore`. Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
+  `validar_archivos` rechaza rutas que salen de la carpeta, `.git/`, los archivos de piezas, `piezas.json` y `acciones.json`. En
+  `app.json` puede sumar acciones y config, pero no cambiar `id`, `nombre`, `repo`, `datos`, `plataformas`, `privado` ni
+  `version`; después Pieza corre `pieza.py acciones`. También puede pedir `borrar` archivos propios (nunca de piezas). Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
 - **Publicar y proponer:** al terminar, «Publicar en GitHub» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
   «Proponer en GitHub» abre en el navegador un issue prellenado en `pieza-app/pieza` (etiqueta `pieza-nueva`).
 - **Tokens:** se estiman con el largo del pedido y de la respuesta (÷ 4). «Todo automático» sigue mientras cada paso quede bien,

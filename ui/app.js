@@ -203,10 +203,11 @@
       <p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola. Se detiene si un paso falla dos veces o al llegar al tope." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
       + sinIA() + errorHTML() + `<ol class="pasos">${filas}</ol>`
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
-        <p class="suave">Para armarla e instalarla, abre esa carpeta en la terminal y corre:</p><p><code data-sin-traducir>bash build.sh</code></p>
-        <p class="suave">Para verla en el navegador:</p><p><code data-sin-traducir>cd ui &amp;&amp; python3 -m http.server</code></p></div>
+        <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
+        <p class="suave">Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.</p></div>
         <section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "")
-      + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>${accion}</div>`;
+      + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>
+        <button type="button" class="pz-boton" id="ver-app">Ver mi app</button>${accion}</div>`;
   }
   function cabeza() {
     return `<p class="paso-n" data-sin-traducir>${esc(Tp("Paso {n} de {total}", { n: E.paso, total: PASOS.length }))}</p><h2>${esc(PASOS[E.paso - 1])}</h2>`;
@@ -326,6 +327,7 @@
       host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), plataformas: n.plataformas, piezas: n.piezas });
     } else if (b.id === "crear") { ocupar("crear"); host.enviar("proyectoCrear", { id: E.proyecto.id }); }
     else if (b.id === "hacer-paso") hacerPaso(Number(b.dataset.n));
+    else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
     else if (b.id === "parar") { E.parar = true; pintar(); }
     else if (b.dataset.modo) { E.modo = b.dataset.modo; pintar(); }
   });
@@ -411,6 +413,7 @@
       pintar();
     },
     fichaLista(r) { E.ficha = r || { ok: false }; if (E.paso === 4) pintar(); },
+    vistaAbierta(r) { if (r && r.ok) toast("Abrí tu app en el navegador."); else toast(Tp((r && r.error) || "No se pudo.")); },
     explorarListo(r) { if (r && r.ok) E.apps = r.apps || []; else { E.apps = []; E.error = (r && r.error) || Tp("No se pudo."); } pintar(); },
     publicarRevisado(r) {
       E.ocupado = "";
@@ -507,6 +510,7 @@
       case "piezasLista": return c.responder("piezasListas", { ok: true, piezas: CATALOGO });
       case "piezasFicha": return c.luego(200, () => c.responder("fichaLista", fichaSimulada(d)));
       case "listaIA": return c.responder("iaLista", { ias: DEMO.ias, elegida: DEMO.config.ia });
+      case "proyectoVista": return c.luego(200, () => c.responder("vistaAbierta", { ok: true, url: "http://127.0.0.1:8765/" }));
       case "publicarExplorar": return c.luego(400, () => c.responder("explorarListo", { ok: true, apps: [
         { nombre: "Recetas de Ana", repo: "ana-perez/recetas", descripcion: Tp("Guarda recetas y arma la lista de compras."), pagina: "https://ana-perez.github.io/recetas/", revisada: true },
         { nombre: "Gastos de la casa", repo: "matias-soto/gastos", descripcion: Tp("Cuentas compartidas, sin servidores."), pagina: "", revisada: false }] }));

@@ -194,8 +194,6 @@
   "Tu app está lista": "Your app is ready",
   "Tu app está lista.": "Your app is ready.",
   "Está en tu carpeta:": "It is in your folder:",
-  "Para armarla e instalarla, abre esa carpeta en la terminal y corre:": "To build and install it, open that folder in the terminal and run:",
-  "Para verla en el navegador:": "To see it in the browser:",
   "Para este paso necesitas tu IA (Claude Code, Codex o Gemini).": "For this step you need your AI (Claude Code, Codex or Gemini).",
   "Elegir mi IA": "Choose my AI",
   "Tus apps": "Your apps",
@@ -249,6 +247,12 @@
   "Archivos": "Files",
   "App": "App",
   "Propuesta desde el programa Pieza.": "Proposed from the Pieza program.",
-  "Pieza nueva: {x}": "New piece: {x}"
+  "Pieza nueva: {x}": "New piece: {x}",
+  "Ver mi app": "See my app",
+  "Abrí tu app en el navegador.": "I opened your app in the browser.",
+  "«Ver mi app» la abre en tu navegador, con datos de ejemplo.": "“See my app” opens it in your browser, with sample data.",
+  "Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.": "To install it as an app: publish it on GitHub (below). GitHub builds it for Mac, Windows and Linux in about 15 minutes and leaves it in “Releases” to download.",
+  "No pude abrir la vista previa.": "I couldn't open the preview.",
+  "Primero crea la app.": "First build the app."
  }
 }

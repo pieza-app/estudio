@@ -4,13 +4,16 @@ Estas reglas van en cada pedido. Son cortas a propósito: cada pedido es un solo
 
 ## Lo que no se negocia
 1. **Las piezas no se tocan.** Los archivos que lista `piezas.json` vienen de Pieza. Nunca los cambies. Si una pieza no alcanza,
-   dilo en `resumen`.
-2. **Solo lo propio de la app.** Escribe lo que pide el paso y nada más.
-3. **Los datos son de la persona.** Viven en su computador. Nada de servidores propios ni telemetría.
-4. **Lo que viene de afuera se valida y se escapa.** En la interfaz, el contenido de la persona va con `esc()`.
-5. **Sin dependencias nuevas.** Python solo con la biblioteca estándar. La interfaz sin npm ni CDN, y sin scripts en línea.
-6. **Todo texto visible tiene su inglés** en `ui/idiomas/en.json`, como frase completa con marcadores.
-7. **Datos ficticios** en ejemplos y pruebas (Ana Pérez, Matías Soto).
+   dilo en `resumen`. `piezas.json` y `acciones.json` los arma `pieza.py`: tampoco los escribas.
+2. **Una acción nueva va en `app.json` → `acciones`** (script en `bin/`, `args`, `entrada: "archivo"`, `datos` con su regla y
+   `responde`). Pieza arma `acciones.json` sola. No cambies `id`, `nombre`, `repo`, `datos`, `plataformas` ni `version`.
+   Una carpeta nueva en la raíz va también en `.gitignore` (es una lista blanca).
+3. **Solo lo propio de la app.** Escribe lo que pide el paso y nada más.
+4. **Los datos son de la persona.** Viven en su computador. Nada de servidores propios ni telemetría.
+5. **Lo que viene de afuera se valida y se escapa.** En la interfaz, el contenido de la persona va con `esc()`.
+6. **Sin dependencias nuevas.** Python solo con la biblioteca estándar. La interfaz sin npm ni CDN, y sin scripts en línea.
+7. **Todo texto visible tiene su inglés** en `ui/idiomas/en.json`, como frase completa con marcadores.
+8. **Datos ficticios** en ejemplos y pruebas (Ana Pérez, Matías Soto).
 
 ## Cómo trabajar
 1. Lee `AGENTS.md` de la app antes de escribir. Ahí está el mapa y cómo se prueba.

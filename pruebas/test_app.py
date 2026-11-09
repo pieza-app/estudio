@@ -142,6 +142,17 @@ class Proyectos(unittest.TestCase):
         # Un archivo de pieza nunca se escribe; uno propio sí.
         with self.assertRaises(ValueError):
             self.p.validar_archivos({"archivos": [{"ruta": "bin/nucleo.py", "contenido": "x"}]}, carpeta)
+        with self.assertRaises(ValueError):  # app.json: sumar acciones sí; cambiar lo que identifica a la app, no
+            self.p.validar_archivos({"archivos": [{"ruta": "app.json", "contenido": '{"id": "otra"}'}]}, carpeta)
+        with open(os.path.join(carpeta, "app.json"), encoding="utf-8") as f:
+            app = json.load(f)
+        app["acciones"]["recetasListar"] = {"script": "recetas.py", "args": ["lista"], "entrada": None, "datos": {},
+                                            "responde": "recetasListas", "limite": 30}
+        _, _, borrar = self.p.validar_archivos({"archivos": [{"ruta": "app.json", "contenido": json.dumps(app)}],
+                                                 "borrar": ["bin/ejemplo.py"]}, carpeta)
+        self.assertEqual(borrar, ["bin/ejemplo.py"])
+        with self.assertRaises(ValueError):
+            self.p.validar_archivos({"archivos": [{"ruta": "x.txt", "contenido": "x"}], "borrar": ["bin/nucleo.py"]}, carpeta)
         pruebas = []
         self.p.probar = lambda c: (pruebas.append(c) or (len(pruebas) > 1, "falló algo"))
         respuesta = json.dumps({"resumen": "Listo.", "archivos": [{"ruta": "bin/recetas.py", "contenido": "print('hola')\n"}]})

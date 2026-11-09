@@ -135,6 +135,23 @@
    "limite": 660,
    "pieza": "app"
   },
+  "proyectoVista": {
+   "script": "vista.py",
+   "args": [
+    "abrir"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "vistaAbierta",
+   "limite": 30,
+   "pieza": "app"
+  },
   "proyectosLista": {
    "script": "proyectos.py",
    "args": [
