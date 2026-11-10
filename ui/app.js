@@ -469,7 +469,7 @@
     ia: "Tu IA no terminó el paso: se cortó, llegó a su límite o no está lista.",
     respuesta: "La respuesta de tu IA no se pudo usar.",
     acciones: "Las acciones nuevas de app.json no se pudieron armar.",
-    gasto: "Este paso ya gastó más de 3 veces lo estimado. Me detuve para que tú decidas: arreglarlo, dividirlo o saltarlo.",
+    gasto: "Esta vez el paso gastó más de 3 veces lo estimado y las pruebas no pasaron. Me detuve antes de gastar más para que tú decidas.",
   };
   const QUE_HIZO = { lee: "lee", escribe: "escribe", prueba: "prueba" };
   // El próximo paso por hacer: el primero que no está listo y que la persona no saltó.
@@ -518,13 +518,23 @@
       ${intentos ? `<p class="etiqueta">Intentos</p><ul class="intentos">${intentos}</ul>` : ""}
       ${registro ? `<p class="etiqueta">Lo que leyó y escribió</p><div class="consola registro">${registro}</div>` : ""}</details>`;
   }
+  // La línea que mejor dice qué falló (la misma regla que proyectos._ultima_linea): a la vista, sin abrir el error completo.
+  function lineaFallo(error) {
+    const lineas = String(error || "").split("\n").map((l) => l.trim()).filter(Boolean);
+    for (const re of [/^(FAIL|ERROR|FALLA):|AssertionError|Error:|✕|falló/i, /error|fail|falla|fall[óo]|assert/i])
+      for (let k = lineas.length - 1; k >= 0; k--) if (re.test(lineas[k]) && !lineas[k].startsWith("FAILED (")) return lineas[k].slice(0, 300);
+    return "";
+  }
   function falloHTML(x, i) {
     const corre = !!E.ocupado;
+    const linea = x.causa === "ia" ? "" : lineaFallo(x.error);
     return `<div class="por-que" role="group" aria-label="Por qué no quedó"><p class="etiqueta">Por qué no quedó</p>
       <p data-sin-traducir>${esc(Tp(CAUSAS[x.causa] || "El paso no quedó."))}</p>
-      ${x.error ? `<details><summary>Ver el error</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
-      <p class="suave">«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.</p>
+      ${linea ? `<p class="fallo-linea"><span class="etiqueta">${esc("Lo que falló")}</span><code data-sin-traducir>${esc(linea)}</code></p>` : ""}
+      ${x.error ? `<details><summary>Ver el error completo</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
+      <p class="suave">«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si ya lo arreglaste tú, «Probar de nuevo» corre solo las pruebas, sin IA y sin gastar tokens. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.</p>
       <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-arreglar="${i}"${corre || !E.config.ia ? " disabled" : ""}>Arreglarlo con mi IA</button>
+      ${x.error && x.causa !== "ia" ? `<button type="button" class="pz-boton" data-reprobar="${i}"${corre ? " disabled" : ""}>Probar de nuevo (sin IA)</button>` : ""}
       <button type="button" class="pz-boton" data-dividir="${i}"${corre || !E.config.ia ? " disabled" : ""}>Dividirlo en pasos más chicos</button>
       ${E.saltados.has(i) ? "" : `<button type="button" class="pz-boton" data-saltar="${i}"${corre ? " disabled" : ""}>Saltarlo por ahora</button>`}</div></div>`;
   }
@@ -817,6 +827,12 @@
       pintar();
     }
     else if (b.dataset.dividir) dividirPaso(Number(b.dataset.dividir));
+    else if (b.dataset.reprobar) {
+      const n = Number(b.dataset.reprobar);
+      E.enCurso = [n]; E.vivos = { [n]: Object.assign(nuevoVivo(), { fase: "acciones" }) };
+      ocupar("paso");
+      host.enviar("proyectoReprobar", { id: E.proyecto.id, n });
+    }
     else if (b.dataset.arreglar) { const n = Number(b.dataset.arreglar); E.saltados.delete(n); hacerPaso(n); }
     else if (b.dataset.saltar) {
       E.saltados.add(Number(b.dataset.saltar)); E.error = "";
@@ -999,6 +1015,14 @@
       pintar();
     },
     fichaLista(r) { E.ficha = r || { ok: false }; if (E.paso === 4) pintar(); },
+    pasoReprobado(r) {
+      E.ocupado = ""; E.enCurso = [];
+      if (r && r.proyecto) E.proyecto = r.proyecto;
+      if (r && r.ok) { E.saltados.delete(r.n); toast("Las pruebas pasaron: el paso quedó listo."); }
+      else if (r && r.proyecto) E.error = Tp("Las pruebas siguen fallando en el paso {n}. Abajo ves qué falló.", { n: r.n + 1 });
+      else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
     pasoAvance(eventos) {
       if (!Array.isArray(eventos)) return;
       for (const e of eventos) {
@@ -1280,6 +1304,11 @@
       case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos, aisladas: true });
       case "proyectoBorrar": SIM.proyectos = SIM.proyectos.filter((x) => x.id !== d.id);
         return c.luego(150, () => c.responder("proyectoBorrado", { ok: true, id: d.id, carpeta: d.carpeta === "si" }));
+      case "proyectoReprobar": return c.luego(600, () => {
+        const p = SIM.proyectos.find((x) => x.id === d.id), x = p.pasos[d.n];
+        Object.assign(x, { estado: "listo", error: "" }); delete x.causa;
+        c.responder("pasoReprobado", { ok: true, proyecto: JSON.parse(JSON.stringify(p)), n: d.n });
+      });
       case "proyectoPlan": return c.luego(900, () => c.responder("planListo", planSimulado(d)));
       case "proyectoRevisar": return c.luego(1200, () => c.responder("revisionLista", revisionSimulada(d)));
       case "proyectoCrear": return c.luego(700, () => {

@@ -101,6 +101,9 @@ await page.waitForSelector(".pasos li");
 await page.click('[data-modo="auto"]');
 await page.waitForSelector("#tope");
 await capturar(page, "3f-pasos-en");
+await page.mouse.wheel(0, 2000);
+assert.ok(await page.evaluate(() => document.querySelector(".lateral .marca").getBoundingClientRect().top >= 0), "la barra de la izquierda no se va al bajar");
+await page.mouse.wheel(0, -2000);
 await page.click("#hacer-paso");
 await page.waitForFunction(() => document.querySelector(".consola-titulo")?.textContent.includes("2"), null, { timeout: 15000 });  // dos a la vez
 await page.waitForSelector(".listo", { timeout: 15000 });
@@ -189,6 +192,8 @@ await page.evaluate(() => window.Pieza._probar((E) => Object.assign(E.proyecto.p
   registro: [{ t: "lee", ruta: "AGENTS.md", intento: 1 }, { t: "escribe", ruta: "bin/recetas.py", intento: 1 }, { t: "prueba", ruta: "pruebas/correr.sh", intento: 1 }] })));
 await page.waitForSelector("#paso-1 .por-que [data-arreglar]");
 assert.equal(await page.locator(".panel-control #hacer-paso").count(), 1, "el botón del próximo paso va en el panel de control");
+assert.equal(await page.locator("#paso-1 [data-reprobar]").count(), 1, "un paso que falló se puede probar de nuevo sin IA");
+assert.ok(await page.locator("#paso-1 .fallo-linea code").count(), "lo que falló se ve sin abrir el error completo");
 await page.click("#paso-1 .detalle-paso summary");
 assert.equal(await page.locator("#paso-1 .intentos li").count(), 2, "se ve cada intento");
 assert.ok(await page.locator(".panel-control .consola").textContent().then((t) => t.includes("bin/recetas.py")), "la consola muestra lo que hizo la última vez");
