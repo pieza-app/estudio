@@ -600,6 +600,24 @@ class Proyectos(unittest.TestCase):
             self.assertEqual(f.read(), "print('hola')\n")
 
 
+class EnVivo(unittest.TestCase):
+    """Lo que se ve mientras corre un paso: rutas de Rust y la línea que dice qué falló."""
+
+    def setUp(self):
+        sys.path.insert(0, os.path.join(RAIZ, "bin"))
+        import proyectos
+        self.p = proyectos
+
+    def test_cargo_de_rustup_esta_en_el_path(self):
+        self.assertIn(os.path.join(os.path.expanduser("~"), ".cargo", "bin"), self.p.RUTAS_EXTRA)
+
+    def test_ultima_linea_dice_que_fallo(self):
+        salida = "Sintaxis\nPython\nFAIL: test_retomar (pruebas.test_app.Historial)\nRan 30 tests\nFAILED (failures=1)"
+        self.assertEqual(self.p._ultima_linea(salida), "FAIL: test_retomar (pruebas.test_app.Historial)")
+        self.assertEqual(self.p._ultima_linea("uno\ndos"), "dos")
+        self.assertEqual(self.p._ultima_linea(""), "")
+
+
 class Publicar(unittest.TestCase):
     """bin/publicar.py: lo que llega del explorador se valida; sin gh con sesión no se publica nada."""
 

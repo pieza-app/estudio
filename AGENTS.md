@@ -81,6 +81,10 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   `versionPublicada`): pide la nota para quien usa la app, revisa secretos, datos personales y privacidad como `subir`, sube
   X.Y+1.0 en `app.json`, `tauri.conf.json`, `Cargo.toml` y `Cargo.lock` (`_subir_numero`), anota el CHANGELOG
   (`_anotar_cambio`), hace el commit con el autor noreply y lo sube a `main`; el workflow de la app arma las descargas.
+- **Un paso en vivo** (`vivoHTML`, `ETAPAS_PASO`): prepara → lee → escribe → revisa → prueba. Los eventos de `paso`/`lote`
+  (`pasoAvance`): `fase` (preparar, ia, revisar, acciones, pruebas), `lee`, `busca`, `escribe`, `uso` (tokens del intento) y
+  `prueba` (`ok: false` con `ultima`, la línea que dice qué falló, `_ultima_linea`). Sin eventos por 1 minuto se dice que la IA
+  está pensando. `RUTAS_EXTRA` suma `~/.cargo/bin` al PATH (Rust con rustup); `requisitos.py instalar` revisa antes si ya está.
 - **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).

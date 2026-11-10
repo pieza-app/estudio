@@ -546,6 +546,24 @@
   "Sus pruebas y textos": "Its tests and texts",
   "El cambio que pediste:": "The change you asked for:",
   "Windows y Linux van en beta: pruébalas antes de contarle a mucha gente.": "Windows and Linux are in beta: try them before telling a lot of people.",
-  "La primera vez que alguien la abre, Windows puede decir «Windows protegió su PC» y Mac pedir confirmarla en Ajustes → Privacidad y seguridad. Es normal en apps nuevas: cuéntalo en la página de tu app.": "The first time someone opens it, Windows may say “Windows protected your PC” and Mac may ask to confirm it in Settings → Privacy & Security. This is normal for new apps: mention it on your app's page."
+  "La primera vez que alguien la abre, Windows puede decir «Windows protegió su PC» y Mac pedir confirmarla en Ajustes → Privacidad y seguridad. Es normal en apps nuevas: cuéntalo en la página de tu app.": "The first time someone opens it, Windows may say “Windows protected your PC” and Mac may ask to confirm it in Settings → Privacy & Security. This is normal for new apps: mention it on your app's page.",
+  "Prepara": "Prepare",
+  "Lee tu código": "Read your code",
+  "Escribe": "Write",
+  "Revisa los cambios": "Check the changes",
+  "Prueba": "Test",
+  "Armando el pedido con el plan, lo que dejaron los pasos anteriores y AGENTS.md.": "Putting together the request with the plan, what earlier steps left and AGENTS.md.",
+  "Corriendo las pruebas de tu app, aisladas.": "Running your app's tests, isolated.",
+  "Revisando lo que cambió: que no toque piezas ni archivos que no le tocan.": "Checking what changed: that it doesn't touch pieces or files it shouldn't.",
+  "Tu IA está pensando: lleva {n} min sin leer ni escribir. Es normal en pasos grandes.": "Your AI is thinking: {n} min without reading or writing. That's normal in big steps.",
+  "Buscando «{x}»": "Searching for “{x}”",
+  "Escribiendo {ruta}": "Writing {ruta}",
+  "Tu IA está empezando…": "Your AI is starting…",
+  "{n} archivos leídos": "{n} files read",
+  "{n} escritos": "{n} written",
+  "~{n} tokens este intento (estimado del paso: ~{e})": "~{n} tokens this try (step estimate: ~{e})",
+  "Intento {n} de {t}: las pruebas fallaron y tu IA lo arregla.": "Try {n} of {t}: the tests failed and your AI is fixing it.",
+  "Ya la tenías instalada: no instalé nada.": "You already had it installed: I didn't install anything.",
+  "{n} tokens": "{n} tokens"
  }
 }
