@@ -423,6 +423,14 @@ class Proyectos(unittest.TestCase):
         self.assertEqual([x["depende"] for x in pasos], [[], [0], [1], [0], [2, 3]])  # «Compras» ahora espera al último de la división
         self.assertEqual(pasos[1]["dividido_de"], "Lista")
 
+    def test_lista_no_muestra_copias(self):
+        """Un respaldo en la carpeta del registro (recetas.antes.json, con el mismo id) no es otra app."""
+        self.plan()
+        import shutil
+        carpeta = self.p._registro()
+        shutil.copy(os.path.join(carpeta, "recetas.json"), os.path.join(carpeta, "recetas.antes.json"))
+        self.assertEqual([x["id"] for x in self.p.lista({})["proyectos"]], ["recetas"])
+
     def test_juntar_cambios(self):
         self.assertEqual(self.p._juntar_texto("a\nb\nc\n", "a\nB\nc\n", "a\nb\nc\nd\n"), "a\nB\nc\nd\n")
         self.assertEqual(self.p._juntar_texto("a\n", "a\nx\n", "a\ny\n"), "a\nx\ny\n")
