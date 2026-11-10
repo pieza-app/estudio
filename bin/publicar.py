@@ -4,12 +4,20 @@
   publicar.py explorar <salida.json>
   publicar.py revisar  <entrada.json {id}> <salida.json>
   publicar.py subir    <entrada.json {id, dueno, visibilidad, explorador}> <salida.json>
+  publicar.py instalar <entrada.json {id}> <salida.json>
+  publicar.py conectar <entrada.json {id}> <salida.json>
 
 - `explorar`: las apps con el topic «hecho-con-pieza» que lista la página de Pieza (solo pieza-app.github.io, pieza «red»).
 - `revisar`: si `gh` está instalado y con sesión, el usuario y sus organizaciones (dónde puede crear el repo).
 - `subir`: con la cuenta de la persona (su `gh`), nunca con una nuestra. Pone el repo en app.json y regenera lo que depende de él,
   revisa la privacidad, hace el primer commit, crea el repo y sube. Con `explorador` (y repo público) suma el topic
   «hecho-con-pieza»: así aparece en el explorador sin pedirle permiso a nadie. Activa GitHub Pages para la página de la app.
+
+- `instalar`: GitHub CLI con el instalador del sistema (Homebrew en Mac, winget en Windows). Sin instalador, `guia`: dónde
+  bajarlo. Nunca se baja un binario por nuestra cuenta.
+- `conectar`: `gh auth login --web` con la cuenta de la persona. El código de una vez sale en el avance ({"t": "codigo"}) y la
+  interfaz lo muestra con «Abrir GitHub» (github.com/login/device): la persona lo pega en GitHub y Pieza espera hasta que
+  autoriza. Pieza nunca ve ni guarda la clave: la guarda gh en el llavero del sistema.
 
 Lo que escribe la persona (la frase) nunca va como argumento: la descripción del repo va por un archivo de entrada a `gh api`.
 """
@@ -21,6 +29,7 @@ import subprocess
 import sys
 import tempfile
 
+import trabajos
 import ia  # noqa: F401 — prepara el PATH (los CLI de Homebrew, npm…) igual que para la IA
 import nucleo
 import proyectos
@@ -85,6 +94,66 @@ def revisar(d):
             "duenos": [usuario] + [o for o in orgs.splitlines() if DUENO.match(o)][:50]}
 
 
+CODIGO = re.compile(r"\b([A-Z0-9]{4}-[A-Z0-9]{4})\b")
+LIMITE_CONECTAR = 900
+
+
+def instalar(d):
+    """Instala GitHub CLI con el instalador del sistema, si hay uno. Si no, dice dónde bajarlo."""
+    proyectos._leer(d.get("id"))
+    if shutil.which("gh"):
+        return dict(revisar(d), instalado=True)
+    if sys.platform == "darwin" and shutil.which("brew"):
+        orden = ["brew", "install", "gh"]
+    elif sys.platform.startswith("win") and shutil.which("winget"):
+        orden = ["winget", "install", "--id", "GitHub.cli", "-e", "--accept-source-agreements", "--accept-package-agreements"]
+    else:
+        return {"ok": True, "gh": False, "sesion": False, "guia": "https://cli.github.com/"}
+    trabajos.emitir({"t": "fase", "fase": "instalar"})
+    try:
+        r = subprocess.run(orden, capture_output=True, text=True, timeout=840, env=proyectos._entorno())
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "La instalación tardó demasiado.", "guia": "https://cli.github.com/"}
+    if r.returncode != 0 or not shutil.which("gh"):
+        return {"ok": False, "error": ((r.stderr or r.stdout) or "No se pudo instalar.").strip()[-400:], "guia": "https://cli.github.com/"}
+    return dict(revisar(d), instalado=True)
+
+
+def conectar(d):
+    """Inicia sesión en GitHub con la cuenta de la persona: gh muestra un código de una vez, la interfaz lo enseña y abre
+    github.com/login/device, y gh espera hasta que la persona autoriza."""
+    proyectos._leer(d.get("id"))
+    if not shutil.which("gh"):
+        return {"ok": True, "gh": False, "sesion": False}
+    actual = revisar(d)
+    if actual.get("sesion"):
+        return actual
+    entorno = dict(proyectos._entorno(), GH_BROWSER="true", BROWSER="true", GH_PROMPT_DISABLED="1")  # el navegador lo abre la interfaz
+    proc = subprocess.Popen(["gh", "auth", "login", "--hostname", "github.com", "--git-protocol", "https", "--web",
+                             "--scopes", "repo,workflow,read:org"],
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=entorno)
+    try:
+        proc.stdin.write("\n")  # «Press Enter to open github.com in your browser»
+        proc.stdin.flush()
+    except OSError:
+        pass
+    visto = False
+    try:
+        for linea in proc.stdout:
+            m = CODIGO.search(linea)
+            if m and not visto:
+                visto = True
+                trabajos.emitir({"t": "codigo", "codigo": m.group(1), "url": "https://github.com/login/device"})
+        proc.wait(timeout=LIMITE_CONECTAR)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        return {"ok": False, "error": "Se acabó el tiempo para autorizar en GitHub. Inténtalo de nuevo."}
+    final = revisar(d)
+    if not final.get("sesion"):
+        return dict(final, ok=False, error="GitHub no quedó conectado. Inténtalo de nuevo.")
+    return final
+
+
 def subir(d):
     p = proyectos._leer(d.get("id"))
     if not p.get("carpeta") or not os.path.isdir(p["carpeta"]):
@@ -140,9 +209,11 @@ def subir(d):
         _gh("api", "-X", "POST", f"repos/{repo}/pages", "-f", "build_type=workflow")
         if d.get("explorador") == "si":
             _gh("repo", "edit", repo, "--add-topic", TOPIC)
-    p.update({"repo": repo, "publicado": visibilidad, "explorador": visibilidad == "publico" and d.get("explorador") == "si"})
+    pagina = f"https://{dueno.lower()}.github.io/{p['id']}/" if visibilidad == "publico" else ""
+    p.update({"repo": repo, "publicado": visibilidad, "explorador": visibilidad == "publico" and d.get("explorador") == "si",
+              "pagina": pagina})
     return {"ok": True, "proyecto": proyectos._guardar(p), "url": f"https://github.com/{repo}"}
 
 
 if __name__ == "__main__":
-    nucleo.script({"explorar": explorar, "revisar": revisar, "subir": subir}, __doc__)
+    nucleo.script({"explorar": explorar, "revisar": revisar, "subir": subir, "instalar": instalar, "conectar": conectar}, __doc__)

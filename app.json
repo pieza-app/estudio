@@ -320,6 +320,40 @@
    },
    "responde": "pasoDividido",
    "limite": 1300
+  },
+  "publicarInstalar": {
+   "script": "publicar.py",
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "args": [
+    "instalar"
+   ],
+   "responde": "ghInstalado",
+   "limite": 900,
+   "progreso": "publicarAvance"
+  },
+  "publicarConectar": {
+   "script": "publicar.py",
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "args": [
+    "conectar"
+   ],
+   "responde": "ghConectado",
+   "limite": 960,
+   "progreso": "publicarAvance"
   }
  },
  "actualizaciones": {

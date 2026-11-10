@@ -101,8 +101,14 @@ await page.waitForSelector(".listo", { timeout: 15000 });
 assert.equal(await page.locator(".pasos .estado-listo").count(), 4, "en automático se hacen todos los pasos");
 assert.ok(await page.locator(".pasos .usa").first().isVisible(), "cada paso dice de qué paso usa lo hecho");
 await capturar(page, "3g-lista-en");
-// 4. Publicar con la cuenta de la persona (simulado) y proponer una pieza.
-await page.click("#revisar-publicar");
+// 4. Publicar: su propia etapa. GitHub se revisa solo; conectarlo muestra el código de una vez y espera; después, dónde y cómo.
+await page.click("#siguiente");
+await page.waitForSelector("#conectar-gh");
+assert.ok(await page.isDisabled("#publicar"), "sin GitHub conectado no se publica");
+await page.click("#conectar-gh");
+await page.waitForSelector(".codigo-gh");
+assert.equal(await page.locator(".codigo-gh").innerText(), "AB12-CD34");
+await capturar(page, "3g2-conectar-en");
 await page.waitForSelector("[data-dueno]");
 assert.ok(await page.isChecked('[data-dueno="ana-perez"]'), "el dueño parte en el usuario");
 // Una organización nueva: la guía, y Publicar espera hasta que la persona la crea y se revisa.
@@ -112,8 +118,8 @@ assert.ok(await page.isDisabled("#publicar"), "con una organización por crear n
 await capturar(page, "3h0-organizacion-en");
 await page.click('[data-dueno="ana-app"]');
 await page.click("#publicar");
-await page.waitForSelector(".publicar .listo");
-assert.match(await page.locator(".publicar .listo").innerText(), /ana-app\/receta/);
+await page.waitForSelector(".listo.publicar");
+assert.ok(await page.locator('.enlaces-pub [data-abrir="https://ana-app.github.io/receta/"]').count(), "la página de la app, a un toque");
 await page.fill("#pz-nombre", "Lista de compras");
 await page.fill("#pz-que", "Arma una lista de compras desde recetas.");
 assert.ok(!(await page.isDisabled("#proponer")), "con nombre y qué resuelve, se puede proponer");

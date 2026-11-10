@@ -260,6 +260,24 @@
    "limite": 30,
    "pieza": "app"
   },
+  "publicarConectar": {
+   "script": "publicar.py",
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "args": [
+    "conectar"
+   ],
+   "responde": "ghConectado",
+   "limite": 960,
+   "progreso": "publicarAvance",
+   "pieza": "app"
+  },
   "publicarExplorar": {
    "script": "publicar.py",
    "args": [
@@ -269,6 +287,24 @@
    "datos": {},
    "responde": "explorarListo",
    "limite": 45,
+   "pieza": "app"
+  },
+  "publicarInstalar": {
+   "script": "publicar.py",
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "args": [
+    "instalar"
+   ],
+   "responde": "ghInstalado",
+   "limite": 900,
+   "progreso": "publicarAvance",
    "pieza": "app"
   },
   "publicarRevisar": {

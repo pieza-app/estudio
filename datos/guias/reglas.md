@@ -7,7 +7,7 @@ Estas reglas van en cada pedido. Son cortas a propósito: cada pedido es un solo
    dilo en `resumen`. `piezas.json` y `acciones.json` los arma `pieza.py`: tampoco los escribas. `pruebas/correr.sh` tampoco:
    si una prueba falla, arregla el código o la prueba, nunca el que las corre.
 2. **Una acción nueva va en `app.json` → `acciones`** (script en `bin/`, `args`, `entrada: "archivo"`, `datos` con su regla y
-   `responde`). Pieza arma `acciones.json` sola. No cambies `id`, `nombre`, `repo`, `datos`, `plataformas` ni `version`.
+   `responde`). Pieza arma `acciones.json` sola, antes de cada prueba: si el contrato dice «acciones.json no está al día», no lo escribas; revisa la acción en `app.json`. No cambies `id`, `nombre`, `repo`, `datos`, `plataformas` ni `version`.
    Una carpeta nueva en la raíz va también en `.gitignore` (es una lista blanca).
 3. **Solo lo propio de la app.** Escribe lo que pide el paso y nada más.
 4. **Los datos son de la persona.** Viven en su computador. Nada de servidores propios ni telemetría.

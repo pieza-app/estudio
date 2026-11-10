@@ -264,3 +264,17 @@ html[data-host="mac"] .panel-control { top: 44px; max-height: calc(100vh - 64px)
   .fila-cuerpo { padding-left: 12px; }
 }
 .panel-cifras.cifras { grid-template-columns: 1fr; margin: 0; }
+
+/* ── Publicar: tres tarjetas en orden; la que todavía no toca, apagada ─────────────────────────────────────────────────── */
+.pub-paso { padding: 16px 18px; border: 1px solid var(--linea); border-radius: var(--radio-grande); background: var(--panel); display: grid; gap: 10px; }
+.pub-paso > header { display: flex; align-items: center; gap: 12px; }
+.pub-paso h3 { margin: 0; font-size: 16px; }
+.pub-paso.hecho .fila-n { background: var(--ok-suave); color: var(--ok); }
+.pub-paso.inactiva { opacity: .55; }
+.pub-cuerpo { display: grid; gap: 10px; padding-left: 40px; }
+.pub-cuerpo > p { margin: 0; }
+.grupo.sin-borde { border: 0; padding: 0; margin: 0; background: none; }
+.codigo-gh { margin: 4px 0; font: 700 30px/1.2 var(--mono); letter-spacing: .12em; color: var(--acento); }
+.se-publica { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--texto-suave); font-size: 13px; }
+.enlaces-pub { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 560px) { .pub-cuerpo { padding-left: 0; } }
