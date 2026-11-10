@@ -1094,6 +1094,17 @@ def borrar(d):
     return {"ok": True, "id": p["id"], "carpeta": borrada}
 
 
+def abrir(d):
+    """Abre la carpeta de la app en el Finder, el Explorador o el gestor de archivos."""
+    p = _leer(d.get("id"))
+    c = p.get("carpeta")
+    if not c or not os.path.isdir(c):
+        raise ValueError("Esta app todavía no tiene carpeta.")
+    orden = ["open", c] if sys.platform == "darwin" else ["explorer", c] if sys.platform.startswith("win") else ["xdg-open", c]
+    subprocess.Popen(orden, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {"ok": True}
+
+
 def lista(_d):
     """Las apps del registro: solo `<id>.json` cuyo id es ese (una copia o un respaldo en la carpeta, como `x.antes.json`, no es otra
     app: si no, aparecerían dos con el mismo id y se marcarían las dos)."""
@@ -1108,4 +1119,4 @@ def lista(_d):
 
 if __name__ == "__main__":
     nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso, "lote": lote, "dividir": dividir,
-                   "borrar": borrar}, __doc__)
+                   "borrar": borrar, "abrir": abrir}, __doc__)

@@ -90,8 +90,7 @@
       const estado = p.estado === "plan" ? Tp("Plan listo") : total && listos === total ? Tp("Lista") : p.estado === "nuevo" ? Tp("Empezada") : Tp("En construcción");
       const menu = E.menuApp === p.id ? `<div class="menu-app" role="menu">
         <button type="button" role="menuitem" data-seguir="${esc(p.id)}">${esc("Seguir")}</button>
-        <button type="button" role="menuitem" data-quitar="${esc(p.id)}">${esc("Quitar de la lista")}</button>
-        <button type="button" role="menuitem" class="peligro" data-borrar="${esc(p.id)}">${esc("Borrar la app…")}</button></div>` : "";
+        <button type="button" role="menuitem" class="peligro" data-borrar="${esc(p.id)}">${esc("Eliminar la app…")}</button></div>` : "";
       return `<li class="tarjeta-app">
         <div class="tarjeta-cabeza"><button type="button" class="tarjeta-nombre" data-seguir="${esc(p.id)}" data-sin-traducir>${esc(p.nombre)}</button>
           <span class="chip-estado${total && listos === total ? " chip-ok" : ""}" data-sin-traducir>${esc(estado)}</span>
@@ -376,13 +375,43 @@
   }
   // La app ya tiene su carpeta (se creó): sus piezas ya están, el plan solo cambia lo que falta.
   function creada() { return !!(E.proyecto && E.proyecto.carpeta && ["creado", "pasos"].includes(E.proyecto.estado)); }
+  // Con qué se construye: sale de los sistemas elegidos (las piezas que van siempre son las mismas).
+  function tecnologias(p) {
+    const pl = p.plataformas || [];
+    const t = [["Interfaz", "HTML, CSS y JavaScript"], ["Lógica", "Python, sin dependencias"]];
+    if (pl.some((x) => ["mac", "windows", "linux"].includes(x))) t.push(["App de escritorio", "Rust + Tauri"]);
+    if (pl.includes("ios")) t.push(["iPhone", "Capacitor + Swift"]);
+    t.push(["Pruebas", "Python, Node y un navegador"], ["Descargas y página", "GitHub Actions y GitHub Pages"]);
+    return t;
+  }
+  function dondeHTML(p, corto = false) {
+    return `<div class="donde${corto ? " corto" : ""}"><p class="etiqueta">Dónde se construye</p>
+      ${p.carpeta ? `<p class="carpeta"><code data-sin-traducir>${esc(p.carpeta)}</code></p><button type="button" class="pz-boton" id="abrir-carpeta">Abrir la carpeta</button>`
+        : `<p class="suave" data-sin-traducir>${esc(Tp("En la carpeta Pieza de tu usuario: Pieza/{nombre}", { nombre: p.nombre || "" }))}</p>`}
+      <p class="etiqueta">Con qué se construye</p><ul class="tecnologias">${tecnologias(p).map(([q, c]) => `<li><span>${esc(q)}</span><b>${esc(c)}</b></li>`).join("")}</ul></div>`;
+  }
+  // Lo que necesita el computador (requisitos.py): lo que falta, con «Instalar» cuando Pieza puede hacerlo sola.
+  function equipoHTML(corto = false) {
+    const r = E.requisitos;
+    if (!r) return corto ? "" : trabajando("Revisando tu computador…");
+    const faltan = r.herramientas.filter((h) => !h.hay);
+    if (corto && !faltan.length) return `<p class="panel-nota equipo-ok">${esc("Tu computador tiene todo lo que hace falta.")}</p>`;
+    const filas = (corto ? faltan : r.herramientas).map((h) => `<li class="${h.hay ? "hay" : h.necesaria ? "falta" : "opcional"}">
+      <span class="equipo-nombre" data-sin-traducir>${esc(h.nombre)}${h.hay && h.version ? ` <small>${esc(h.version)}</small>` : ""}</span>
+      <span class="equipo-para">${esc(h.para)}</span>
+      ${h.hay ? "" : E.instalando === h.id ? trabajando("Instalando… puede tardar unos minutos.")
+        : h.puede_instalar ? `<button type="button" class="pz-boton${h.necesaria ? " pz-principal" : ""}" data-instalar="${esc(h.id)}"${E.instalando ? " disabled" : ""}>${esc("Instalar")}</button>`
+        : `<button type="button" class="pz-boton" data-abrir="${esc(h.guia)}">${esc("Bajarla")}</button>`}</li>`).join("");
+    return `<div class="equipo${corto ? " corto" : ""}"><p class="etiqueta">Lo que usa tu computador</p><ul>${filas}</ul></div>`;
+  }
   function pasoCrear() {
     const p = E.proyecto;
     if (creada()) return marcoPaso(`<div class="vacio-paso"><p data-sin-traducir>${esc(Tp("La app «{nombre}» ya está creada en tu carpeta. Sigue con sus pasos.", { nombre: p.nombre }))}</p>
       <p><code data-sin-traducir>${esc(p.carpeta)}</code></p></div>`, { lado: medidor(p), acciones: `<button type="button" class="pz-boton pz-principal" id="ir-construir">Ir a construir</button>
       <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>` });
     const principal = `<div class="vacio-paso"><p data-sin-traducir>${esc(Tp("Pieza arma la app «{nombre}» con {n} piezas ya hechas, en la carpeta Pieza de tu usuario. No gasta tokens.",
-      { nombre: p.nombre, n: (E.ficha && E.ficha.hechas) || 0 }))}</p></div>` + errorHTML() + (E.ocupado === "crear" ? trabajando("Armando la app…") : "");
+      { nombre: p.nombre, n: (E.ficha && E.ficha.hechas) || 0 }))}</p></div>` + errorHTML() + (E.ocupado === "crear" ? trabajando("Armando la app…") : "")
+      + dondeHTML(p) + equipoHTML();
     return marcoPaso(principal, { ahora: "Toca «Crear la app». Pieza copia las piezas: no gasta tokens.", lado: medidor(p), acciones: `<button type="button" class="pz-boton pz-principal" id="crear"${E.ocupado ? " disabled" : ""}>Crear la app</button>
       <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>` });
   }
@@ -512,7 +541,7 @@
       + (E.aisladas === undefined ? "" : `<p class="panel-nota aislamiento${E.aisladas ? "" : " sin"}">${esc(E.aisladas
         ? "Las pruebas corren aisladas: sin internet y sin acceso a tus llaves ni a tus carpetas privadas."
         : "En este computador las pruebas corren sin aislar: revisa lo que hace tu app antes de publicarla.")}</p>`)
-      + consolaHTML();
+      + equipoHTML(true) + dondeHTML(p, true) + consolaHTML();
     const acciones = (fin ? `<button type="button" class="pz-boton pz-principal" id="siguiente">${esc(p.repo ? "Ver dónde está publicada" : "Siguiente: publicarla")}</button>` : "")
       + accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
       <button type="button" class="pz-boton pz-plano" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>`;
@@ -661,8 +690,9 @@
       const p = E.proyectos.find((x) => x.id === b.dataset.borrar);
       E.menuApp = "";
       if (!p) return;
-      const si = await ui.confirmar({ titulo: "¿Borrar «{app}»?", valores: { app: p.nombre }, peligro: true, si: "Borrar",
-        texto: p.carpeta ? "Se borran su plan y su carpeta en tu computador. Lo que ya publicaste en GitHub queda allá." : "Se borra su plan." });
+      const si = await ui.confirmar({ titulo: "¿Eliminar «{app}»?", valores: { app: p.nombre, carpeta: p.carpeta || "" }, peligro: true, si: "Eliminar",
+        texto: p.carpeta ? "Se borra de Pieza y se borra su carpeta en tu computador: {carpeta}. Si la publicaste, el repo en GitHub no se toca."
+          : "Se borra de Pieza. Todavía no tenía carpeta." });
       if (si) host.enviar("proyectoBorrar", { id: p.id, carpeta: "si" });
     }
     else if (b.dataset.idioma) {
@@ -684,6 +714,8 @@
     else if (b.id === "explorar" || b.id === "explorar-lateral") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
     else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }
     else if (b.id === "revisar-subida") pedirRevisionSubida(), pintar();
+    else if (b.dataset.instalar) { E.instalando = b.dataset.instalar; pintar(); host.enviar("requisitoInstalar", { id: b.dataset.instalar }); }
+    else if (b.id === "abrir-carpeta") host.enviar("proyectoAbrir", { id: E.proyecto.id });
     else if (b.id === "instalar-gh") { ocupar("instalar"); host.enviar("publicarInstalar", { id: E.proyecto.id }); }
     else if (b.id === "conectar-gh") { E.codigoGH = null; ocupar("conectar"); host.enviar("publicarConectar", { id: E.proyecto.id }); }
     else if (b.id === "copiar-codigo") { try { await navigator.clipboard.writeText(E.codigoGH.codigo); toast("Copié el código."); } catch { toast("No pude copiarlo: escríbelo a mano.", { error: true }); } }
@@ -812,6 +844,7 @@
     // El plan nace de la idea: si la persona vuelve y la cambia, el plan de antes no sirve.
     if (E.paso === 5 && E.proyecto && E.proyecto.estado === "plan" && (E.proyecto.nombre !== n.nombre.trim() || E.proyecto.frase !== n.frase.trim() || (E.proyecto.detalle || "") !== (n.detalle || "").trim()))
       E.proyecto = null;
+    if ([6, 7, 8].includes(E.paso) && !E.requisitos) host.enviar("requisitosLista");
     if (E.paso === 8 && E.proyecto && !E.proyecto.repo && !E.gh && E.ocupado !== "revisar") { E.ocupado = "revisar"; host.enviar("publicarRevisar", { id: E.proyecto.id }); }
     if (E.paso === 4) { E.ficha = null; host.enviar("piezasFicha", { plataformas: n.plataformas, piezas: n.piezas }); }
     pintar();
@@ -948,6 +981,16 @@
       else E.error = (r && r.error) || Tp("No se pudo.");
       pintar();
     },
+    requisitosListos(r) { if (r && r.ok) { E.requisitos = r; pintar(); } },
+    requisitoInstalado(r) {
+      const id = E.instalando; E.instalando = "";
+      if (r && r.herramientas) E.requisitos = r;
+      if (r && r.ok) toast("Listo: quedó instalada.");
+      else { E.error = (r && r.error) || Tp("No se pudo."); if (r && r.guia) host.enviar("abrirEnlace", { url: r.guia }); }
+      if (id === "gh") E.gh = null;
+      pintar();
+    },
+    carpetaAbierta(r) { if (!(r && r.ok)) toast((r && r.error) || "No se pudo.", { error: true }); },
     subidaRevisada(r) {
       E.ocupado = "";
       if (r && r.ok) E.subida = r; else E.error = (r && r.error) || Tp("No se pudo.");
@@ -1076,7 +1119,11 @@
       red: [...new Set(piezas.flatMap((p) => p.red || []))].sort(), tareas: [...new Set(piezas.flatMap((p) => p.tareas_persona || []))] };
   }
   // Proyectos en la vista previa: un plan de ejemplo (la IA de verdad lo arma con la frase de la persona).
-  const SIM = { proyectos: [] };
+  const SIM = { proyectos: [], requisitos: { ok: true, instalador: "brew", herramientas: [
+    { id: "git", nombre: "Git", para: "Guardar las versiones de tu app y publicarla", necesaria: true, hay: true, version: "2.47.0", puede_instalar: true, guia: "https://git-scm.com/downloads" },
+    { id: "node", nombre: "Node.js", para: "Probar la interfaz de tu app", necesaria: true, hay: true, version: "22.11.0", puede_instalar: true, guia: "https://nodejs.org/" },
+    { id: "rust", nombre: "Rust", para: "Armar y probar la app de escritorio en tu computador (sin Rust, GitHub la arma igual al publicar)", necesaria: false, hay: false, version: "", puede_instalar: true, guia: "https://rustup.rs/" },
+    { id: "gh", nombre: "GitHub CLI", para: "Publicar tu app con tu cuenta de GitHub", necesaria: false, hay: true, version: "2.62.0", puede_instalar: true, guia: "https://cli.github.com/" }] } };
   function planSimulado(d) {
     const id = d.nombre.normalize("NFKD").replace(/[^A-Za-z0-9]/g, "").toLowerCase().slice(0, 30);
     const ficha = fichaSimulada(d);
@@ -1117,6 +1164,9 @@
         { nombre: "Recetas de Ana", repo: "ana-perez/recetas", descripcion: Tp("Guarda recetas y arma la lista de compras."), pagina: "https://ana-perez.github.io/recetas/", revisada: true },
         { nombre: "Gastos de la casa", repo: "matias-soto/gastos", descripcion: Tp("Cuentas compartidas, sin servidores."), pagina: "", revisada: false }] }));
       case "publicarRevisar": return c.luego(300, () => c.responder("publicarRevisado", SIM.gh ? { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] } : { ok: true, gh: true, sesion: false }));
+      case "requisitosLista": return c.luego(200, () => c.responder("requisitosListos", SIM.requisitos));
+      case "requisitoInstalar": return c.luego(500, () => { SIM.requisitos.herramientas.find((h) => h.id === d.id).hay = true; c.responder("requisitoInstalado", { ...SIM.requisitos, ok: true, instalada: d.id }); });
+      case "proyectoAbrir": return c.responder("carpetaAbierta", { ok: true });
       case "publicarPreparar": return c.luego(300, () => c.responder("subidaRevisada", { ok: true, archivos: ["app.json", "bin/recetas.py", "ui/app.js"],
         secretos: [], personales: [{ archivo: "ui/demo.json", linea: 3, tipo: "correo", muestra: "ana@correo.cl" }], dominios: [], comandos: [] }));
       case "publicarInstalar": return c.luego(300, () => c.responder("ghInstalado", { ok: true, gh: true, sesion: false, instalado: true }));
