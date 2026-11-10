@@ -423,6 +423,22 @@ class Proyectos(unittest.TestCase):
         self.assertEqual([x["depende"] for x in pasos], [[], [0], [1], [0], [2, 3]])  # «Compras» ahora espera al último de la división
         self.assertEqual(pasos[1]["dividido_de"], "Lista")
 
+    def test_acciones_json_se_arma_siempre(self):
+        """app.json con una acción nueva de un intento anterior: Pieza arma acciones.json antes de las pruebas aunque este intento no
+        cambie app.json (antes quedaba viejo y el contrato fallaba sin que la IA pudiera arreglarlo)."""
+        self.plan()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        app = json.load(open(os.path.join(carpeta, "app.json")))
+        app["acciones"]["recetasListar"] = {"script": "recetas.py", "args": ["lista"], "entrada": None, "datos": {},
+                                            "responde": "recetasListas", "limite": 30}
+        json.dump(app, open(os.path.join(carpeta, "app.json"), "w"))
+        open(os.path.join(carpeta, "bin", "recetas.py"), "w").write("print('recetas')\n")
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+        self.p.ia.preguntar_vivo = lambda pedido, **o: ("Ya estaba hecho.", None)
+        self.assertTrue(self.p.paso({"id": "recetas", "n": 0})["ok"])
+        self.assertIn("recetasListar", json.load(open(os.path.join(carpeta, "acciones.json")))["acciones"])
+
     def test_lista_no_muestra_copias(self):
         """Un respaldo en la carpeta del registro (recetas.antes.json, con el mismo id) no es otra app."""
         self.plan()

@@ -613,15 +613,14 @@ def paso(d):
                 if destino and os.path.isfile(destino):
                     os.remove(destino)
             escritos = sorted(set(escritos) | {r for r, _ in archivos})
-        if "app.json" in escritos:
-            # Las acciones nuevas pasan a acciones.json (lo que lee la app de escritorio), con las reglas de pieza.py.
-            r = subprocess.run([sys.executable, _pieza_py(), "acciones", carpeta], capture_output=True, text=True, timeout=120,
-                               env=_entorno())
-            if r.returncode != 0:
-                error_prueba = "pieza.py acciones falló: " + (r.stderr or r.stdout).strip()[-1500:]
-                x.update(estado="fallo", error=error_prueba, intentos=intento, resumen=resumen, escritos=escritos)
-                anotar(intento, "acciones")
-                continue
+        # acciones.json lo arma Pieza desde app.json (la IA no puede tocarlo): siempre antes de las pruebas, aunque app.json haya
+        # cambiado en un intento anterior. Si no, el contrato falla con «acciones.json no está al día» y la IA no lo puede arreglar.
+        falla = _armar_acciones(carpeta)
+        if falla:
+            error_prueba = falla
+            x.update(estado="fallo", error=error_prueba, intentos=intento, resumen=resumen, escritos=escritos)
+            anotar(intento, "acciones")
+            continue
         trabajos.emitir({"t": "fase", "fase": "pruebas", "n": n, "intento": intento})
         registro.append({"t": "prueba", "ruta": "pruebas/correr.sh", "intento": intento})
         ok, salida = probar(carpeta)
@@ -893,11 +892,9 @@ def lote(d):
             f.write(actual[rel])
     ok, salida = True, ""
     if aplicados:
-        if actual.get("app.json") != base.get("app.json"):
-            r = subprocess.run([sys.executable, _pieza_py(), "acciones", carpeta], capture_output=True, text=True, timeout=120,
-                               env=_entorno())
-            if r.returncode != 0:
-                ok, salida = False, "pieza.py acciones falló: " + (r.stderr or r.stdout).strip()[-1500:]
+        falla = _armar_acciones(carpeta)
+        if falla:
+            ok, salida = False, falla
         if ok:
             trabajos.emitir({"t": "fase", "fase": "pruebas", "n": aplicados[0], "intento": 1})
             ok, salida = probar(carpeta)
@@ -921,6 +918,15 @@ def lote(d):
     p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
     return {"ok": ok and not aplazados and all(p["pasos"][n]["estado"] == "listo" for n in ns), "proyecto": _guardar(p), "ns": ns,
             "aplicados": aplicados, "aplazados": aplazados}
+
+
+def _armar_acciones(carpeta):
+    """pieza.py acciones: acciones.json al día con app.json. None si quedó bien; si no, el error (para la IA: está en app.json)."""
+    r = subprocess.run([sys.executable, _pieza_py(), "acciones", carpeta], capture_output=True, text=True, timeout=120, env=_entorno())
+    if r.returncode == 0:
+        return None
+    return ("pieza.py acciones falló (revisa las acciones de app.json; acciones.json lo arma Pieza, no lo escribas): "
+            + (r.stderr or r.stdout).strip()[-1500:])
 
 
 def _foto(carpeta):

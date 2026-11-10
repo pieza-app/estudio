@@ -61,7 +61,13 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   Con Gemini, lee la carpeta y responde JSON. `validar_archivos` rechaza rutas que salen de la carpeta, `.git/`, los archivos de piezas, `piezas.json` y `acciones.json`. En
   `app.json` puede sumar acciones y config, pero no cambiar `id`, `nombre`, `repo`, `datos`, `plataformas`, `privado` ni
   `version`; después Pieza corre `pieza.py acciones`. También puede pedir `borrar` archivos propios (nunca de piezas). Si cambias esas reglas, cambia la prueba `Proyectos` de `pruebas/test_app.py`.
-- **Publicar y proponer:** al terminar, «Publicar en GitHub» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
+- **Publicar** es su propia etapa (paso 8, `pasoPublicar`): 1) GitHub conectado: `publicar.py instalar` (acción
+  `publicarInstalar` → `ghInstalado`: Homebrew o winget; si no hay, la guía a cli.github.com) y `publicar.py conectar`
+  (`publicarConectar` → `ghConectado`): `gh auth login --web`; el código de una vez sale en el avance (`publicarAvance`,
+  `{"t": "codigo"}`), la interfaz lo muestra y abre github.com/login/device; gh guarda la sesión en el llavero. 2) Dónde (cuenta u
+  organización, con la guía). 3) Cómo (pública o privada, explorador). Publicar exige todos los pasos listos.
+- **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
+- **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
   «En una organización nueva» (`__nueva__`) muestra la guía (`.guia-org`): abre GitHub para crearla y «Ya la creé: revisar» vuelve
   a `publicarRevisar`; si la encuentra, la elige. «Publicar» espera hasta entonces.
   «Proponer en GitHub» abre en el navegador un issue prellenado en `pieza-app/pieza` (etiqueta `pieza-nueva`).

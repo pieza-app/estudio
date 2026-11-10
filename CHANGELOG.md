@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.9.0
+- Publicar es su propia etapa, guiada: Pieza instala GitHub CLI, lo conecta con un código que pegas en GitHub (sin terminal), te ayuda a elegir tu cuenta o crear una organización, y al publicar te deja la página y las descargas a un toque. Un paso ya no queda fallando porque «acciones.json no está al día»: Pieza lo arma siempre antes de las pruebas. · *Publishing is its own guided stage: Pieza installs GitHub CLI, connects it with a code you paste on GitHub (no terminal), helps you pick your account or create an organization, and after publishing gives you the page and downloads one tap away. A step no longer keeps failing with “acciones.json is out of date”: Pieza always builds it before the tests.*
+
 ## 0.8.3
 - En «Paso a paso», cuando hay pasos que no dependen entre sí, puedes hacerlos a la vez («Hacer los pasos 4, 5 a la vez»). El panel de control ya no queda cortado en ventanas angostas. · *In “Step by step”, when some steps don't depend on each other, you can do them at once (“Do steps 4, 5 at once”). The control panel no longer gets cut off in narrow windows.*
 

@@ -61,7 +61,7 @@
     { grupo: "Celular", ids: [["ios", "iPhone"], ["android", "Android"]] },
     { grupo: "Web", ids: [["web", "Solo en el navegador"]] },
   ];
-  const PASOS = ["¿Para qué sistemas?", "¿Qué hace tu app?", "Las piezas", "La ficha", "El plan", "Crear la app", "Paso a paso"];
+  const PASOS = ["¿Para qué sistemas?", "¿Qué hace tu app?", "Las piezas", "La ficha", "El plan", "Crear la app", "Paso a paso", "Publícala"];
   const ESTADOS = { pendiente: "Pendiente", listo: "Listo", fallo: "Falló" };
   const miles = (n) => Math.round(n || 0).toLocaleString(i18n.idioma);
   const CATEGORIAS = { base: "Base", plataforma: "Plataforma", interfaz: "Interfaz", ia: "IA", datos: "Datos", conexiones: "Conexiones",
@@ -147,35 +147,79 @@
       <p class="suave">Aparecen solas: cada persona elige sumarse al publicar su app. Nadie da permisos a nadie.</p>
       ${errorHTML()}${filas}<div class="pz-pie"><button type="button" class="pz-boton" id="inicio">Volver al inicio</button></div>`;
   }
-  function publicarHTML(p) {
-    if (p.repo) return `<div class="listo"><h3>Publicada</h3><p><button type="button" class="pz-enlace" data-abrir="https://github.com/${esc(p.repo)}" data-sin-traducir>github.com/${esc(p.repo)}</button></p>
-      <p class="suave">${esc(p.explorador ? "Aparece en el explorador de Pieza." : "No aparece en el explorador de Pieza.")}</p></div>`;
+  // Publicar: una etapa guiada. 1) GitHub conectado (gh instalado y con sesión: Pieza lo instala y conecta con un código que se
+  // pega en GitHub), 2) dónde (tu cuenta o una organización, con la guía para crearla), 3) cómo (pública o privada, explorador).
+  // Al publicar, GitHub arma la página y las descargas para Mac, Windows y Linux.
+  function tarjetaPub(n, titulo, hecho, cuerpo, activa = true) {
+    return `<section class="pub-paso${hecho ? " hecho" : ""}${activa ? "" : " inactiva"}"><header><span class="fila-n">${hecho ? "✓" : n}</span><h3>${esc(titulo)}</h3></header>
+      ${activa ? `<div class="pub-cuerpo">${cuerpo}</div>` : ""}</section>`;
+  }
+  function conexionHTML() {
     const g = E.gh;
-    if (!g) return `<h3>Publicar en GitHub</h3><p class="suave">Con tu cuenta de GitHub. Pieza no guarda tu clave ni pide permisos.</p>
-      <div class="pz-pie"><button type="button" class="pz-boton" id="revisar-publicar"${E.ocupado ? " disabled" : ""}>Publicar en GitHub</button></div>`;
-    if (!g.gh || !g.sesion) return `<h3>Publicar en GitHub</h3><p class="suave">Para publicar necesitas GitHub CLI con tu sesión iniciada.</p>
-      <ol class="suave"><li>Instálalo desde cli.github.com.</li><li>En la terminal, corre este comando:</li><li><code data-sin-traducir>gh auth login</code></li><li>Vuelve aquí y toca «Revisar de nuevo».</li></ol>
-      <div class="pz-pie"><button type="button" class="pz-boton" data-abrir="https://cli.github.com/">Abrir cli.github.com</button>
-      <button type="button" class="pz-boton pz-principal" id="revisar-publicar">Revisar de nuevo</button></div>`;
+    if (E.ocupado === "revisar" && !g) return trabajando("Revisando GitHub en tu computador…");
+    if (!g) return `<button type="button" class="pz-boton" id="revisar-publicar">Revisar mi GitHub</button>`;
+    if (g.sesion) return `<p data-sin-traducir>${esc(Tp("Conectado como @{usuario}.", { usuario: g.usuario }))}</p>`;
+    if (E.ocupado === "instalar") return trabajando("Instalando GitHub CLI… puede tardar unos minutos.");
+    if (!g.gh) return `<p class="suave">${esc("Pieza publica con GitHub CLI, la herramienta oficial de GitHub, y con tu cuenta. Pieza no guarda tu clave.")}</p>
+      ${g.guia ? `<ol class="suave"><li>${esc("Bájalo desde cli.github.com e instálalo.")}</li><li>${esc("Vuelve aquí y toca «Ya lo instalé».")}</li></ol>
+        <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-abrir="https://cli.github.com/">Abrir cli.github.com</button>
+        <button type="button" class="pz-boton" id="revisar-publicar">Ya lo instalé</button></div>`
+        : `<div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" id="instalar-gh"${E.ocupado ? " disabled" : ""}>Instalar GitHub CLI</button></div>`}`;
+    if (E.ocupado === "conectar") {
+      const c = E.codigoGH;
+      return c ? `<p>${esc("Pega este código en GitHub y autoriza a GitHub CLI:")}</p>
+        <p class="codigo-gh" data-sin-traducir>${esc(c.codigo)}</p>
+        <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-abrir="https://github.com/login/device">Abrir GitHub</button>
+        <button type="button" class="pz-boton" id="copiar-codigo">Copiar el código</button></div>
+        ${trabajando("Esperando que autorices en GitHub…")}` : trabajando("Pidiendo un código a GitHub…");
+    }
+    return `<p class="suave">${esc("Conéctalo con tu cuenta: GitHub te da un código, lo pegas en su página y listo. Sin terminal.")}</p>
+      <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" id="conectar-gh"${E.ocupado ? " disabled" : ""}>Conectar mi GitHub</button></div>`;
+  }
+  function pasoPublicar() {
+    const p = E.proyecto;
+    if (!p) return marcoPaso("", {});
+    const faltan = (p.pasos || []).filter((x) => x.estado !== "listo").length;
+    if (p.repo) {
+      const enlaces = [["Ver el repositorio", `https://github.com/${p.repo}`], p.pagina ? ["Ver la página", p.pagina] : null,
+        ["Descargas", `https://github.com/${p.repo}/releases`], ["Cómo va la armada", `https://github.com/${p.repo}/actions`]].filter(Boolean);
+      return marcoPaso(`<section class="listo publicar"><h3>Publicada</h3>
+        <p class="suave">${esc("GitHub está armando la página y las descargas para Mac, Windows y Linux. Tarda unos 15 minutos.")}</p>
+        <div class="enlaces-pub">${enlaces.map(([t, u]) => `<button type="button" class="pz-boton" data-abrir="${esc(u)}">${esc(t)}</button>`).join("")}</div>
+        <p class="suave" data-sin-traducir>${esc(p.explorador ? Tp("Aparece en el explorador de Pieza.") : Tp("No aparece en el explorador de Pieza."))}</p></section>
+        <section class="proponer">${proponerHTML()}</section>`,
+        { acciones: `<button type="button" class="pz-boton pz-principal" data-abrir="https://github.com/${esc(p.repo)}">Abrir en GitHub</button>
+          <button type="button" class="pz-boton pz-plano" id="inicio">Volver al inicio</button>` });
+    }
+    const g = E.gh || {};
     const pub = E.pub;
     const org = pub.orgNueva || `${p.id}-app`;
     const nueva = pub.dueno === "__nueva__";
-    const duenos = g.duenos.map((d) => `<label class="opcion"><input type="radio" name="dueno" data-dueno="${esc(d)}"${pub.dueno === d ? " checked" : ""}> <span data-sin-traducir>${esc(d)}/${esc(p.id)}</span></label>`).join("")
+    const conectado = !!g.sesion;
+    const duenos = (g.duenos || []).map((d) => `<label class="opcion"><input type="radio" name="dueno" data-dueno="${esc(d)}"${pub.dueno === d ? " checked" : ""}> <span data-sin-traducir>${esc(d)}/${esc(p.id)}</span></label>`).join("")
       + `<label class="opcion"><input type="radio" name="dueno" data-dueno="__nueva__"${nueva ? " checked" : ""}> <span>${esc("En una organización nueva")}</span></label>`
       + (nueva ? `<div class="guia-org">
         <label class="pz-campo"><span>Nombre de la organización</span><input id="org-nueva" maxlength="39" value="${esc(org)}" autocomplete="off"></label>
         <ol><li>${esc("Toca «Abrir GitHub» y escribe ese nombre.")}</li><li>${esc("Elige el plan gratis y toca «Create organization».")}</li><li>${esc("Vuelve aquí y toca «Ya la creé: revisar».")}</li></ol>
-        <div class="pz-pie pz-izq"><button type="button" class="pz-boton" data-abrir="https://github.com/account/organizations/new?plan=free">Abrir GitHub</button>
+        <div class="acciones-fallo"><button type="button" class="pz-boton" data-abrir="https://github.com/account/organizations/new?plan=free">Abrir GitHub</button>
         <button type="button" class="pz-boton pz-principal" id="revisar-publicar">Ya la creé: revisar</button></div></div>` : "");
-    const vis = [["publico", "Pública: cualquiera la ve y la puede usar"], ["privado", "Privada: solo tú"]].map(([v, n]) =>
-      `<label class="opcion"><input type="radio" name="vis" data-vis="${v}"${pub.visibilidad === v ? " checked" : ""}> <span>${esc(n)}</span></label>`).join("");
-    return `<h3>Publicar en GitHub</h3>
-      <fieldset class="grupo"><legend>Dónde</legend>${duenos}</fieldset>
-      <fieldset class="grupo"><legend>Cómo</legend>${vis}
-        <label class="opcion"><input type="checkbox" id="explorador"${pub.explorador && pub.visibilidad === "publico" ? " checked" : ""}${pub.visibilidad === "publico" ? "" : " disabled"}> <span>${esc("Sumarla al explorador de Pieza (topic «hecho-con-pieza»)")}</span></label></fieldset>
-      <p class="suave">Antes de subir, Pieza revisa que no vayan nombres, correos ni rutas reales.</p>
-      ${E.ocupado === "publicar" ? trabajando("Publicando…") : ""}
-      <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="publicar"${pub.dueno && pub.dueno !== "__nueva__" && !E.ocupado ? "" : " disabled"}>Publicar</button></div>`;
+    const vis = [["publico", "Pública: cualquiera la ve, la baja y la usa"], ["privado", "Privada: solo tú (sin página ni explorador)"]].map(([v, n]) =>
+      `<label class="opcion"><input type="radio" name="vis" data-vis="${v}"${pub.visibilidad === v ? " checked" : ""}> <span>${esc(n)}</span></label>`).join("")
+      + `<label class="opcion"><input type="checkbox" id="explorador"${pub.explorador && pub.visibilidad === "publico" ? " checked" : ""}${pub.visibilidad === "publico" ? "" : " disabled"}> <span>${esc("Sumarla al explorador de Pieza (topic «hecho-con-pieza»)")}</span></label>`;
+    const donde = conectado && pub.dueno && !nueva;
+    const pagina = pub.dueno && !nueva ? `https://${pub.dueno.toLowerCase()}.github.io/${p.id}/` : "";
+    const principal = (faltan ? `<p class="aviso-pasos">${esc(Tp("A tu app le faltan {n} pasos. Termínalos antes de publicarla.", { n: faltan }))}</p>` : "") + errorHTML()
+      + tarjetaPub(1, "Conecta tu GitHub", conectado, conexionHTML())
+      + tarjetaPub(2, "Dónde vive tu app", donde, `<fieldset class="grupo sin-borde">${duenos}</fieldset>`, conectado)
+      + tarjetaPub(3, "Cómo la publicas", false, `<fieldset class="grupo sin-borde">${vis}</fieldset>`, conectado)
+      + (E.ocupado === "publicar" ? trabajando("Publicando…") : "");
+    const lado = `<div class="panel-bloque"><p class="etiqueta">Lo que se publica</p><ul class="se-publica">
+        <li>${esc("El código de tu app, revisado: sin nombres, correos ni rutas reales.")}</li>
+        ${pub.visibilidad === "publico" ? `<li data-sin-traducir>${esc(pagina ? Tp("Su página web: {url}", { url: pagina }) : Tp("Su página web, en GitHub Pages."))}</li>` : ""}
+        <li>${esc("Las descargas para Mac, Windows y Linux, que arma GitHub solo (unos 15 minutos).")}</li>
+        <li>${esc("Las actualizaciones: cada versión nueva llega sola a quien la instaló.")}</li></ul></div>`;
+    return marcoPaso(principal, { lado, acciones: `<button type="button" class="pz-boton pz-principal" id="publicar"${donde && !faltan && !E.ocupado ? "" : " disabled"}>Publicar</button>
+      <button type="button" class="pz-boton pz-plano" id="atras"${E.ocupado ? " disabled" : ""}>Atrás</button>` });
   }
   // Proponer una pieza: abre un issue prellenado en pieza-app/pieza (en el navegador, con la cuenta de la persona).
   function proponerHTML() {
@@ -403,23 +447,24 @@
     const principal = sinIA() + errorHTML() + quedan + (E.ocupado === "dividir" ? trabajando("Tu IA está dividiendo el paso en pasos más chicos…") : "")
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
-        <p class="suave">Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.</p></div>` : "")
+        <p class="suave">Para instalarla como app y compartirla, publícala: GitHub arma la página y las descargas para Mac, Windows y Linux.</p></div>` : "")
       + `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{h} de {n} pasos listos", { h: hechos, n: p.pasos.length }))}</p>
         <button type="button" class="pz-plano" id="abrir-todo" data-que="paso">${esc(abiertos("paso") ? "Cerrar todos" : "Abrir todos")}</button></div>
         <progress class="barra-avance" max="${p.pasos.length}" value="${hechos}" aria-hidden="true"></progress>
         <ol class="filas pasos">${p.pasos.map((x, i) => filaPaso(p, x, i)).join("")}</ol>`
-      + (fin ? `<section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "");
+      ;
     const lado = medidor(p) + `<div class="panel-bloque"><p class="etiqueta">Modo</p><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
         ${E.modo === "auto" ? `<label class="tope"><span>Detener al llegar a (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>` : ""}
         ${enFila ? `<p class="panel-nota">${esc("En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.")}</p>` : ""}
         <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p></div>`
       + consolaHTML();
-    const acciones = accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
+    const acciones = (fin ? `<button type="button" class="pz-boton pz-principal" id="siguiente">${esc(p.repo ? "Ver dónde está publicada" : "Siguiente: publicarla")}</button>` : "")
+      + accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
       <button type="button" class="pz-boton pz-plano" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>`;
     return marcoPaso(principal, { acciones, lado });
   }
-  // Las etapas que ve la persona: los 7 pasos del asistente, agrupados en 4.
-  const ETAPAS = [["Tu idea", [1, 2]], ["Piezas", [3, 4]], ["Plan", [5, 6]], ["Construir", [7]]];
+  // Las etapas que ve la persona: los 8 pasos del asistente, agrupados en 5.
+  const ETAPAS = [["Tu idea", [1, 2]], ["Piezas", [3, 4]], ["Plan", [5, 6]], ["Construir", [7]], ["Publicar", [8]]];
   function etapas() {
     const actual = ETAPAS.findIndex(([, ps]) => ps.includes(E.paso));
     return `<ol class="etapas" aria-label="Etapas">${ETAPAS.map(([n], i) =>
@@ -506,7 +551,7 @@
       <h3>Lo que te toca</h3>${lista(f.tareas.map(esc))}`, { acciones: pie({ siguiente: "Siguiente: el plan" }), lado: cifras });
   }
   function principal() {
-    const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha, pasoPlan, pasoCrear, pasoPasos];
+    const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha, pasoPlan, pasoCrear, pasoPasos, pasoPublicar];
     return `<div class="marco">${lateral()}<main class="contenido">${E.vista === "explorar" ? explorar() : pasos[E.paso]()}</main></div>`;
   }
   function ajustes() {
@@ -576,6 +621,9 @@
     else if (b.id === "inicio" || b.id === "ir-inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
     else if (b.id === "explorar" || b.id === "explorar-lateral") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
     else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }
+    else if (b.id === "instalar-gh") { ocupar("instalar"); host.enviar("publicarInstalar", { id: E.proyecto.id }); }
+    else if (b.id === "conectar-gh") { E.codigoGH = null; ocupar("conectar"); host.enviar("publicarConectar", { id: E.proyecto.id }); }
+    else if (b.id === "copiar-codigo") { try { await navigator.clipboard.writeText(E.codigoGH.codigo); toast("Copié el código."); } catch { toast("No pude copiarlo: escríbelo a mano.", { error: true }); } }
     else if (b.id === "revisar-publicar") { ocupar("revisar"); host.enviar("publicarRevisar", { id: E.proyecto.id }); }
     else if (b.id === "publicar") {
       ocupar("publicar");
@@ -678,6 +726,7 @@
     // El plan nace de la idea: si la persona vuelve y la cambia, el plan de antes no sirve.
     if (E.paso === 5 && E.proyecto && E.proyecto.estado === "plan" && (E.proyecto.nombre !== n.nombre.trim() || E.proyecto.frase !== n.frase.trim() || (E.proyecto.detalle || "") !== (n.detalle || "").trim()))
       E.proyecto = null;
+    if (E.paso === 8 && E.proyecto && !E.proyecto.repo && !E.gh && E.ocupado !== "revisar") { E.ocupado = "revisar"; host.enviar("publicarRevisar", { id: E.proyecto.id }); }
     if (E.paso === 4) { E.ficha = null; host.enviar("piezasFicha", { plataformas: n.plataformas, piezas: n.piezas }); }
     pintar();
     const h = raiz.querySelector(".contenido h2");
@@ -788,6 +837,28 @@
         else if (org) E.error = Tp("Todavía no veo la organización «{org}». Revisa que la creaste con ese nombre.", { org });
         else if (r.duenos && !E.pub.dueno) E.pub.dueno = r.duenos[0];
       } else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
+    ghInstalado(r) {
+      E.ocupado = "";
+      if (r && (r.ok || r.guia)) E.gh = Object.assign({}, E.gh, r);
+      if (r && r.ok && r.instalado) toast("Instalé GitHub CLI.");
+      else if (r && !r.ok) E.error = r.error || Tp("No se pudo.");
+      pintar();
+    },
+    publicarAvance(eventos) {
+      for (const e of Array.isArray(eventos) ? eventos : []) {
+        if (e && e.t === "codigo" && typeof e.codigo === "string" && /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(e.codigo)) {
+          E.codigoGH = { codigo: e.codigo };
+          host.enviar("abrirEnlace", { url: "https://github.com/login/device" });  // GitHub en el navegador, listo para pegar el código
+        }
+      }
+      if (E.paso === 8) pintar();
+    },
+    ghConectado(r) {
+      E.ocupado = ""; E.codigoGH = null;
+      if (r && r.ok) { E.gh = r; if (r.duenos && !E.pub.dueno) E.pub.dueno = r.duenos[0]; toast("GitHub conectado como @{usuario}.", { valores: { usuario: r.usuario || "" } }); }
+      else E.error = (r && r.error) || Tp("No se pudo.");
       pintar();
     },
     publicado(r) {
@@ -938,10 +1009,15 @@
       case "publicarExplorar": return c.luego(400, () => c.responder("explorarListo", { ok: true, apps: [
         { nombre: "Recetas de Ana", repo: "ana-perez/recetas", descripcion: Tp("Guarda recetas y arma la lista de compras."), pagina: "https://ana-perez.github.io/recetas/", revisada: true },
         { nombre: "Gastos de la casa", repo: "matias-soto/gastos", descripcion: Tp("Cuentas compartidas, sin servidores."), pagina: "", revisada: false }] }));
-      case "publicarRevisar": return c.luego(300, () => c.responder("publicarRevisado", { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] }));
+      case "publicarRevisar": return c.luego(300, () => c.responder("publicarRevisado", SIM.gh ? { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] } : { ok: true, gh: true, sesion: false }));
+      case "publicarInstalar": return c.luego(300, () => c.responder("ghInstalado", { ok: true, gh: true, sesion: false, instalado: true }));
+      case "publicarConectar":
+        c.luego(200, () => c.responder("publicarAvance", [{ t: "codigo", codigo: "AB12-CD34", url: "https://github.com/login/device" }]));
+        return c.luego(700, () => { SIM.gh = true; c.responder("ghConectado", { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] }); });
       case "publicarSubir": return c.luego(800, () => {
         const p = SIM.proyectos.find((x) => x.id === d.id);
-        Object.assign(p, { repo: `${d.dueno}/${p.id}`, publicado: d.visibilidad, explorador: d.explorador === "si" });
+        Object.assign(p, { repo: `${d.dueno}/${p.id}`, publicado: d.visibilidad, explorador: d.explorador === "si",
+          pagina: d.visibilidad === "publico" ? `https://${d.dueno}.github.io/${p.id}/` : "" });
         c.responder("publicado", { ok: true, proyecto: p, url: `https://github.com/${p.repo}` });
       });
       case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos });
