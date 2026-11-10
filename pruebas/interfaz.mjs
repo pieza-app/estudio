@@ -209,6 +209,18 @@ const total = await page.locator(".pasos > li").count();
 await page.evaluate(() => window.Pieza._probar((E) => Object.assign(E.proyecto.pasos[2], { estado: "fallo", causa: "pruebas", error: "x" })));
 await page.click("#paso-2 [data-dividir]");
 await page.waitForFunction((n) => document.querySelectorAll(".pasos > li").length === n + 1, total);
+assert.deepEqual(await page.locator("#paso-2 .fila-n, #paso-3 .fila-n").allTextContents(), ["3.1", "3.2"], "las partes llevan el número del paso: 3.1 y 3.2");
+assert.equal((await page.locator("#paso-4 .fila-n").textContent()).trim(), "04", "los pasos de después no se corren");
+// Un paso que llega al tope por paso se divide solo (5 → 5.1, 5.2) y sigue con la primera parte, sin que la persona toque nada.
+const conPartes = await page.locator(".pasos > li").count();
+await page.evaluate(() => {
+  const E = window.Pieza._pruebas.E, n = E.proyecto.pasos.length - 1;
+  const proyecto = JSON.parse(JSON.stringify(E.proyecto));
+  Object.assign(proyecto.pasos[n], { estado: "fallo", causa: "tope", error: "Llegó al tope de 250000 tokens por paso." });
+  window.Pieza.pasoListo({ ok: false, proyecto, n });
+});
+await page.waitForFunction((n) => document.querySelectorAll(".pasos > li").length === n + 1, conPartes);
+await page.waitForSelector(".pasos > li:nth-last-child(2).estado-listo");   // la primera parte ya se hizo sola
 await page.click("#inicio");
 await page.waitForSelector(".proyectos [data-seguir]");
 await sinDesborde(page, "inicio a 390 px");

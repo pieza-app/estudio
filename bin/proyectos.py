@@ -35,6 +35,7 @@ import shutil
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 import re
+import secrets
 import subprocess
 import sys
 import unicodedata
@@ -64,7 +65,8 @@ MAX_DETALLE = 12_000  # la idea completa (opcional): reglas, pantallas, datos; v
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
-FRENO = 3  # un paso que gasta más de 3 veces lo estimado se detiene y pregunta
+FRENO = 3  # sin tope por paso: un paso que gasta más de 3 veces lo estimado se detiene y pregunta
+MIN_TOPE_PASO = 5000  # el tope por paso más chico que se acepta (menos no alcanza ni para leer el plan)
 MAX_RESUMEN = 4000    # lo que la IA cuenta que hizo, completo (la interfaz lo muestra al abrir el paso)
 MAX_HISTORIAL = 6    # intentos guardados por paso
 MAX_REGISTRO = 300   # lo que leyó y escribió en la última vez
@@ -507,18 +509,39 @@ def _preparar_rust(carpeta):
             pass
 
 
-def probar(carpeta):
-    """(ok, las últimas líneas) de bash pruebas/correr.sh, aislado si el sistema lo permite."""
+def probar(carpeta, n=None):
+    """(ok, las últimas líneas) de bash pruebas/correr.sh, aislado si el sistema lo permite. Cada línea que imprime va en vivo a la
+    interfaz (`{"t": "probando", "linea"}`): así se ve qué prueba corre («Python», «Interfaz»…) y no solo «probando»."""
+    import threading
     _preparar_rust(carpeta)
     orden, _ = aislar(["bash", "pruebas/correr.sh"], carpeta)
     try:
-        r = subprocess.run(orden, cwd=carpeta, capture_output=True, text=True, timeout=LIMITE_PRUEBAS, env=_entorno())
+        proc = subprocess.Popen(orden, cwd=carpeta, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=_entorno(),
+                                errors="replace")
     except FileNotFoundError:
         return False, "No encontré bash para correr las pruebas."
-    except subprocess.TimeoutExpired:
+    vencido = threading.Event()
+
+    def cortar():
+        vencido.set()
+        proc.kill()
+    reloj = threading.Timer(LIMITE_PRUEBAS, cortar)
+    reloj.start()
+    lineas = []
+    try:
+        for linea in proc.stdout:
+            linea = linea.rstrip("\n")
+            lineas.append(linea)
+            del lineas[:-200]
+            if linea.strip():
+                trabajos.emitir({"t": "probando", "linea": linea.strip()[:160], **({"n": n} if n is not None else {})})
+        proc.wait()
+    finally:
+        reloj.cancel()
+    if vencido.is_set():
         return False, "Las pruebas tardaron demasiado."
-    salida = "\n".join(((r.stdout or "") + "\n" + (r.stderr or "")).strip().splitlines()[-60:])
-    return r.returncode == 0, salida
+    salida = "\n".join("\n".join(lineas).strip().splitlines()[-60:])
+    return proc.returncode == 0, salida
 
 
 def _no_leer(rel):
@@ -643,6 +666,12 @@ def paso(d):
     registro, historial = [], list(x.get("historial") or [])[-(MAX_HISTORIAL - INTENTOS):]
     x.pop("causa", None)
     gastado_antes = x.get("gastado", 0)  # el freno mira lo de esta vez: lo gastado antes (otros días, otros errores) no cuenta
+    # El tope por paso (lo elige la persona): si este paso lo alcanza, la IA se corta en ese momento (lo escrito queda) y la
+    # interfaz lo divide en partes (5.1, 5.2). Sin tope, el freno es FRENO veces lo estimado, y solo entre intentos.
+    tope = d.get("tope") if isinstance(d.get("tope"), int) and d["tope"] >= MIN_TOPE_PASO else 0
+
+    def pasado(uso):
+        return lambda: bool(tope) and x.get("gastado", 0) - gastado_antes + uso.get("entrada", 0) + uso.get("salida", 0) >= tope
 
     def anotar(intento, causa=""):
         """Lo que hizo cada intento, para que la persona vea qué pasó (y por qué falló) aunque el paso no quede."""
@@ -656,7 +685,7 @@ def paso(d):
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
             uso = {}
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, no_leer=NO_LEER,
-                                             al_evento=_avisar(carpeta, n, intento, uso, registro))
+                                             al_evento=_avisar(carpeta, n, intento, uso, registro), detener=pasado(uso))
             trabajos.emitir({"t": "fase", "fase": "revisar", "n": n, "intento": intento})
             nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
             _gastar(x, uso, tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN)
@@ -664,8 +693,10 @@ def paso(d):
                 x["cuidados"] = sorted(set(x.get("cuidados", [])) | set(cuidados))
             if error:
                 escritos = sorted(set(escritos) | set(nuevos))
-                x.update(estado="fallo", error=ia.frase(error), intentos=intento, escritos=escritos)
-                anotar(intento, "ia")
+                corte = ia.detenido(error) and pasado(uso)()
+                x.update(estado="fallo", intentos=intento, escritos=escritos,
+                         error=f"Llegó al tope de {tope} tokens por paso." if corte else ia.frase(error))
+                anotar(intento, "tope" if corte else "ia")
                 break
             resumen = _texto(texto, MAX_RESUMEN)
             escritos = sorted(set(escritos) | set(nuevos))
@@ -675,11 +706,13 @@ def paso(d):
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
             uso = {}
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, no_leer=NO_LEER,
-                                             al_evento=_avisar(carpeta, n, intento, uso, registro))
+                                             al_evento=_avisar(carpeta, n, intento, uso, registro), detener=pasado(uso))
             _gastar(x, uso, tokens(pedido, texto))
             if error:
-                x.update(estado="fallo", error=ia.frase(error), intentos=intento)
-                anotar(intento, "ia")
+                corte = ia.detenido(error) and pasado(uso)()
+                x.update(estado="fallo", intentos=intento,
+                         error=f"Llegó al tope de {tope} tokens por paso." if corte else ia.frase(error))
+                anotar(intento, "tope" if corte else "ia")
                 break
             try:
                 resumen, archivos, borrar = validar_archivos(_json_de(texto), carpeta)
@@ -705,7 +738,7 @@ def paso(d):
             continue
         trabajos.emitir({"t": "fase", "fase": "pruebas", "n": n, "intento": intento})
         registro.append({"t": "prueba", "ruta": "pruebas/correr.sh", "intento": intento})
-        ok, salida = probar(carpeta)
+        ok, salida = probar(carpeta, n)
         x.update(intentos=intento, resumen=resumen, escritos=escritos)
         if ok:
             x.update(estado="listo", error="")
@@ -715,7 +748,10 @@ def paso(d):
         x.update(estado="fallo", error=salida[-1500:])
         trabajos.emitir({"t": "prueba", "ok": False, "n": n, "intento": intento, "ultima": _ultima_linea(salida)})
         # Freno de gasto: si el paso ya gastó más de FRENO veces lo estimado, no se intenta de nuevo solo; la persona decide.
-        if x.get("tokens") and x.get("gastado", 0) - gastado_antes > FRENO * x["tokens"] and intento < INTENTOS:
+        if tope and x.get("gastado", 0) - gastado_antes >= tope and intento < INTENTOS:
+            anotar(intento, "tope")
+            break
+        if not tope and x.get("tokens") and x.get("gastado", 0) - gastado_antes > FRENO * x["tokens"] and intento < INTENTOS:
             anotar(intento, "gasto")
             break
         anotar(intento, "pruebas")
@@ -744,7 +780,7 @@ def reprobar(d):
         ok, salida = False, falla
     else:
         trabajos.emitir({"t": "fase", "fase": "pruebas", "n": n, "intento": 1})
-        ok, salida = probar(carpeta)
+        ok, salida = probar(carpeta, n)
     if ok:
         x.update(estado="listo", error="")
         x.pop("causa", None)
@@ -756,8 +792,10 @@ def reprobar(d):
 
 # ── Dividir un paso grande ───────────────────────────────────────────────────────────────────────────────────────────────
 
-def _prompt_dividir(p, n):
+def _prompt_dividir(p, n, tope=0):
     x = p["pasos"][n]
+    # Cada parte cabe holgada en el tope por paso que eligió la persona (la mitad), y nunca más que TOPE_PASO.
+    objetivo = min(TOPE_PASO, max(MIN_TOPE_PASO, tope // 2)) if tope else TOPE_PASO
     intentos = "\n".join(f"- Intento {h['intento']}: {h.get('causa') or 'quedó'}. {_texto(h.get('resumen'), 300)}"
                           for h in (x.get("historial") or [])[-3:])
     error = f"\n# El último error\n```\n{_texto(x.get('error'), 1200)}\n```" if x.get("error") else ""
@@ -776,7 +814,7 @@ Lo que deja listo: {x.get('entrega') or 'sin decir'}
 
 # Lo que te pido
 Divide SOLO este paso en 2 a 4 pasos más chicos, en orden. Cada uno hace una sola cosa que se puede probar, toca pocos archivos
-y gasta menos de {TOPE_PASO // 1000} mil tokens. Entre todos hacen lo mismo que el paso original y dejan listo lo mismo.
+y gasta menos de {objetivo // 1000} mil tokens. Entre todos hacen lo mismo que el paso original y dejan listo lo mismo.
 En «depende», los números DENTRO de esta división (1 = el primero de estos pasos); el primero hereda lo que necesitaba el original.
 Responde SOLO este JSON:
 {{"pasos": [{{"titulo": "…", "que": "…", "archivos": ["ruta"], "tokens": 0, "entrega": "…", "depende": []}}]}}"""
@@ -792,7 +830,8 @@ def dividir(d):
     x = p["pasos"][n]
     if x.get("estado") == "listo":
         raise ValueError("Ese paso ya está listo.")
-    pedido = _prompt_dividir(p, n)
+    tope = d.get("tope") if isinstance(d.get("tope"), int) and d["tope"] >= MIN_TOPE_PASO else 0
+    pedido = _prompt_dividir(p, n, tope)
     nuevos, falla, gastado = None, "", 0
     for _ in range(INTENTOS):
         texto, error = ia.preguntar(pedido, timeout=600)
@@ -806,12 +845,14 @@ def dividir(d):
             break
         except ValueError as e:
             falla, nuevos = str(e), None
-            pedido = _prompt_dividir(p, n) + f"\n\n# Tu respuesta anterior no sirvió\n{falla} Responde solo el JSON."
+            pedido = _prompt_dividir(p, n, tope) + f"\n\n# Tu respuesta anterior no sirvió\n{falla} Responde solo el JSON."
     p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
     if nuevos is None or len(p["pasos"]) - 1 + len(nuevos) > MAX_PASOS_TOTAL:
         _guardar(p)
         return {"ok": False, "error": falla or "La app ya tiene demasiados pasos para dividir más.", "codigo": "dividir"}
     k = len(nuevos)
+    # Las partes llevan el número del paso original (5 → 5.1, 5.2; 5.1 → 5.1.1, 5.1.2): `grupo` es la cadena de divisiones.
+    grupo = [g for g in (x.get("grupo") or []) if isinstance(g, str)][:4] + [secrets.token_hex(4)]
     base = dependencias(p, n)
     viejos = [dict(y, depende=dependencias(p, i)) for i, y in enumerate(p["pasos"])]
     armados = []
@@ -819,7 +860,7 @@ def dividir(d):
         # validar_plan los numeró desde 0 dentro de la división (y, sin «depende», del anterior): se pasan a índices del plan.
         dentro = [n + d for d in y["depende"] if 0 <= d < j]
         armados.append(dict(y, depende=sorted(set(base + dentro)) if j == 0 else sorted(set(dentro or [n + j - 1])),
-                            estado="pendiente", gastado=0, dividido_de=x["titulo"]))
+                            estado="pendiente", gastado=0, dividido_de=x["titulo"], grupo=grupo))
     if x.get("escritos"):
         armados[0]["que"] = _texto(armados[0]["que"] + " (Un intento anterior dejó cambios en: " + ", ".join(x["escritos"][:8]) + ".)", 700)
 
@@ -941,6 +982,8 @@ def lote(d):
     carpeta = p["carpeta"]
     base = _foto(carpeta)
 
+    tope = d.get("tope") if isinstance(d.get("tope"), int) and d["tope"] >= MIN_TOPE_PASO else 0
+
     def uno(n):
         x = p["pasos"][n]
         copia = os.path.join(tempfile.mkdtemp(prefix="pieza-paso-"), "app")
@@ -952,7 +995,8 @@ def lote(d):
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": 1})
             uso, registro = {}, []
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=copia, no_leer=NO_LEER,
-                                             al_evento=_avisar(copia, n, 1, uso, registro))
+                                             al_evento=_avisar(copia, n, 1, uso, registro),
+                                             detener=lambda: bool(tope) and uso.get("entrada", 0) + uso.get("salida", 0) >= tope)
             trabajos.emitir({"t": "fase", "fase": "revisar", "n": n, "intento": 1})
             escritos, cuidados, bytes_ = _cuidar(copia, antes)
             final = _foto(copia)
@@ -974,8 +1018,11 @@ def lote(d):
         x["registro"] = r["registro"][-MAX_REGISTRO:]
         historial = list(x.get("historial") or [])
         if r["error"]:
-            x.update(estado="fallo", error=ia.frase(r["error"]), causa="ia", intentos=1)
-            historial.append({"intento": len(historial) + 1, "resumen": "", "escritos": [], "causa": "ia", "error": x["error"]})
+            corte = bool(tope) and ia.detenido(r["error"])
+            causa = "tope" if corte else "ia"
+            x.update(estado="fallo", causa=causa, intentos=1,
+                     error=f"Llegó al tope de {tope} tokens por paso." if corte else ia.frase(r["error"]))
+            historial.append({"intento": len(historial) + 1, "resumen": "", "escritos": [], "causa": causa, "error": x["error"]})
             x["historial"] = historial[-MAX_HISTORIAL:]
             continue
         juntado = {}
@@ -1011,7 +1058,7 @@ def lote(d):
             ok, salida = False, falla
         if ok:
             trabajos.emitir({"t": "fase", "fase": "pruebas", "n": aplicados[0], "intento": 1})
-            ok, salida = probar(carpeta)
+            ok, salida = probar(carpeta, aplicados[0])
     for n in aplicados:
         x = p["pasos"][n]
         x.pop("nota", None)

@@ -88,6 +88,11 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 - **Probar de nuevo** (`proyectos.py reprobar`, acción `proyectoReprobar` → `pasoReprobado`): arma `acciones.json` y corre las
   pruebas, sin IA y sin gastar tokens. Si pasan, el paso queda listo. El freno de gasto (`FRENO`) compara solo lo de esta vez
   (`gastado_antes`).
+- **Tope por paso** (`tope` en `proyectoPaso`, `proyectoLote` y `proyectoDividir`, desde `MIN_TOPE_PASO`): la IA se corta con
+  `detener` al llegar (causa «tope») y la interfaz divide el paso sola (`dividirPorTope`) y sigue con la primera parte. Las partes
+  llevan `grupo` (la cadena de divisiones) y se numeran 5.1, 5.2 (`numeros`); los pasos de después no se corren.
+- **Avance:** el host de escritorio manda `{eventos: [...]}` a la función de «progreso» (`eventosDe` acepta eso y una lista).
+  `probar` manda cada línea de `pruebas/correr.sh` (`{"t": "probando"}`).
 - **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).

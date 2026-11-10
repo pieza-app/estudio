@@ -344,15 +344,22 @@ html[data-host="mac"] .panel-control { top: 44px; max-height: calc(100vh - 64px)
 .despues { display: grid; gap: 16px; margin-top: 24px; }
 
 /* Un paso en curso: sus etapas (prepara → lee → escribe → revisa → prueba), qué hace ahora y cuánto lleva */
-.etapas-paso { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 4px; }
-.etapas-paso li { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 6px; border-radius: 999px; font-size: 13.5px;
-  color: var(--texto-suave); background: var(--panel-2); }
-.etapa-punto { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--linea); font-size: 11px; }
-.etapa-punto .pz-giro { width: 12px; height: 12px; }
-.etapas-paso .hecha { color: var(--texto); }
+.etapas-paso { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 0; }
+.etapas-paso li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 0 0 12px; color: var(--texto-suave); }
+.etapas-paso li:not(:last-child)::after { content: ""; position: absolute; left: 10px; top: 24px; bottom: 2px; width: 1px; background: var(--linea); }
+.etapas-paso p { margin: 0; }
+.etapa-punto { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--linea); font-size: 12px;
+  background: var(--panel); }
+.etapa-punto .pz-giro { width: 14px; height: 14px; }
+.etapa-nombre { font-weight: 600; font-size: 14.5px; line-height: 22px; }
+.etapa-detalle { font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.etapas-paso .hecha { color: var(--texto-suave); }
 .etapas-paso .hecha .etapa-punto { border-color: transparent; background: var(--ok-suave); color: var(--ok); }
-.etapas-paso .actual { color: var(--texto); font-weight: 600; background: var(--acento-suave); box-shadow: inset 0 0 0 1px var(--acento); }
-.etapas-paso .actual .etapa-punto { border-color: transparent; }
+.etapas-paso .actual { color: var(--texto); }
+.etapas-paso .actual .etapa-punto { border-color: var(--acento); background: var(--acento-suave); }
+.etapas-paso .actual .etapa-nombre { color: var(--acento); }
+.etapas-paso .pendiente .etapa-detalle { opacity: .75; }
+.vivo-pensando { margin: 0; padding: 8px 12px; border-radius: var(--radio); background: var(--panel-2); font-size: 14px; }
 .vivo-ahora { font-weight: 550; }
 .vivo-intento { margin: 0 0 4px; padding: 10px 12px; border-radius: var(--radio); background: var(--panel-2); font-size: 14px; }
 .vivo-intento code { display: block; margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; color: var(--rojo); }
