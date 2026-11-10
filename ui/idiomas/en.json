@@ -388,6 +388,9 @@
   "La app «{nombre}» ya está creada en tu carpeta. Sigue con sus pasos.": "The app “{nombre}” is already created in your folder. Go on with its steps.",
   "Ir a construir": "Go build",
   "Rehacer lo que falta": "Redo what's left",
-  "La app ya está creada. «Rehacer lo que falta» deja los pasos listos y planifica de nuevo el resto, con pasos más chicos.": "The app is already created. “Redo what's left” keeps the finished steps and plans the rest again, with smaller steps."
+  "La app ya está creada. «Rehacer lo que falta» deja los pasos listos y planifica de nuevo el resto, con pasos más chicos.": "The app is already created. “Redo what's left” keeps the finished steps and plans the rest again, with smaller steps.",
+  "Hacer los pasos {lista} a la vez": "Do steps {lista} at once",
+  "Solo el paso {n}": "Only step {n}",
+  "En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.": "In this plan each step uses the one before, so they go one by one. “Redo what's left” (in the plan) rebuilds it with steps that can run at once."
  }
 }

@@ -383,11 +383,21 @@
     const modos = [["paso", "Paso a paso"], ["auto", "Todo automático"]].map(([m, n]) =>
       `<button type="button" data-modo="${m}" aria-pressed="${E.modo === m}"${E.ocupado ? " disabled" : ""}>${esc(n)}</button>`).join("");
     const fin = faltan === 0;
+    // Paso a paso, cuando hay varios pasos que no dependen entre sí: se ofrece hacerlos a la vez (y, aparte, solo el próximo).
+    const juntos = E.modo === "paso" && siguiente >= 0 && p.pasos[siguiente].estado !== "fallo" && EDITAN.includes(E.config.ia)
+      ? paraLote(p).filter((i) => p.pasos[i].estado !== "fallo") : [];
+    const puede = E.config.ia && !E.ocupado ? "" : " disabled";
     const accion = siguiente < 0 ? "" : E.ocupado === "paso"
       ? (E.modo === "auto" ? `<button type="button" class="pz-boton" id="parar"${E.parar ? " disabled" : ""}>${esc(E.parar ? "Se detiene al terminar este paso" : "Detener")}</button>` : "")
-      : `<button type="button" class="pz-boton pz-principal" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${E.config.ia && !E.ocupado ? "" : " disabled"}>${
+      : juntos.length > 1
+        ? `<button type="button" class="pz-boton pz-principal" id="hacer-juntos" data-ns="${juntos.join(",")}" data-sin-traducir${puede}>${
+          esc(Tp("Hacer los pasos {lista} a la vez", { lista: juntos.map((i) => i + 1).join(", ") }))}</button>
+          <button type="button" class="pz-boton" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${puede}>${esc(Tp("Solo el paso {n}", { n: siguiente + 1 }))}</button>`
+        : `<button type="button" class="pz-boton pz-principal" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${puede}>${
         esc(p.pasos[siguiente].estado === "fallo" ? Tp("Arreglar el paso {n}", { n: siguiente + 1 })
           : E.modo === "auto" ? Tp("Hacer todo desde el paso {n}", { n: siguiente + 1 }) : Tp("Hacer el paso {n}", { n: siguiente + 1 }))}</button>`;
+    // Un plan donde cada paso usa el anterior no deja hacer nada a la vez: se dice, con el camino para cambiarlo.
+    const enFila = EDITAN.includes(E.config.ia) && faltan > 2 && p.pasos.every((x, i) => i === 0 || (depende(p, i).length === 1 && depende(p, i)[0] === i - 1));
     const quedan = !fin && siguiente < 0
       ? `<p class="aviso-pasos">${esc(Tp("Quedan {n} pasos sin terminar. Arréglalos para que tu app quede lista.", { n: faltan }))}</p>` : "";
     const principal = sinIA() + errorHTML() + quedan + (E.ocupado === "dividir" ? trabajando("Tu IA está dividiendo el paso en pasos más chicos…") : "")
@@ -401,6 +411,7 @@
       + (fin ? `<section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "");
     const lado = medidor(p) + `<div class="panel-bloque"><p class="etiqueta">Modo</p><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
         ${E.modo === "auto" ? `<label class="tope"><span>Detener al llegar a (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>` : ""}
+        ${enFila ? `<p class="panel-nota">${esc("En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.")}</p>` : ""}
         <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p></div>`
       + consolaHTML();
     const acciones = accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
@@ -561,6 +572,7 @@
     // Una app ya creada no se crea de nuevo: del plan va directo a construir.
     else if (b.id === "siguiente") irA(E.paso === 5 && creada() ? 7 : E.paso + 1);
     else if (b.id === "ir-construir") irA(7);
+    else if (b.id === "hacer-juntos") hacerLote(b.dataset.ns.split(",").map(Number));
     else if (b.id === "inicio" || b.id === "ir-inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
     else if (b.id === "explorar" || b.id === "explorar-lateral") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
     else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }

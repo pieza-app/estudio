@@ -154,6 +154,7 @@ await page.click("#hacer-paso");
 await page.waitForSelector(".pasos .estado-listo");
 await sinDesborde(page, "pasos a 390 px");
 await capturar(page, "4b-pasos-390");
+assert.equal(await page.getAttribute("#hacer-juntos", "data-ns"), "1,2", "paso a paso: ofrece los pasos que no dependen entre sí, a la vez");
 // Un paso que no quedó: dice por qué, muestra lo que hizo y se arregla o se salta desde ahí.
 await page.evaluate(() => window.Pieza._probar((E) => Object.assign(E.proyecto.pasos[1], {
   estado: "fallo", causa: "pruebas", error: "FALLA: test_lista esperaba 3 recetas", resumen: "Hice la lista de recetas. ".repeat(30),
