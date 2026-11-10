@@ -373,6 +373,21 @@
   "Dividirlo en pasos más chicos": "Split it into smaller steps",
   "«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.": "“Fix it” gives this error to your AI so it can correct it. If the step is too big, split it. To go on with the others, skip it for now.",
   "Tu IA está dividiendo el paso en pasos más chicos…": "Your AI is splitting the step into smaller steps…",
-  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué.": "Pieza does every step by itself, several at once when they don't depend on each other. If one fails, it fixes or splits it; if it still fails, it stops and tells you why."
+  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué.": "Pieza does every step by itself, several at once when they don't depend on each other. If one fails, it fixes or splits it; if it still fails, it stops and tells you why.",
+  "{n} pasos · toca uno para ver qué hace": "{n} steps · tap one to see what it does",
+  "usa {lista}": "uses {lista}",
+  "La revisión a ciegas: tres sesiones nuevas de tu IA leen solo tu idea y el plan, y buscan fallas.": "Blind review: three fresh sessions of your AI read only your idea and the plan, and look for flaws.",
+  "Revisión a ciegas: {n} hallazgos": "Blind review: {n} findings",
+  "{h} de {n} pasos listos": "{h} of {n} steps done",
+  "En curso": "Running",
+  "Cerrar todos": "Close all",
+  "Abrir todos": "Open all",
+  "Deja listo": "Leaves ready",
+  "ya hechas: 0 tokens": "already made: 0 tokens",
+  "Panel de control": "Control panel",
+  "La app «{nombre}» ya está creada en tu carpeta. Sigue con sus pasos.": "The app “{nombre}” is already created in your folder. Go on with its steps.",
+  "Ir a construir": "Go build",
+  "Rehacer lo que falta": "Redo what's left",
+  "La app ya está creada. «Rehacer lo que falta» deja los pasos listos y planifica de nuevo el resto, con pasos más chicos.": "The app is already created. “Redo what's left” keeps the finished steps and plans the rest again, with smaller steps."
  }
 }

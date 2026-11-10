@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.8.1
+- Los pasos del plan y de la construcción se ven en filas que se abren al tocarlas, sin un scroll gigante. Los botones, las cifras y el modo están en un panel de control a la derecha, siempre a la vista. En una app ya creada puedes revisar a ciegas, rehacer lo que falta (los pasos listos se quedan) e ir directo a construir. · *Plan and build steps are rows you tap to open, with no giant scroll. The buttons, numbers and mode are in a control panel on the right, always in view. In an app that's already created you can run the blind review, redo what's left (finished steps stay) and go straight to building.*
+
 ## 0.8.0
 - Pieza desarrolla mejor tu app: el plan trae pasos más chicos que dicen qué deja listo cada uno y de cuáles dependen. Los pasos que no dependen entre sí se hacen a la vez. Un paso que no queda se divide en pasos más chicos (solo, en «Todo automático», o con «Dividirlo»). · *Pieza builds your app better: the plan has smaller steps that say what each one leaves ready and which ones they depend on. Steps that don't depend on each other run at the same time. A step that doesn't work is split into smaller steps (by itself in “Do it all”, or with “Split it”).*
 

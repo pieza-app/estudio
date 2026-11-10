@@ -388,6 +388,29 @@ class Proyectos(unittest.TestCase):
         self.assertEqual(open(os.path.join(carpeta, "ui", "app.js")).read().splitlines()[0], "// paso 2")
         self.assertNotEqual(primera, "// paso 2")
 
+    def test_rehacer_lo_que_falta_de_una_app_creada(self):
+        """Una app ya creada: revisar y rehacer el plan funcionan; los pasos listos se quedan y el plan nuevo es solo lo que falta."""
+        self.plan_en_paralelo()
+        self.p.crear({"id": "recetas"})
+        proyecto = self.p._leer("recetas")
+        proyecto["pasos"][0].update(estado="listo", gastado=5000, resumen="Dejé el formato.")
+        proyecto["pasos"][2].update(estado="fallo", gastado=7000)
+        proyecto["estado"] = "pasos"
+        self.p._guardar(proyecto)
+        self.respuestas.append(json.dumps({"pasos": [
+            {"titulo": "Lista chica", "que": "a", "archivos": ["bin/lista.py"], "tokens": 500, "depende": [1]},
+            {"titulo": "Buscar chico", "que": "b", "archivos": ["bin/buscar.py"], "tokens": 500, "depende": [1]}]}))
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": []})
+        self.assertTrue(r["ok"], r)
+        p = r["proyecto"]
+        self.assertEqual(p["estado"], "pasos")
+        self.assertEqual([x["titulo"] for x in p["pasos"]], ["Datos", "Lista chica", "Buscar chico"])
+        self.assertEqual([x["depende"] for x in p["pasos"]], [[], [0], [0]])
+        self.assertIn("pasos 1 a 1: no los repitas", self.pedidos[-1][0])
+        self.assertGreaterEqual(p["gastado"], 12000)  # lo gastado en el paso que se fue sigue en la cuenta
+        self.respuestas.extend(['{"hallazgos": []}'] * 3)
+        self.assertTrue(self.p.revisar({"id": "recetas"})["ok"])
+
     def test_dividir_un_paso(self):
         self.plan_en_paralelo()
         self.respuestas.append(json.dumps({"pasos": [

@@ -12,7 +12,7 @@
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
-    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {},
+    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {}, abiertos: new Set(), cerrados: new Set(),
     vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
@@ -129,10 +129,10 @@
   // Lo que se gasta y lo que se ahorra: siempre a la vista desde el plan.
   function medidor(p) {
     const estimado = (p.pasos || []).reduce((s, x) => s + (x.tokens || 0), 0);
-    return `<div class="cifras medidor">
-      <p><b data-sin-traducir>~${esc(miles(p.gastado))}</b> <span>${esc("tokens gastados")}</span></p>
-      <p><b data-sin-traducir>~${esc(miles(estimado))}</b> <span>${esc("estimado del plan")}</span></p>
-      <p class="ahorro"><b data-sin-traducir>${ICONO}~${esc(miles(p.ahorro))}</b> <span>${esc("ahorrados con piezas")}</span></p></div>`;
+    return `<dl class="medidor panel-cifras">
+      <div><dt>${esc("tokens gastados")}</dt><dd data-sin-traducir>~${esc(miles(p.gastado))}</dd></div>
+      <div><dt>${esc("estimado del plan")}</dt><dd data-sin-traducir>~${esc(miles(estimado))}</dd></div>
+      <div class="ahorro"><dt>${esc("ahorrados con piezas")}</dt><dd data-sin-traducir>${ICONO}~${esc(miles(p.ahorro))}</dd></div></dl>`;
   }
   // El explorador: las apps públicas con el topic «hecho-con-pieza» (las lista la página de Pieza).
   function explorar() {
@@ -231,48 +231,65 @@
     return E.config.ia ? "" : `<p class="aviso-ia">${esc("Para este paso necesitas tu IA (Claude Code, Codex o Gemini).")}
       <button type="button" class="pz-boton" id="elegir-ia">Elegir mi IA</button></p>`;
   }
+  // Un paso del plan, colapsado: número, título y tokens; al abrirlo, qué hace, qué deja listo y de qué depende.
+  function filaPlan(p, x, i) {
+    const dep = depende(p, i);
+    return `<li><details data-abierto="plan:${i}"${E.abiertos.has(`plan:${i}`) ? " open" : ""}><summary>
+      <span class="fila-n">${String(i + 1).padStart(2, "0")}</span><span class="fila-titulo" data-sin-traducir>${esc(x.titulo)}</span>
+      ${dep.length ? `<span class="fila-usa" data-sin-traducir>${esc(Tp("usa {lista}", { lista: dep.map((d) => d + 1).join(", ") }))}</span>` : ""}
+      <span class="fila-meta" data-sin-traducir>${esc(Tp("~{n} tokens", { n: miles(x.tokens) }))}</span></summary>
+      <div class="fila-cuerpo"><p data-sin-traducir>${esc(x.que)}</p>
+      ${x.entrega ? `<p class="suave"><span class="etiqueta">Deja listo</span> <span data-sin-traducir>${esc(x.entrega)}</span></p>` : ""}
+      ${(x.archivos || []).length ? `<p class="archivos" data-sin-traducir>${esc(x.archivos.join(", "))}</p>` : ""}</div></details></li>`;
+  }
   function pasoPlan() {
     const p = E.proyecto;
     const listo = p && p.pasos && p.pasos.length;
-    const filas = listo ? `<ol class="plan">${p.pasos.map((x) => `<li><b data-sin-traducir>${esc(x.titulo)}</b>
-      <span class="suave" data-sin-traducir>${esc(x.que)}</span>
-      <small class="suave" data-sin-traducir>${esc(Tp("~{n} tokens", { n: miles(x.tokens) }))}</small></li>`).join("")}</ol>` : "";
-    return cabeza() + `<p class="suave">Tu IA desglosa lo propio de tu app en pasos chicos. Las piezas ya hechas no entran al plan.</p>`
-      + sinIA() + (listo ? medidor(p) + `<div class="dos-columnas"><div class="columna-principal">${filas}</div><aside class="columna-lado">${revisionHTML(p)}</aside></div>` : "") + errorHTML()
+    const principal = (listo ? `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{n} pasos · toca uno para ver qué hace", { n: p.pasos.length }))}</p>
+        <button type="button" class="pz-plano" id="abrir-todo" data-que="plan">${esc(abiertos("plan") ? "Cerrar todos" : "Abrir todos")}</button></div>
+        ${revisionHTML(p)}<ol class="filas plan">${p.pasos.map((x, i) => filaPlan(p, x, i)).join("")}</ol>`
+      : `<div class="vacio-paso"><p>${esc("Tu IA desglosa lo propio de tu app en pasos chicos. Las piezas ya hechas no entran al plan.")}</p></div>`)
       + (E.ocupado === "plan" ? trabajando("Tu IA está armando el plan…") : "")
-      + (E.ocupado === "revisar" ? trabajando("Tres revisores nuevos están leyendo tu idea…") : "")
-      + `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
-        <button type="button" class="pz-boton${listo ? "" : " pz-principal"}" id="hacer-plan"${E.ocupado || !E.config.ia ? " disabled" : ""}>${
-          esc(listo ? "Rehacer el plan" : "Hacer el plan con mi IA")}</button>
-        ${listo ? `<button type="button" class="pz-boton pz-principal" id="siguiente"${E.ocupado ? " disabled" : ""}>Siguiente</button>` : ""}</div>`;
+      + (E.ocupado === "revisar" ? trabajando("Tres revisores nuevos están leyendo tu idea…") : "");
+    const acciones = (listo ? `<button type="button" class="pz-boton pz-principal" id="siguiente"${E.ocupado ? " disabled" : ""}>${esc(creada() ? "Ir a construir" : "Siguiente")}</button>` : "")
+      + `<button type="button" class="pz-boton${listo ? "" : " pz-principal"}" id="hacer-plan"${E.ocupado || !E.config.ia ? " disabled" : ""}>${
+        esc(!listo ? "Hacer el plan con mi IA" : creada() ? "Rehacer lo que falta" : "Rehacer el plan")}</button>
+      ${listo ? `<button type="button" class="pz-boton" id="revisar"${E.ocupado || !E.config.ia ? " disabled" : ""}>${esc(p.revision ? "Revisar de nuevo" : "Revisar a ciegas")}</button>` : ""}
+      <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>`;
+    const lado = listo ? medidor(p) + (creada() ? `<p class="panel-nota">${esc("La app ya está creada. «Rehacer lo que falta» deja los pasos listos y planifica de nuevo el resto, con pasos más chicos.")}</p>` : "")
+      + `<p class="panel-nota">${esc("La revisión a ciegas: tres sesiones nuevas de tu IA leen solo tu idea y el plan, y buscan fallas.")}</p>` : "";
+    return marcoPaso(sinIA() + errorHTML() + principal, { acciones, lado });
   }
   // Revisar a ciegas (elefante y pez dorado): 3 sesiones nuevas de tu IA leen solo la idea y el plan, y buscan fallas.
   const ENFOQUES = { riesgos: "Riesgos y seguridad", uso: "Uso", pasos: "Plan" };
   const GRAVEDAD = { alta: "Grave", media: "Importante", baja: "Menor" };
   function revisionHTML(p) {
     const r = p.revision;
-    const boton = `<button type="button" class="pz-boton" id="revisar"${E.ocupado || !E.config.ia ? " disabled" : ""}>${esc(r ? "Revisar de nuevo" : "Revisar a ciegas")}</button>`;
-    if (!r) return `<section class="revision"><h3>${esc("Revisión a ciegas")}</h3>
-      <p class="suave">${esc("Tres sesiones nuevas de tu IA leen solo tu idea y el plan, sin saber cómo se armó, y buscan fallas: riesgos, uso y pasos.")}</p>${boton}</section>`;
-    if (!r.hallazgos.length) return `<section class="revision"><h3>${esc("Revisión a ciegas")}</h3><p class="suave">${esc("Los revisores no encontraron fallas.")}</p>${boton}</section>`;
+    if (!r) return "";
+    if (!r.hallazgos.length) return `<section class="revision"><p class="suave">${esc("Los revisores no encontraron fallas.")}</p></section>`;
     const elegidos = E.aceptados || [];
     const filas = r.hallazgos.map((h) => `<li class="gravedad-${esc(h.gravedad)}"><label>
       <input type="checkbox" data-hallazgo="${esc(h.id)}"${elegidos.includes(h.id) ? " checked" : ""}${E.ocupado ? " disabled" : ""}>
       <span><small class="chip-estado">${esc(GRAVEDAD[h.gravedad] || h.gravedad)} · ${esc(ENFOQUES[h.enfoque] || h.enfoque)}</small>
       <b data-sin-traducir>${esc(h.problema)}</b><span class="suave" data-sin-traducir>${esc(h.propuesta)}</span></span></label></li>`).join("");
     const n = elegidos.length;
-    return `<section class="revision"><h3>${esc("Revisión a ciegas")}</h3>
+    return `<details class="revision" data-cerrable="revision"${E.cerrados.has("revision") ? "" : " open"}>
+      <summary><span class="fila-titulo" data-sin-traducir>${esc(Tp("Revisión a ciegas: {n} hallazgos", { n: r.hallazgos.length }))}</span></summary>
       <p class="suave">${esc("Marca los cambios que quieres y rehaz el plan con ellos.")}</p><ul class="hallazgos">${filas}</ul>
-      <div class="pz-pie pz-izq">${boton}<button type="button" class="pz-boton pz-principal" id="rehacer-con"${E.ocupado || !n ? " disabled" : ""} data-sin-traducir>${
-        esc(Tp("Rehacer el plan con {n} cambios", { n }))}</button></div></section>`;
+      <button type="button" class="pz-boton pz-principal" id="rehacer-con"${E.ocupado || !n ? " disabled" : ""} data-sin-traducir>${
+        esc(Tp("Rehacer el plan con {n} cambios", { n }))}</button></details>`;
   }
+  // La app ya tiene su carpeta (se creó): sus piezas ya están, el plan solo cambia lo que falta.
+  function creada() { return !!(E.proyecto && E.proyecto.carpeta && ["creado", "pasos"].includes(E.proyecto.estado)); }
   function pasoCrear() {
     const p = E.proyecto;
-    return cabeza() + `<p class="suave" data-sin-traducir>${esc(Tp("Pieza arma la app «{nombre}» con {n} piezas ya hechas, en la carpeta Pieza de tu usuario. No gasta tokens.",
-      { nombre: p.nombre, n: (E.ficha && E.ficha.hechas) || 0 }))}</p>` + medidor(p) + errorHTML()
-      + (E.ocupado === "crear" ? trabajando("Armando la app…") : "")
-      + `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
-        <button type="button" class="pz-boton pz-principal" id="crear"${E.ocupado ? " disabled" : ""}>Crear la app</button></div>`;
+    if (creada()) return marcoPaso(`<div class="vacio-paso"><p data-sin-traducir>${esc(Tp("La app «{nombre}» ya está creada en tu carpeta. Sigue con sus pasos.", { nombre: p.nombre }))}</p>
+      <p><code data-sin-traducir>${esc(p.carpeta)}</code></p></div>`, { lado: medidor(p), acciones: `<button type="button" class="pz-boton pz-principal" id="ir-construir">Ir a construir</button>
+      <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>` });
+    const principal = `<div class="vacio-paso"><p data-sin-traducir>${esc(Tp("Pieza arma la app «{nombre}» con {n} piezas ya hechas, en la carpeta Pieza de tu usuario. No gasta tokens.",
+      { nombre: p.nombre, n: (E.ficha && E.ficha.hechas) || 0 }))}</p></div>` + errorHTML() + (E.ocupado === "crear" ? trabajando("Armando la app…") : "");
+    return marcoPaso(principal, { lado: medidor(p), acciones: `<button type="button" class="pz-boton pz-principal" id="crear"${E.ocupado ? " disabled" : ""}>Crear la app</button>
+      <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>` });
   }
   // Por qué no quedó un paso, en palabras de persona (la causa la anota proyectos.py; el error técnico va aparte).
   const CAUSAS = {
@@ -338,18 +355,31 @@
       <button type="button" class="pz-boton" data-dividir="${i}"${corre || !E.config.ia ? " disabled" : ""}>Dividirlo en pasos más chicos</button>
       ${E.saltados.has(i) ? "" : `<button type="button" class="pz-boton" data-saltar="${i}"${corre ? " disabled" : ""}>Saltarlo por ahora</button>`}</div></div>`;
   }
+  // Un paso al construir, colapsado: estado, número, título y tokens. Se abre solo el que corre o el que falló.
+  const ICONO_ESTADO = { listo: "✓", fallo: "!", pendiente: "" };
+  function filaPaso(p, x, i) {
+    const corre = E.ocupado === "paso" && E.enCurso.includes(i);
+    const dep = depende(p, i);
+    const abierto = corre || x.estado === "fallo" || E.abiertos.has(`paso:${i}`);
+    const saltado = E.saltados.has(i) && x.estado !== "listo";
+    const tokens = x.gastado ? (x.medido ? Tp("{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens gastados", { n: miles(x.gastado) }))
+      : Tp("~{n} tokens estimados", { n: miles(x.tokens) });
+    return `<li class="estado-${esc(x.estado)}${saltado ? " saltado" : ""}${corre ? " corriendo" : ""}" id="paso-${i}"><details data-abierto="paso:${i}"${abierto ? " open" : ""}><summary>
+      <span class="fila-n">${corre ? `<span class="pz-giro" aria-hidden="true"></span>` : esc(ICONO_ESTADO[x.estado] || "") || String(i + 1).padStart(2, "0")}</span>
+      <span class="fila-titulo" data-sin-traducir>${esc(x.titulo)}</span>
+      ${dep.length ? `<span class="fila-usa usa" data-sin-traducir>${esc(Tp("usa {lista}", { lista: dep.map((d) => d + 1).join(", ") }))}</span>` : ""}
+      ${saltado || corre || x.estado !== "pendiente" ? `<span class="chip-estado">${esc(saltado ? "Saltado" : corre ? "En curso" : ESTADOS[x.estado] || x.estado)}</span>` : ""}
+      <span class="fila-meta" data-sin-traducir>${esc(tokens)}</span></summary>
+      <div class="fila-cuerpo"><p class="suave" data-sin-traducir>${esc(x.que || "")}</p>
+      ${x.resumen && !corre ? `<p class="resumen-paso" data-sin-traducir>${esc(x.resumen)}</p>` : ""}
+      ${corre ? vivoHTML(i) : x.estado === "fallo" ? falloHTML(x, i) : ""}
+      ${corre ? "" : detallePaso(x)}</div></details></li>`;
+  }
   function pasoPasos() {
     const p = E.proyecto;
     const siguiente = proximo(p);
     const faltan = p.pasos.filter((x) => x.estado !== "listo").length;
-    const filas = p.pasos.map((x, i) => `<li class="estado-${esc(x.estado)}${E.saltados.has(i) ? " saltado" : ""}" id="paso-${i}">
-      <span class="chip-estado">${esc(E.saltados.has(i) && x.estado !== "listo" ? "Saltado" : ESTADOS[x.estado] || x.estado)}</span>
-      <b data-sin-traducir>${esc(x.titulo)}</b>
-      <small class="suave" data-sin-traducir>${esc(x.gastado ? (x.medido ? Tp("{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens gastados", { n: miles(x.gastado) })) : Tp("~{n} tokens estimados", { n: miles(x.tokens) }))}</small>
-      ${x.resumen ? `<p class="resumen-paso" data-sin-traducir>${esc(x.resumen)}</p>` : ""}
-      ${depende(p, i).length ? `<small class="usa" data-sin-traducir>${esc(Tp("Usa lo del paso {lista}", { lista: depende(p, i).map((d) => d + 1).join(", ") }))}</small>` : ""}
-      ${E.ocupado === "paso" && E.enCurso.includes(i) ? vivoHTML(i) : x.estado === "fallo" ? falloHTML(x, i) : ""}
-      ${E.ocupado === "paso" && E.enCurso.includes(i) ? "" : detallePaso(x)}</li>`).join("");
+    const hechos = p.pasos.length - faltan;
     const modos = [["paso", "Paso a paso"], ["auto", "Todo automático"]].map(([m, n]) =>
       `<button type="button" data-modo="${m}" aria-pressed="${E.modo === m}"${E.ocupado ? " disabled" : ""}>${esc(n)}</button>`).join("");
     const fin = faltan === 0;
@@ -358,23 +388,24 @@
       : `<button type="button" class="pz-boton pz-principal" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${E.config.ia && !E.ocupado ? "" : " disabled"}>${
         esc(p.pasos[siguiente].estado === "fallo" ? Tp("Arreglar el paso {n}", { n: siguiente + 1 })
           : E.modo === "auto" ? Tp("Hacer todo desde el paso {n}", { n: siguiente + 1 }) : Tp("Hacer el paso {n}", { n: siguiente + 1 }))}</button>`;
-    // Lo que se hace va arriba y queda a la vista al bajar (barra fija): el modo, el tope y el botón del próximo paso.
-    const barra = `<div class="barra-pasos"><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
-      ${E.modo === "auto" ? `<label class="tope"><span>Tope</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}" aria-label="Detener al llegar a (tokens)"></label>` : ""}
-      <span class="barra-pasos-espacio"></span>
-      <button type="button" class="pz-boton" id="ver-app">Ver mi app</button>${accion}</div>`;
     const quedan = !fin && siguiente < 0
       ? `<p class="aviso-pasos">${esc(Tp("Quedan {n} pasos sin terminar. Arréglalos para que tu app quede lista.", { n: faltan }))}</p>` : "";
-    return cabeza() + medidor(p) + barra
-      + `<p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
-      + sinIA() + errorHTML() + quedan + (E.ocupado === "dividir" ? trabajando("Tu IA está dividiendo el paso en pasos más chicos…") : "")
-      + `<div class="dos-columnas"><div class="columna-principal"><ol class="pasos">${filas}</ol></div>
-        <aside class="columna-lado">${consolaHTML()}</aside></div>`
+    const principal = sinIA() + errorHTML() + quedan + (E.ocupado === "dividir" ? trabajando("Tu IA está dividiendo el paso en pasos más chicos…") : "")
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
-        <p class="suave">Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.</p></div>
-        <section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "")
-      + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button></div>`;
+        <p class="suave">Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.</p></div>` : "")
+      + `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{h} de {n} pasos listos", { h: hechos, n: p.pasos.length }))}</p>
+        <button type="button" class="pz-plano" id="abrir-todo" data-que="paso">${esc(abiertos("paso") ? "Cerrar todos" : "Abrir todos")}</button></div>
+        <progress class="barra-avance" max="${p.pasos.length}" value="${hechos}" aria-hidden="true"></progress>
+        <ol class="filas pasos">${p.pasos.map((x, i) => filaPaso(p, x, i)).join("")}</ol>`
+      + (fin ? `<section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "");
+    const lado = medidor(p) + `<div class="panel-bloque"><p class="etiqueta">Modo</p><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
+        ${E.modo === "auto" ? `<label class="tope"><span>Detener al llegar a (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>` : ""}
+        <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p></div>`
+      + consolaHTML();
+    const acciones = accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
+      <button type="button" class="pz-boton pz-plano" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>`;
+    return marcoPaso(principal, { acciones, lado });
   }
   // Las etapas que ve la persona: los 7 pasos del asistente, agrupados en 4.
   const ETAPAS = [["Tu idea", [1, 2]], ["Piezas", [3, 4]], ["Plan", [5, 6]], ["Construir", [7]]];
@@ -386,27 +417,35 @@
   function cabeza() {
     return etapas() + `<p class="paso-n" data-sin-traducir>${esc(Tp("Paso {n} de {total}", { n: E.paso, total: PASOS.length }))}</p><h2>${esc(PASOS[E.paso - 1])}</h2>`;
   }
+  // Los botones de un paso del asistente (van en el panel de control): Siguiente arriba y ancho, Atrás plano.
   function pie({ puede = true, siguiente = "Siguiente" } = {}) {
-    return `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
-      <button type="button" class="pz-boton pz-principal" id="siguiente"${puede ? "" : " disabled"}>${esc(siguiente)}</button></div>`;
+    return `<button type="button" class="pz-boton pz-principal" id="siguiente"${puede ? "" : " disabled"}>${esc(siguiente)}</button>
+      <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>`;
+  }
+  // Todo paso del asistente: lo principal a la izquierda y el panel de control a la derecha (fijo al bajar), con los botones
+  // arriba y lo que ayuda a decidir abajo. En el celular, el panel va arriba y sus botones quedan fijos abajo.
+  // Lo que la persona abrió o cerró (los pasos se pintan de nuevo a menudo: así no se cierran solos).
+  const abiertos = (que) => [...E.abiertos].some((k) => k.startsWith(que + ":"));
+  function marcoPaso(principal, { acciones = "", lado = "" } = {}) {
+    return cabeza() + `<div class="paso-grilla"><div class="paso-principal">${principal}</div>
+      <aside class="panel-control" aria-label="Panel de control"><div class="panel-acciones">${acciones}</div>${lado}</aside></div>`;
   }
   function pasoSistemas() {
     const n = E.nueva;
     const grupos = SISTEMAS.map((g) => `<fieldset class="grupo"><legend>${esc(g.grupo)}</legend>${g.ids.map(([id, nombre]) =>
       `<label class="opcion"><input type="checkbox" data-sistema="${id}"${n.plataformas.includes(id) ? " checked" : ""}> <span>${esc(nombre)}</span>${
         id === "android" ? `<small class="suave">${esc("Por hacer: su pieza todavía no existe")}</small>` : ""}</label>`).join("")}</fieldset>`).join("");
-    return cabeza() + `<p class="suave">El sistema decide qué piezas sirven. Por eso va primero.</p>${grupos}` + pie({ puede: n.plataformas.length > 0 });
+    return marcoPaso(grupos, { acciones: pie({ puede: n.plataformas.length > 0 }),
+      lado: `<p class="panel-nota">${esc("El sistema decide qué piezas sirven. Por eso va primero.")}</p>` });
   }
   function pasoIdea() {
     const n = E.nueva;
-    return cabeza() + `<div class="dos-columnas"><div class="columna-principal">
-      <label class="pz-campo"><span>Nombre</span><input id="nombre" maxlength="40" value="${esc(n.nombre)}" autocomplete="off"></label>
+    return marcoPaso(`<label class="pz-campo"><span>Nombre</span><input id="nombre" maxlength="40" value="${esc(n.nombre)}" autocomplete="off"></label>
       <label class="pz-campo"><span>En una frase: qué hace y para quién</span><textarea id="frase" rows="3" maxlength="400">${esc(n.frase)}</textarea></label>
       <div class="caja-detalle"><div class="caja-detalle-cabeza"><label for="detalle">La idea completa</label><span class="chip-estado">Opcional</span>
         <span class="contador" id="contador-detalle" data-sin-traducir>${esc(miles((n.detalle || "").length))} / 12.000</span></div>
-        <textarea id="detalle" rows="10" maxlength="12000" placeholder="Cómo funciona, reglas, pantallas y datos. Va al plan y a cada paso.">${esc(n.detalle || "")}</textarea></div>
-      </div><aside class="columna-lado" id="piezas-vivo">${piezasVivo()}</aside></div>`
-      + pie({ puede: n.nombre.trim().length > 0 && n.frase.trim().length > 0 });
+        <textarea id="detalle" rows="10" maxlength="12000" placeholder="Cómo funciona, reglas, pantallas y datos. Va al plan y a cada paso.">${esc(n.detalle || "")}</textarea></div>`,
+      { acciones: pie({ puede: n.nombre.trim().length > 0 && n.frase.trim().length > 0 }), lado: `<div id="piezas-vivo">${piezasVivo()}</div>` });
   }
   // Mientras se escribe la frase: las piezas ya hechas que calzan y lo que se ahorra (bytes ÷ 4, como la ficha).
   function piezasVivo() {
@@ -434,8 +473,8 @@
     const bloques = Object.entries(porCategoria).map(([c, ps]) => `<fieldset class="grupo"><legend>${esc(CATEGORIAS[c] || c)}</legend>${
       ps.map((p) => filaPieza(p, p.recomendar.siempre || n.piezas.includes(p.id), p.recomendar.siempre)).join("")}</fieldset>`).join("");
     const hechas = disponibles.filter((p) => p.estado === "lista" && (p.recomendar.siempre || n.piezas.includes(p.id))).length;
-    return cabeza() + `<p class="suave">${ICONO} ${esc("Las piezas con este ícono ya están hechas: no gastan tokens. Marcamos las que calzan con tu frase.")}</p>
-      <p class="resumen" data-sin-traducir>${esc(Tp("{n} piezas ya hechas", { n: hechas }))}</p>${bloques}` + pie();
+    return marcoPaso(bloques, { acciones: pie(), lado: `<dl class="panel-cifras"><div><dt>${esc("ya hechas: 0 tokens")}</dt><dd class="resumen" data-sin-traducir>${esc(String(hechas))}</dd></div></dl>
+      <p class="panel-nota">${ICONO} ${esc("Las piezas con este ícono ya están hechas: no gastan tokens. Marcamos las que calzan con tu frase.")}</p>` });
   }
   function pasoFicha() {
     const f = E.ficha;
@@ -444,17 +483,16 @@
     const nombres = Object.fromEntries(E.catalogo.map((p) => [p.id, enIdioma(p, "nombre")]));
     const lista = (xs) => `<ul>${xs.map((x) => `<li data-sin-traducir>${x}</li>`).join("")}</ul>`;
     const permisos = Object.entries(f.permisos);
-    return cabeza() + `<div class="cifras">
-        <p><b>${esc(String(f.hechas))}</b> <span>${esc("piezas ya hechas")}</span></p>
-        <p><b>${esc(String(f.por_hacer.length))}</b> <span>${esc("por hacer")}</span></p>
-        <p><b data-sin-traducir>~${esc(f.tokens_ahorrados.toLocaleString(i18n.idioma))}</b> <span>${esc("tokens que no gastas")}</span></p></div>
-      ${f.por_hacer.length ? `<h3>Por hacer</h3>${lista(f.por_hacer.map((id) => esc(nombres[id] || id)))}` : ""}
+    const cifras = `<dl class="panel-cifras cifras">
+        <div><dt>${esc("piezas ya hechas")}</dt><dd>${esc(String(f.hechas))}</dd></div>
+        <div><dt>${esc("por hacer")}</dt><dd>${esc(String(f.por_hacer.length))}</dd></div>
+        <div class="ahorro"><dt>${esc("tokens que no gastas")}</dt><dd data-sin-traducir>~${esc(f.tokens_ahorrados.toLocaleString(i18n.idioma))}</dd></div></dl>`;
+    return marcoPaso(`${f.por_hacer.length ? `<h3>Por hacer</h3>${lista(f.por_hacer.map((id) => esc(nombres[id] || id)))}` : ""}
       <h3>Pantallas</h3>${lista(f.pantallas.map((x) => `<b>${esc(x.donde)} · ${esc(x.nombre)}</b>: ${esc(x.que)}`))}
       <h3>Permisos</h3>${permisos.length ? permisos.map(([plat, filas]) => `<p class="plataforma" data-sin-traducir>${esc(plat)}</p>${
         lista(filas.map((x) => `<b>${esc(x.clave)}</b>: ${esc(x.por)}`))}`).join("") : `<p class="suave">No pide permisos del sistema.</p>`}
       <h3>Internet</h3>${f.red.length ? lista(f.red.map(esc)) : `<p class="suave">Funciona sin internet.</p>`}
-      <h3>Lo que te toca</h3>${lista(f.tareas.map(esc))}`
-      + pie({ siguiente: "Siguiente: el plan" });
+      <h3>Lo que te toca</h3>${lista(f.tareas.map(esc))}`, { acciones: pie({ siguiente: "Siguiente: el plan" }), lado: cifras });
   }
   function principal() {
     const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha, pasoPlan, pasoCrear, pasoPasos];
@@ -485,6 +523,13 @@
   }
 
   // ── Lo que hace la persona ──
+  // Abrir o cerrar un paso queda anotado (toggle no burbujea: se escucha en captura).
+  document.addEventListener("toggle", (ev) => {
+    const d = ev.target;
+    if (!d.dataset) return;
+    if (d.dataset.abierto) d.open ? E.abiertos.add(d.dataset.abierto) : E.abiertos.delete(d.dataset.abierto);
+    if (d.dataset.cerrable) d.open ? E.cerrados.delete(d.dataset.cerrable) : E.cerrados.add(d.dataset.cerrable);
+  }, true);
   document.addEventListener("click", async (ev) => {
     if (bv.manejarClic(ev) || ui.manejarClic(ev)) return;
     if (tema.manejarClic(ev)) return pintar();
@@ -513,7 +558,9 @@
       irA(1);
     }
     else if (b.id === "atras") irA(E.paso - 1);
-    else if (b.id === "siguiente") irA(E.paso + 1);
+    // Una app ya creada no se crea de nuevo: del plan va directo a construir.
+    else if (b.id === "siguiente") irA(E.paso === 5 && creada() ? 7 : E.paso + 1);
+    else if (b.id === "ir-construir") irA(7);
     else if (b.id === "inicio" || b.id === "ir-inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
     else if (b.id === "explorar" || b.id === "explorar-lateral") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
     else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }
@@ -542,6 +589,12 @@
     else if (b.id === "hacer-paso") { if (E.modo !== "auto" || E.proyecto.pasos[Number(b.dataset.n)].estado === "fallo" || !seguirAuto()) hacerPaso(Number(b.dataset.n)); }
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
     else if (b.id === "parar") { E.parar = true; pintar(); }
+    else if (b.id === "abrir-todo") {
+      const que = b.dataset.que, total = E.proyecto ? E.proyecto.pasos.length : 0;
+      if (abiertos(que)) E.abiertos = new Set([...E.abiertos].filter((k) => !k.startsWith(que + ":")));
+      else for (let i = 0; i < total; i++) E.abiertos.add(`${que}:${i}`);
+      pintar();
+    }
     else if (b.dataset.dividir) dividirPaso(Number(b.dataset.dividir));
     else if (b.dataset.arreglar) { const n = Number(b.dataset.arreglar); E.saltados.delete(n); hacerPaso(n); }
     else if (b.dataset.saltar) {
@@ -601,7 +654,7 @@
     const p = E.proyectos.find((x) => x.id === id);
     if (!p) return;
     E.proyecto = p;
-    E.saltados = new Set(); E.reparados = {}; E.divididos = {};
+    E.saltados = new Set(); E.reparados = {}; E.divididos = {}; E.abiertos = new Set();
     E.nueva = { plataformas: p.plataformas, nombre: p.nombre, frase: p.frase, detalle: p.detalle || "", piezas: p.piezas, tocadas: p.piezas };
     irA(p.estado === "plan" ? 5 : p.estado === "nuevo" ? 5 : 7);
   }
