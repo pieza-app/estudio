@@ -24,7 +24,7 @@ HERRAMIENTAS = {
     "git": ("Git", "Guardar las versiones de tu app y publicarla", True, ["git", "--version"], "git", "Git.Git",
             "https://git-scm.com/downloads"),
     "node": ("Node.js", "Probar la interfaz de tu app", True, ["node", "--version"], "node", "OpenJS.NodeJS.LTS", "https://nodejs.org/"),
-    "rust": ("Rust", "Armar y probar la app de escritorio en tu computador (sin Rust, GitHub la arma igual al publicar)", False,
+    "rust": ("Rust", "Armar y probar la parte nativa de tu app (Rust + Tauri). Sin Rust, las pruebas de cada paso no la revisan.", True,
              ["cargo", "--version"], "rust", "Rustlang.Rustup", "https://rustup.rs/"),
     "gh": ("GitHub CLI", "Publicar tu app con tu cuenta de GitHub", False, ["gh", "--version"], "gh", "GitHub.cli", "https://cli.github.com/"),
 }

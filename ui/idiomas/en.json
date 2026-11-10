@@ -521,7 +521,6 @@
   "Lo que usa tu computador": "What your computer uses",
   "Guardar las versiones de tu app y publicarla": "Keep your app's versions and publish it",
   "Probar la interfaz de tu app": "Test your app's interface",
-  "Armar y probar la app de escritorio en tu computador (sin Rust, GitHub la arma igual al publicar)": "Build and test the desktop app on your computer (without Rust, GitHub still builds it when you publish)",
   "Publicar tu app con tu cuenta de GitHub": "Publish your app with your GitHub account",
   "Listo: quedó instalada.": "Done: it's installed.",
   "Pieza no puede instalarla sola en este computador: bájala desde su página.": "Pieza can't install it by itself on this computer: download it from its page.",
@@ -602,6 +601,7 @@
   "Ya intenté arreglarlo solo: tu IA lo corrigió con este error y, si seguía sin quedar, lo dividí. Puedes darle otra vuelta (vuelve a intentarlo solo), probar de nuevo sin IA si lo arreglaste tú, dividirlo o saltarlo por ahora.": "I already tried to fix it on my own: your AI corrected it with this error and, if it still didn't work, I split it. You can give it another go (it tries on its own again), test again without AI if you fixed it yourself, split it or skip it for now.",
   "Intentarlo de nuevo": "Try again",
   "Si un paso falla, tu IA lo arregla sola (hasta 2 veces) y, si sigue, lo divido en partes. Solo te pregunto si nada de eso resulta.": "If a step fails, your AI fixes it on its own (up to 2 times) and, if it still fails, I split it into parts. I only ask you if none of that works.",
-  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí.": "Pieza does all the steps on its own, several at once when they don't depend on each other."
+  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí.": "Pieza does all the steps on its own, several at once when they don't depend on each other.",
+  "Armar y probar la parte nativa de tu app (Rust + Tauri). Sin Rust, las pruebas de cada paso no la revisan.": "Build and test your app's native part (Rust + Tauri). Without Rust, each step's tests don't check it."
  }
 }
