@@ -17,7 +17,9 @@ body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 
 /* El marco: barra lateral + contenido. En el celular la barra queda arriba. */
 .marco { display: flex; flex-wrap: wrap; min-height: 100vh; }
 .lateral { flex: 1 1 232px; max-width: 256px; background: var(--lateral); color: var(--lateral-texto); padding: 20px 14px;
-  display: flex; flex-direction: column; gap: 16px; }
+  display: flex; flex-direction: column; gap: 16px;
+  /* Quieta al bajar: la marca, «App nueva» y Ajustes siempre a la vista. */
+  position: sticky; top: 0; height: 100vh; overflow-y: auto; align-self: flex-start; scrollbar-width: thin; }
 .lateral button { font: inherit; }
 .marca { display: flex; align-items: center; gap: 10px; padding: 4px 8px; background: none; border: 0; color: inherit; cursor: pointer;
   font-size: 19px !important; font-weight: 700; letter-spacing: -.01em; }
@@ -38,7 +40,8 @@ body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 
 .lateral :focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
 @media (max-width: 760px) {
   .marco { flex-direction: column; flex-wrap: nowrap; }
-  .lateral { flex: none; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 10px 12px; gap: 8px; }
+  .lateral { flex: none; max-width: none; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 10px 12px; gap: 8px;
+    position: static; height: auto; overflow: visible; align-self: auto; }
   .lateral .pz-principal { width: auto; }
   .lateral-titulo, .lateral-apps, .lateral-ia, #explorar-lateral { display: none; }
   .lateral { flex-wrap: nowrap; }
@@ -357,3 +360,8 @@ html[data-host="mac"] .panel-control { top: 44px; max-height: calc(100vh - 64px)
 /* En el panel angosto, cada herramienta en su propia línea: nombre, para qué y el botón abajo */
 .equipo.corto li { grid-template-columns: minmax(0, 1fr); }
 .equipo.corto li > .pz-boton, .equipo.corto li > .trabajando { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 4px; }
+
+/* Lo que falló, a la vista (una línea) */
+.fallo-linea { display: grid; gap: 4px; margin: 0; }
+.fallo-linea code { display: block; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); color: var(--rojo); font-size: 12.5px;
+  white-space: pre-wrap; overflow-wrap: anywhere; }

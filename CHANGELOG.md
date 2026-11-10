@@ -8,6 +8,11 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.14.0
+- «Probar de nuevo (sin IA)»: si un paso falló y ya está arreglado, corre solo las pruebas y lo deja listo sin gastar tokens. Lo que falló se ve en una línea, sin abrir el error completo. · *“Test again (no AI)”: if a step failed and it's already fixed, it only runs the tests and marks it done without spending tokens. What failed shows in one line, without opening the full error.*
+- El freno de gasto mira solo lo que el paso gastó esta vez: lo gastado antes ya no corta un «Arreglarlo» en el primer intento. · *The spending brake only looks at what the step spent this time: earlier spending no longer stops a “Fix it” on the first try.*
+- La barra de la izquierda queda quieta al bajar por la página. · *The left bar stays in place when you scroll the page.*
+
 ## 0.13.0
 - Un paso en curso muestra sus etapas (prepara, lee tu código, escribe, revisa los cambios, prueba), qué hace en este momento, cuántos archivos leyó y escribió y cuántos tokens lleva. Si las pruebas fallan, ves qué falló mientras tu IA lo arregla. · *A running step shows its stages (prepare, read your code, write, check the changes, test), what it's doing right now, how many files it read and wrote, and how many tokens it has used. If the tests fail, you see what failed while your AI fixes it.*
 - Pieza encuentra Rust instalado con rustup y ya no lo instala de nuevo. Antes de instalar algo, revisa otra vez si ya lo tienes. · *Pieza finds Rust installed with rustup and no longer installs it again. Before installing anything, it checks again whether you already have it.*

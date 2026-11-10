@@ -475,6 +475,43 @@ class Proyectos(unittest.TestCase):
         x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
         self.assertEqual((len(llamadas), x["causa"]), (1, "gasto"))
 
+    def test_el_freno_mira_solo_lo_de_esta_vez(self):
+        """Lo gastado otras veces no frena un intento nuevo: «Arreglarlo» tiene sus dos intentos."""
+        self.plan()
+        self.p.crear({"id": "recetas"})
+        p = self.p._leer("recetas")
+        p["pasos"][0].update(gastado=900_000, estado="fallo", error="falla de antes")
+        self.p._guardar(p)
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (False, "falla")
+        llamadas = []
+
+        def cara(pedido, **o):
+            llamadas.append(1)
+            o["al_evento"]({"t": "uso", "entrada": 100, "salida": 0})
+            return "Intenté.", None
+        self.p.ia.preguntar_vivo = cara
+        x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
+        self.assertEqual((len(llamadas), x["causa"]), (2, "pruebas"))
+
+    def test_probar_de_nuevo_sin_ia(self):
+        """«Probar de nuevo»: solo las pruebas, sin llamar a la IA. Si pasan, el paso queda listo."""
+        self.plan()
+        self.p.crear({"id": "recetas"})
+        p = self.p._leer("recetas")
+        p["pasos"][0].update(estado="fallo", error="falla", causa="gasto")
+        self.p._guardar(p)
+        self.p.ia.preguntar_vivo = lambda *a, **o: self.fail("no debe llamar a la IA")
+        self.p.probar = lambda c: (False, "FAIL: test_x\nAssertionError: 1 != 2")
+        r = self.p.reprobar({"id": "recetas", "n": 0})
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["proyecto"]["pasos"][0]["causa"], "pruebas")
+        self.p.probar = lambda c: (True, "ok")
+        r = self.p.reprobar({"id": "recetas", "n": 0})
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["proyecto"]["pasos"][0]["estado"], "listo")
+        self.assertNotIn("causa", r["proyecto"]["pasos"][0])
+
     def test_pruebas_aisladas(self):
         """En Mac, las pruebas van en sandbox-exec: sin red de afuera, escribe solo en la carpeta, no lee llaves."""
         carpeta = "/" + "Users/ana/Pieza/Recetas"  # armada: la revisión de privacidad marca rutas de usuario escritas

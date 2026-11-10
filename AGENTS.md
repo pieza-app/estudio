@@ -85,6 +85,9 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   (`pasoAvance`): `fase` (preparar, ia, revisar, acciones, pruebas), `lee`, `busca`, `escribe`, `uso` (tokens del intento) y
   `prueba` (`ok: false` con `ultima`, la línea que dice qué falló, `_ultima_linea`). Sin eventos por 1 minuto se dice que la IA
   está pensando. `RUTAS_EXTRA` suma `~/.cargo/bin` al PATH (Rust con rustup); `requisitos.py instalar` revisa antes si ya está.
+- **Probar de nuevo** (`proyectos.py reprobar`, acción `proyectoReprobar` → `pasoReprobado`): arma `acciones.json` y corre las
+  pruebas, sin IA y sin gastar tokens. Si pasan, el paso queda listo. El freno de gasto (`FRENO`) compara solo lo de esta vez
+  (`gastado_antes`).
 - **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).

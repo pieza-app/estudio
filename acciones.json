@@ -236,6 +236,30 @@
    "limite": 660,
    "pieza": "app"
   },
+  "proyectoReprobar": {
+   "script": "proyectos.py",
+   "args": [
+    "reprobar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "n": {
+     "tipo": "entero",
+     "min": 0,
+     "max": 39,
+     "requerido": true
+    }
+   },
+   "responde": "pasoReprobado",
+   "progreso": "pasoAvance",
+   "limite": 900,
+   "pieza": "app"
+  },
   "proyectoRevisar": {
    "script": "proyectos.py",
    "args": [

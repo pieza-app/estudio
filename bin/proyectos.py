@@ -6,6 +6,7 @@
   proyectos.py revisar <entrada.json {id}> <salida.json>
   proyectos.py crear <entrada.json {id}> <salida.json>
   proyectos.py paso  <entrada.json {id, n}> <salida.json>
+  proyectos.py reprobar <entrada.json {id, n}> <salida.json>   (solo las pruebas, sin IA: no gasta tokens)
   proyectos.py borrar <entrada.json {id, carpeta: si|no}> <salida.json>
 
 Un proyecto se guarda en <carpeta de datos>/proyectos/<id>.json. La app queda en ~/Pieza/<Nombre> (o en PIEZA_PROYECTOS, para
@@ -609,7 +610,7 @@ def _ultima_linea(salida):
     """La línea que mejor dice qué falló (para verla en vivo): primero la de la prueba que falló («FAIL:», «AssertionError»…), si
     no la última que hable de un error, y si no, la última."""
     lineas = [l.strip() for l in (salida or "").splitlines() if l.strip()]
-    for patron in (r"^(FAIL|ERROR):|AssertionError|Error:|✕|falló", r"error|fail|fall[óo]|assert"):
+    for patron in (r"^(FAIL|ERROR|FALLA):|AssertionError|Error:|✕|falló", r"error|fail|falla|fall[óo]|assert"):
         for l in reversed(lineas):
             if re.search(patron, l, re.I) and not l.startswith("FAILED ("):
                 return l[:200]
@@ -641,6 +642,7 @@ def paso(d):
     edita = ia.puede_escribir()
     registro, historial = [], list(x.get("historial") or [])[-(MAX_HISTORIAL - INTENTOS):]
     x.pop("causa", None)
+    gastado_antes = x.get("gastado", 0)  # el freno mira lo de esta vez: lo gastado antes (otros días, otros errores) no cuenta
 
     def anotar(intento, causa=""):
         """Lo que hizo cada intento, para que la persona vea qué pasó (y por qué falló) aunque el paso no quede."""
@@ -713,7 +715,7 @@ def paso(d):
         x.update(estado="fallo", error=salida[-1500:])
         trabajos.emitir({"t": "prueba", "ok": False, "n": n, "intento": intento, "ultima": _ultima_linea(salida)})
         # Freno de gasto: si el paso ya gastó más de FRENO veces lo estimado, no se intenta de nuevo solo; la persona decide.
-        if x.get("tokens") and x.get("gastado", 0) > FRENO * x["tokens"] and intento < INTENTOS:
+        if x.get("tokens") and x.get("gastado", 0) - gastado_antes > FRENO * x["tokens"] and intento < INTENTOS:
             anotar(intento, "gasto")
             break
         anotar(intento, "pruebas")
@@ -724,6 +726,32 @@ def paso(d):
     p["estado"] = "pasos"
     p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
     return {"ok": x["estado"] == "listo", "proyecto": _guardar(p), "n": n}
+
+
+def reprobar(d):
+    """Corre las pruebas de nuevo, sin IA y sin gastar tokens: sirve cuando la persona (o algo afuera) ya arregló lo que fallaba.
+    Si pasan, el paso queda listo; si no, el error se actualiza para que «Arreglarlo» le pase el de ahora a la IA."""
+    p = _leer(d.get("id"))
+    n = d.get("n")
+    if p.get("estado") not in ("creado", "pasos") or not p.get("carpeta"):
+        raise ValueError("Primero crea la app.")
+    if not isinstance(n, int) or not 0 <= n < len(p["pasos"]):
+        raise ValueError("Paso desconocido.")
+    carpeta, x = p["carpeta"], p["pasos"][n]
+    trabajos.emitir({"t": "fase", "fase": "acciones", "n": n, "intento": 1})
+    falla = _armar_acciones(carpeta)
+    if falla:
+        ok, salida = False, falla
+    else:
+        trabajos.emitir({"t": "fase", "fase": "pruebas", "n": n, "intento": 1})
+        ok, salida = probar(carpeta)
+    if ok:
+        x.update(estado="listo", error="")
+        x.pop("causa", None)
+    else:
+        x.update(estado="fallo", error=salida[-1500:], causa="pruebas")
+    p["estado"] = "pasos"
+    return {"ok": ok, "proyecto": _guardar(p), "n": n}
 
 
 # ── Dividir un paso grande ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -1159,4 +1187,4 @@ def lista(_d):
 
 if __name__ == "__main__":
     nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso, "lote": lote, "dividir": dividir,
-                   "borrar": borrar, "abrir": abrir}, __doc__)
+                   "borrar": borrar, "abrir": abrir, "reprobar": reprobar}, __doc__)

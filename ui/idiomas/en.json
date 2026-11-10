@@ -453,7 +453,6 @@
   "Revisa el plan y toca «Ir a construir».": "Review the plan and tap “Go build”.",
   "Revisa el plan mejorado y toca Siguiente.": "Review the improved plan and tap Next.",
   "Hacer el plan": "Make the plan",
-  "Este paso ya gastó más de 3 veces lo estimado. Me detuve para que tú decidas: arreglarlo, dividirlo o saltarlo.": "This step already used more than 3 times its estimate. I stopped so you can decide: fix it, split it or skip it.",
   "Tope de la app (tokens)": "App limit (tokens)",
   "Tu app está lista. Toca «Siguiente: publicarla».": "Your app is ready. Tap “Next: publish it”.",
   "Tu IA está trabajando. Puedes mirar cómo avanza o detenerla.": "Your AI is working. You can watch it or stop it.",
@@ -564,6 +563,13 @@
   "~{n} tokens este intento (estimado del paso: ~{e})": "~{n} tokens this try (step estimate: ~{e})",
   "Intento {n} de {t}: las pruebas fallaron y tu IA lo arregla.": "Try {n} of {t}: the tests failed and your AI is fixing it.",
   "Ya la tenías instalada: no instalé nada.": "You already had it installed: I didn't install anything.",
-  "{n} tokens": "{n} tokens"
+  "{n} tokens": "{n} tokens",
+  "Lo que falló": "What failed",
+  "Ver el error completo": "See the full error",
+  "«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si ya lo arreglaste tú, «Probar de nuevo» corre solo las pruebas, sin IA y sin gastar tokens. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.": "“Fix it” gives this error to your AI so it fixes it. If you already fixed it yourself, “Test again” only runs the tests, without AI and without spending tokens. If the step is too big, split it. To go on with the others, skip it for now.",
+  "Probar de nuevo (sin IA)": "Test again (no AI)",
+  "Las pruebas pasaron: el paso quedó listo.": "The tests passed: the step is done.",
+  "Las pruebas siguen fallando en el paso {n}. Abajo ves qué falló.": "The tests still fail in step {n}. Below you see what failed.",
+  "Esta vez el paso gastó más de 3 veces lo estimado y las pruebas no pasaron. Me detuve antes de gastar más para que tú decidas.": "This time the step used more than 3 times its estimate and the tests didn't pass. I stopped before spending more so you can decide."
  }
 }
