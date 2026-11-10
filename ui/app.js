@@ -12,7 +12,7 @@
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
-    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {}, abiertos: new Set(), cerrados: new Set(),
+    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {}, abiertos: new Set(), cerrados: new Set(), mejora: null,
     vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
@@ -218,7 +218,9 @@
         ${pub.visibilidad === "publico" ? `<li data-sin-traducir>${esc(pagina ? Tp("Su página web: {url}", { url: pagina }) : Tp("Su página web, en GitHub Pages."))}</li>` : ""}
         <li>${esc("Las descargas para Mac, Windows y Linux, que arma GitHub solo (unos 15 minutos).")}</li>
         <li>${esc("Las actualizaciones: cada versión nueva llega sola a quien la instaló.")}</li></ul></div>`;
-    return marcoPaso(principal, { lado, acciones: `<button type="button" class="pz-boton pz-principal" id="publicar"${donde && !faltan && !E.ocupado ? "" : " disabled"}>Publicar</button>
+    const ahora = faltan ? "Termina los pasos de tu app antes de publicarla." : !conectado ? "Conecta tu GitHub: es una sola vez."
+      : !donde ? "Elige dónde va a vivir tu app." : "Revisa cómo la publicas y toca «Publicar».";
+    return marcoPaso(principal, { lado, ahora, acciones: `<button type="button" class="pz-boton pz-principal" id="publicar"${donde && !faltan && !E.ocupado ? "" : " disabled"}>Publicar</button>
       <button type="button" class="pz-boton pz-plano" id="atras"${E.ocupado ? " disabled" : ""}>Atrás</button>` });
   }
   // Proponer una pieza: abre un issue prellenado en pieza-app/pieza (en el navegador, con la cuenta de la persona).
@@ -286,23 +288,45 @@
       ${x.entrega ? `<p class="suave"><span class="etiqueta">Deja listo</span> <span data-sin-traducir>${esc(x.entrega)}</span></p>` : ""}
       ${(x.archivos || []).length ? `<p class="archivos" data-sin-traducir>${esc(x.archivos.join(", "))}</p>` : ""}</div></details></li>`;
   }
+  // El plan se mejora solo: 1) tu IA arma el plan, 2) tres revisores nuevos lo leen a ciegas, 3) Pieza aplica lo grave e importante
+  // y rehace el plan. Se ve como tres etapas; al final, qué se corrigió y lo menor, para sumarlo si la persona quiere.
+  const FASES_MEJORA = [["plan", "Tu IA arma el plan"], ["revisar", "3 revisores lo revisan a ciegas"], ["corregir", "Pieza corrige y lo mejora"]];
+  function mejoraHTML() {
+    const m = E.mejora;
+    if (!m) return "";
+    const i = m.fase === "listo" ? 3 : FASES_MEJORA.findIndex(([f]) => f === m.fase);
+    return `<ol class="mejora" aria-label="${esc("Cómo se mejora el plan")}">${FASES_MEJORA.map(([, t], j) =>
+      `<li class="${j < i ? "hecha" : j === i ? "actual" : ""}"><span class="mejora-n">${j < i ? "✓" : j === i && E.ocupado ? `<span class="pz-giro" aria-hidden="true"></span>` : j + 1}</span><span>${esc(t)}</span></li>`).join("")}</ol>`;
+  }
+  function mejoradoHTML(p) {
+    const m = E.mejora, acuerdos = p.acuerdos || [];
+    if (m && m.fase !== "listo") return "";
+    const opcionales = (m && m.opcionales) || [];
+    const elegidos = E.aceptados || [];
+    return `<section class="plan-mejorado"><p class="plan-mejorado-titulo" data-sin-traducir>${esc(acuerdos.length ? Tp("Plan mejorado: {n} correcciones aplicadas", { n: acuerdos.length }) : Tp("Plan revisado: los revisores no encontraron nada grave"))}</p>
+      ${acuerdos.length ? `<details data-cerrable="corregido"${E.cerrados.has("corregido") ? "" : " open"}><summary>${esc("Qué se corrigió")}</summary><ul class="corregido">${acuerdos.map((a) => `<li data-sin-traducir>${esc(a)}</li>`).join("")}</ul></details>` : ""}
+      ${opcionales.length ? `<details data-abierto="opcionales:0"${E.abiertos.has("opcionales:0") ? " open" : ""}><summary data-sin-traducir>${esc(Tp("{n} sugerencias menores (opcionales)", { n: opcionales.length }))}</summary><ul class="hallazgos">${opcionales.map((h) =>
+        `<li><label><input type="checkbox" data-hallazgo="${esc(h.id)}"${elegidos.includes(h.id) ? " checked" : ""}${E.ocupado ? " disabled" : ""}><span><b data-sin-traducir>${esc(h.problema)}</b><span class="suave" data-sin-traducir>${esc(h.propuesta)}</span></span></label></li>`).join("")}</ul>
+        <button type="button" class="pz-boton" id="sumar-opcionales"${E.ocupado || !elegidos.length ? " disabled" : ""}>${esc("Sumarlas y mejorar el plan")}</button></details>` : ""}</section>`;
+  }
   function pasoPlan() {
     const p = E.proyecto;
     const listo = p && p.pasos && p.pasos.length;
-    const principal = (listo ? `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{n} pasos · toca uno para ver qué hace", { n: p.pasos.length }))}</p>
+    const mejorando = E.mejora && E.mejora.fase !== "listo" && E.ocupado;
+    const principal = mejoraHTML() + (listo && !mejorando ? mejoradoHTML(p) : "")
+      + (listo ? `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{n} pasos · toca uno para ver qué hace", { n: p.pasos.length }))}</p>
         <button type="button" class="pz-plano" id="abrir-todo" data-que="plan">${esc(abiertos("plan") ? "Cerrar todos" : "Abrir todos")}</button></div>
-        ${revisionHTML(p)}<ol class="filas plan">${p.pasos.map((x, i) => filaPlan(p, x, i)).join("")}</ol>`
-      : `<div class="vacio-paso"><p>${esc("Tu IA desglosa lo propio de tu app en pasos chicos. Las piezas ya hechas no entran al plan.")}</p></div>`)
-      + (E.ocupado === "plan" ? trabajando("Tu IA está armando el plan…") : "")
-      + (E.ocupado === "revisar" ? trabajando("Tres revisores nuevos están leyendo tu idea…") : "");
+        ${E.mejora ? "" : revisionHTML(p)}<ol class="filas plan${mejorando ? " atenuado" : ""}">${p.pasos.map((x, i) => filaPlan(p, x, i)).join("")}</ol>`
+      : E.ocupado ? "" : `<div class="vacio-paso"><p>${esc("Tu IA divide lo propio de tu app en pasos chicos. Después, tres revisores nuevos lo leen a ciegas y Pieza corrige lo que encuentren. Las piezas ya hechas no entran al plan.")}</p></div>`);
+    const ahora = mejorando ? "Espera un momento: Pieza está armando y mejorando el plan." : !listo ? "Toca «Hacer el plan». Tu IA lo arma y Pieza lo revisa y lo corrige sola."
+      : creada() ? "Revisa el plan y toca «Ir a construir»." : "Revisa el plan mejorado y toca Siguiente.";
     const acciones = (listo ? `<button type="button" class="pz-boton pz-principal" id="siguiente"${E.ocupado ? " disabled" : ""}>${esc(creada() ? "Ir a construir" : "Siguiente")}</button>` : "")
       + `<button type="button" class="pz-boton${listo ? "" : " pz-principal"}" id="hacer-plan"${E.ocupado || !E.config.ia ? " disabled" : ""}>${
-        esc(!listo ? "Hacer el plan con mi IA" : creada() ? "Rehacer lo que falta" : "Rehacer el plan")}</button>
-      ${listo ? `<button type="button" class="pz-boton" id="revisar"${E.ocupado || !E.config.ia ? " disabled" : ""}>${esc(p.revision ? "Revisar de nuevo" : "Revisar a ciegas")}</button>` : ""}
-      <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>`;
-    const lado = listo ? medidor(p) + (creada() ? `<p class="panel-nota">${esc("La app ya está creada. «Rehacer lo que falta» deja los pasos listos y planifica de nuevo el resto, con pasos más chicos.")}</p>` : "")
-      + `<p class="panel-nota">${esc("La revisión a ciegas: tres sesiones nuevas de tu IA leen solo tu idea y el plan, y buscan fallas.")}</p>` : "";
-    return marcoPaso(sinIA() + errorHTML() + principal, { acciones, lado });
+        esc(!listo ? "Hacer el plan" : creada() ? "Rehacer lo que falta" : "Rehacer el plan")}</button>
+      ${listo ? `<button type="button" class="pz-boton" id="revisar"${E.ocupado || !E.config.ia ? " disabled" : ""}>${esc("Revisar de nuevo")}</button>` : ""}
+      <button type="button" class="pz-boton pz-plano" id="atras"${E.ocupado ? " disabled" : ""}>Atrás</button>`;
+    const lado = listo ? medidor(p) + (creada() ? `<p class="panel-nota">${esc("La app ya está creada. «Rehacer lo que falta» deja los pasos listos y planifica de nuevo el resto, con pasos más chicos.")}</p>` : "") : "";
+    return marcoPaso(sinIA() + errorHTML() + principal, { acciones, lado, ahora });
   }
   // Revisar a ciegas (elefante y pez dorado): 3 sesiones nuevas de tu IA leen solo la idea y el plan, y buscan fallas.
   const ENFOQUES = { riesgos: "Riesgos y seguridad", uso: "Uso", pasos: "Plan" };
@@ -332,7 +356,7 @@
       <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>` });
     const principal = `<div class="vacio-paso"><p data-sin-traducir>${esc(Tp("Pieza arma la app «{nombre}» con {n} piezas ya hechas, en la carpeta Pieza de tu usuario. No gasta tokens.",
       { nombre: p.nombre, n: (E.ficha && E.ficha.hechas) || 0 }))}</p></div>` + errorHTML() + (E.ocupado === "crear" ? trabajando("Armando la app…") : "");
-    return marcoPaso(principal, { lado: medidor(p), acciones: `<button type="button" class="pz-boton pz-principal" id="crear"${E.ocupado ? " disabled" : ""}>Crear la app</button>
+    return marcoPaso(principal, { ahora: "Toca «Crear la app». Pieza copia las piezas: no gasta tokens.", lado: medidor(p), acciones: `<button type="button" class="pz-boton pz-principal" id="crear"${E.ocupado ? " disabled" : ""}>Crear la app</button>
       <button type="button" class="pz-boton pz-plano" id="atras">Atrás</button>` });
   }
   // Por qué no quedó un paso, en palabras de persona (la causa la anota proyectos.py; el error técnico va aparte).
@@ -341,6 +365,7 @@
     ia: "Tu IA no terminó el paso: se cortó, llegó a su límite o no está lista.",
     respuesta: "La respuesta de tu IA no se pudo usar.",
     acciones: "Las acciones nuevas de app.json no se pudieron armar.",
+    gasto: "Este paso ya gastó más de 3 veces lo estimado. Me detuve para que tú decidas: arreglarlo, dividirlo o saltarlo.",
   };
   const QUE_HIZO = { lee: "lee", escribe: "escribe", prueba: "prueba" };
   // El próximo paso por hacer: el primero que no está listo y que la persona no saltó.
@@ -454,14 +479,18 @@
         <ol class="filas pasos">${p.pasos.map((x, i) => filaPaso(p, x, i)).join("")}</ol>`
       ;
     const lado = medidor(p) + `<div class="panel-bloque"><p class="etiqueta">Modo</p><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
-        ${E.modo === "auto" ? `<label class="tope"><span>Detener al llegar a (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>` : ""}
+        <label class="tope"><span>Tope de la app (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>
         ${enFila ? `<p class="panel-nota">${esc("En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.")}</p>` : ""}
         <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p></div>`
       + consolaHTML();
     const acciones = (fin ? `<button type="button" class="pz-boton pz-principal" id="siguiente">${esc(p.repo ? "Ver dónde está publicada" : "Siguiente: publicarla")}</button>` : "")
       + accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
       <button type="button" class="pz-boton pz-plano" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>`;
-    return marcoPaso(principal, { acciones, lado });
+    const fallo = p.pasos.some((x) => x.estado === "fallo");
+    const ahora = fin ? "Tu app está lista. Toca «Siguiente: publicarla»." : E.ocupado === "paso" ? "Tu IA está trabajando. Puedes mirar cómo avanza o detenerla."
+      : E.ocupado === "dividir" ? "Espera: tu IA está dividiendo el paso." : fallo ? "Un paso no quedó. Abajo ves por qué: arréglalo, divídelo o sáltalo."
+      : "Toca el botón para hacer el próximo paso.";
+    return marcoPaso(principal, { acciones, lado, ahora });
   }
   // Las etapas que ve la persona: los 8 pasos del asistente, agrupados en 5.
   const ETAPAS = [["Tu idea", [1, 2]], ["Piezas", [3, 4]], ["Plan", [5, 6]], ["Construir", [7]], ["Publicar", [8]]];
@@ -482,16 +511,18 @@
   // arriba y lo que ayuda a decidir abajo. En el celular, el panel va arriba y sus botones quedan fijos abajo.
   // Lo que la persona abrió o cerró (los pasos se pintan de nuevo a menudo: así no se cierran solos).
   const abiertos = (que) => [...E.abiertos].some((k) => k.startsWith(que + ":"));
-  function marcoPaso(principal, { acciones = "", lado = "" } = {}) {
+  // «Ahora» = lo único que la persona tiene que hacer en esta pantalla, arriba del panel, en una frase.
+  function marcoPaso(principal, { acciones = "", lado = "", ahora = "" } = {}) {
     return cabeza() + `<div class="paso-grilla"><div class="paso-principal">${principal}</div>
-      <aside class="panel-control" aria-label="Panel de control"><div class="panel-acciones">${acciones}</div>${lado}</aside></div>`;
+      <aside class="panel-control" aria-label="Panel de control">${ahora ? `<p class="panel-ahora"><span>${esc("Ahora")}</span>${esc(ahora)}</p>` : ""}
+      <div class="panel-acciones">${acciones}</div>${lado}</aside></div>`;
   }
   function pasoSistemas() {
     const n = E.nueva;
     const grupos = SISTEMAS.map((g) => `<fieldset class="grupo"><legend>${esc(g.grupo)}</legend>${g.ids.map(([id, nombre]) =>
       `<label class="opcion"><input type="checkbox" data-sistema="${id}"${n.plataformas.includes(id) ? " checked" : ""}> <span>${esc(nombre)}</span>${
         id === "android" ? `<small class="suave">${esc("Por hacer: su pieza todavía no existe")}</small>` : ""}</label>`).join("")}</fieldset>`).join("");
-    return marcoPaso(grupos, { acciones: pie({ puede: n.plataformas.length > 0 }),
+    return marcoPaso(grupos, { ahora: "Marca dónde quieres usar tu app y toca Siguiente.", acciones: pie({ puede: n.plataformas.length > 0 }),
       lado: `<p class="panel-nota">${esc("El sistema decide qué piezas sirven. Por eso va primero.")}</p>` });
   }
   function pasoIdea() {
@@ -501,7 +532,8 @@
       <div class="caja-detalle"><div class="caja-detalle-cabeza"><label for="detalle">La idea completa</label><span class="chip-estado">Opcional</span>
         <span class="contador" id="contador-detalle" data-sin-traducir>${esc(miles((n.detalle || "").length))} / 12.000</span></div>
         <textarea id="detalle" rows="10" maxlength="12000" placeholder="Cómo funciona, reglas, pantallas y datos. Va al plan y a cada paso.">${esc(n.detalle || "")}</textarea></div>`,
-      { acciones: pie({ puede: n.nombre.trim().length > 0 && n.frase.trim().length > 0 }), lado: `<div id="piezas-vivo">${piezasVivo()}</div>` });
+      { ahora: "Ponle nombre y cuenta en una frase qué hace. Si quieres, cuenta más en «La idea completa».",
+        acciones: pie({ puede: n.nombre.trim().length > 0 && n.frase.trim().length > 0 }), lado: `<div id="piezas-vivo">${piezasVivo()}</div>` });
   }
   // Mientras se escribe la frase: las piezas ya hechas que calzan y lo que se ahorra (bytes ÷ 4, como la ficha).
   function piezasVivo() {
@@ -529,7 +561,7 @@
     const bloques = Object.entries(porCategoria).map(([c, ps]) => `<fieldset class="grupo"><legend>${esc(CATEGORIAS[c] || c)}</legend>${
       ps.map((p) => filaPieza(p, p.recomendar.siempre || n.piezas.includes(p.id), p.recomendar.siempre)).join("")}</fieldset>`).join("");
     const hechas = disponibles.filter((p) => p.estado === "lista" && (p.recomendar.siempre || n.piezas.includes(p.id))).length;
-    return marcoPaso(bloques, { acciones: pie(), lado: `<dl class="panel-cifras"><div><dt>${esc("ya hechas: 0 tokens")}</dt><dd class="resumen" data-sin-traducir>${esc(String(hechas))}</dd></div></dl>
+    return marcoPaso(bloques, { ahora: "Ya marqué las piezas que calzan con tu idea. Revisa y toca Siguiente.", acciones: pie(), lado: `<dl class="panel-cifras"><div><dt>${esc("ya hechas: 0 tokens")}</dt><dd class="resumen" data-sin-traducir>${esc(String(hechas))}</dd></div></dl>
       <p class="panel-nota">${ICONO} ${esc("Las piezas con este ícono ya están hechas: no gastan tokens. Marcamos las que calzan con tu frase.")}</p>` });
   }
   function pasoFicha() {
@@ -548,7 +580,7 @@
       <h3>Permisos</h3>${permisos.length ? permisos.map(([plat, filas]) => `<p class="plataforma" data-sin-traducir>${esc(plat)}</p>${
         lista(filas.map((x) => `<b>${esc(x.clave)}</b>: ${esc(x.por)}`))}`).join("") : `<p class="suave">No pide permisos del sistema.</p>`}
       <h3>Internet</h3>${f.red.length ? lista(f.red.map(esc)) : `<p class="suave">Funciona sin internet.</p>`}
-      <h3>Lo que te toca</h3>${lista(f.tareas.map(esc))}`, { acciones: pie({ siguiente: "Siguiente: el plan" }), lado: cifras });
+      <h3>Lo que te toca</h3>${lista(f.tareas.map(esc))}`, { ahora: "Mira lo que va a tener tu app y sigue al plan.", acciones: pie({ siguiente: "Siguiente: el plan" }), lado: cifras });
   }
   function principal() {
     const pasos = [inicio, pasoSistemas, pasoIdea, pasoPiezas, pasoFicha, pasoPlan, pasoCrear, pasoPasos, pasoPublicar];
@@ -633,10 +665,16 @@
     else if (b.dataset.seguir) seguir(b.dataset.seguir);
     else if (b.id === "hacer-plan") {
       const n = E.nueva;
+      E.mejora = { fase: "plan", opcionales: [] }; E.aceptados = [];
       ocupar("plan");
       host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(),
         acuerdos: (E.proyecto && E.proyecto.acuerdos) || [], plataformas: n.plataformas, piezas: n.piezas });
-    } else if (b.id === "revisar") { E.aceptados = []; ocupar("revisar"); host.enviar("proyectoRevisar", { id: E.proyecto.id }); }
+    } else if (b.id === "revisar") { E.aceptados = []; E.mejora = { fase: "revisar", opcionales: [] }; ocupar("revisar"); host.enviar("proyectoRevisar", { id: E.proyecto.id }); }
+    else if (b.id === "sumar-opcionales") {
+      const elegidas = ((E.mejora && E.mejora.opcionales) || []).filter((h) => (E.aceptados || []).includes(h.id));
+      E.mejora = { fase: "corregir", opcionales: [] };
+      replanear(elegidas.map((h) => h.propuesta));
+    }
     else if (b.id === "rehacer-con") {
       const n = E.nueva, p = E.proyecto;
       const nuevos = p.revision.hallazgos.filter((h) => (E.aceptados || []).includes(h.id)).map((h) => h.propuesta);
@@ -670,11 +708,19 @@
     return "https://github.com/pieza-app/pieza/issues/new?labels=pieza-nueva&title=" + encodeURIComponent(Tp("Pieza nueva: {x}", { x: x.nombre.trim() }))
       + "&body=" + encodeURIComponent(cuerpo);
   }
+  // Rehace el plan con correcciones nuevas (se suman a las de antes; van a cada pedido de la IA).
+  function replanear(nuevas) {
+    const n = E.nueva, p = E.proyecto;
+    E.aceptados = [];
+    ocupar("plan");
+    host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(),
+      acuerdos: [...((p && p.acuerdos) || []), ...nuevas].slice(-20), plataformas: n.plataformas, piezas: n.piezas });
+  }
   function ocupar(que) { E.ocupado = que; E.error = ""; E.parar = false; pintar(); }
   // Todo automático, cuando un paso no queda: primero tu IA lo arregla con el error; si sigue sin quedar, se divide en pasos más
   // chicos (una vez). Si la IA misma no respondió, o se llegó al tope, se detiene. Devuelve si siguió trabajando.
   function autoReparar(n, x) {
-    if (x.causa === "ia" || E.proyecto.gastado >= E.tope) return false;
+    if (x.causa === "ia" || x.causa === "gasto" || E.proyecto.gastado >= E.tope) return false;
     if (!E.reparados[n]) {
       E.reparados[n] = true;
       toast(Tp("El paso {n} no quedó. Le pido a tu IA que lo arregle.", { n: n + 1 }));
@@ -690,13 +736,22 @@
     return false;
   }
   const nuevoVivo = () => ({ inicio: Date.now(), fase: "ia", intento: 1, escritos: new Set(), leyendo: "" });
+  // El tope vale en los dos modos: sin espacio, no se empieza nada (la persona lo sube en el panel si quiere seguir).
+  function sinTope() {
+    if (E.proyecto.gastado < E.tope) return false;
+    E.error = Tp("Llegaste al tope de {n} tokens. Para seguir, súbelo en el panel.", { n: miles(E.tope) });
+    pintar();
+    return true;
+  }
   function hacerPaso(n) {
+    if (sinTope()) return;
     E.enCurso = [n];
     E.vivos = { [n]: nuevoVivo() };
     ocupar("paso");
     host.enviar("proyectoPaso", { id: E.proyecto.id, n });
   }
   function hacerLote(ns) {
+    if (sinTope()) return;
     E.enCurso = ns;
     E.vivos = Object.fromEntries(ns.map((n) => [n, nuevoVivo()]));
     ocupar("paso");
@@ -714,7 +769,7 @@
     const p = E.proyectos.find((x) => x.id === id);
     if (!p) return;
     E.proyecto = p;
-    E.saltados = new Set(); E.reparados = {}; E.divididos = {}; E.abiertos = new Set();
+    E.saltados = new Set(); E.reparados = {}; E.divididos = {}; E.abiertos = new Set(); E.mejora = null;
     E.nueva = { plataformas: p.plataformas, nombre: p.nombre, frase: p.frase, detalle: p.detalle || "", piezas: p.piezas, tocadas: p.piezas };
     irA(p.estado === "plan" ? 5 : p.estado === "nuevo" ? 5 : 7);
   }
@@ -876,13 +931,27 @@
       E.ocupado = "";
       if (r && r.ok) {
         E.proyecto = r.proyecto;
-        E.aceptados = r.proyecto.revision.hallazgos.filter((h) => h.gravedad === "alta").map((h) => h.id);  // lo grave, marcado
-      } else E.error = (r && r.error) || Tp("No se pudo.");
+        const hs = r.proyecto.revision.hallazgos;
+        if (E.mejora) {
+          // Lo grave e importante se aplica solo; lo menor queda para que la persona lo sume si quiere.
+          const aplicar = hs.filter((h) => h.gravedad !== "baja").map((h) => h.propuesta);
+          const opcionales = hs.filter((h) => h.gravedad === "baja");
+          if (!aplicar.length) { E.mejora = { fase: "listo", opcionales }; return pintar(); }
+          E.mejora = { fase: "corregir", opcionales };
+          return replanear(aplicar);
+        }
+        E.aceptados = hs.filter((h) => h.gravedad === "alta").map((h) => h.id);
+      } else { E.error = (r && r.error) || Tp("No se pudo."); if (E.mejora) E.mejora.fase = "listo"; }
       pintar();
     },
     planListo(r) {
       E.ocupado = "";
-      if (r && r.ok) E.proyecto = r.proyecto; else E.error = (r && r.error) || Tp("No se pudo.");
+      if (r && r.ok) {
+        E.proyecto = r.proyecto;
+        // Primer plan: sigue solo con la revisión a ciegas. Plan corregido: listo.
+        if (E.mejora && E.mejora.fase === "plan") { E.mejora.fase = "revisar"; ocupar("revisar"); return host.enviar("proyectoRevisar", { id: E.proyecto.id }); }
+        if (E.mejora) E.mejora.fase = "listo";
+      } else { E.error = (r && r.error) || Tp("No se pudo."); if (E.mejora) E.mejora = null; }
       pintar();
     },
     proyectoCreado(r) {

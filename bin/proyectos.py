@@ -62,6 +62,7 @@ MAX_DETALLE = 12_000  # la idea completa (opcional): reglas, pantallas, datos; v
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
+FRENO = 3  # un paso que gasta más de 3 veces lo estimado se detiene y pregunta
 MAX_RESUMEN = 4000    # lo que la IA cuenta que hizo, completo (la interfaz lo muestra al abrir el paso)
 MAX_HISTORIAL = 6    # intentos guardados por paso
 MAX_REGISTRO = 300   # lo que leyó y escribió en la última vez
@@ -631,6 +632,10 @@ def paso(d):
             break
         error_prueba = salida
         x.update(estado="fallo", error=salida[-1500:])
+        # Freno de gasto: si el paso ya gastó más de FRENO veces lo estimado, no se intenta de nuevo solo; la persona decide.
+        if x.get("tokens") and x.get("gastado", 0) > FRENO * x["tokens"] and intento < INTENTOS:
+            anotar(intento, "gasto")
+            break
         anotar(intento, "pruebas")
     x["historial"] = historial[-MAX_HISTORIAL:]
     x["registro"] = registro[-MAX_REGISTRO:]

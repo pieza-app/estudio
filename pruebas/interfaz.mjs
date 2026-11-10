@@ -77,18 +77,19 @@ await capturar(page, "3d-ficha-en");
 // 3. El plan con la IA, crear la app y los pasos en «Todo automático».
 await page.click("#siguiente");
 await page.click("#hacer-plan");
-await page.waitForSelector(".plan li");
+// El plan se mejora solo: plan → revisión a ciegas → corrección. Lo grave e importante se aplica; lo menor queda opcional.
+await page.waitForSelector(".mejora .actual");
+await page.waitForSelector(".plan-mejorado", { timeout: 15000 });
+assert.equal(await page.locator(".mejora .hecha").count(), 3, "las tres etapas de la mejora quedan hechas");
+assert.equal(await page.locator(".corregido li").count(), 2, "se aplicaron lo grave y lo importante");
 assert.ok(await page.locator(".medidor .ahorro .icono-pieza").count(), "el medidor muestra lo ahorrado con piezas");
+assert.ok(await page.locator(".panel-ahora").isVisible(), "el panel dice qué hacer ahora");
 await capturar(page, "3e-plan-en");
-// Revisión a ciegas: lo grave viene marcado; rehacer el plan con lo aceptado.
-await page.click("#revisar");
-await page.waitForSelector(".hallazgos li");
-assert.equal(await page.locator(".hallazgos li").count(), 3, "la revisión trae sus hallazgos");
-assert.ok(await page.isChecked('[data-hallazgo="h1"]'), "lo grave viene marcado");
+await page.click(".plan-mejorado details:not([open]) summary");
+await page.check('[data-hallazgo="h3"]');
+await page.click("#sumar-opcionales");
+await page.waitForFunction(() => document.querySelectorAll(".corregido li").length === 3, null, { timeout: 15000 });
 await capturar(page, "3e2-revision-en");
-await page.click("#rehacer-con");
-await page.waitForSelector(".hallazgos", { state: "detached" });  // el plan nuevo parte sin revisión
-await page.waitForSelector(".plan li");
 await page.click("#siguiente");
 await page.click("#crear");
 await page.waitForSelector(".pasos li");

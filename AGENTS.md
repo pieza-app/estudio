@@ -78,6 +78,11 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   control (`.panel-control`) a la derecha, fijo al bajar, con los botones arriba (`pie()` da Siguiente/Atrás) y las cifras
   (`medidor`, `.panel-cifras`) y lo que ayuda a decidir abajo. En el celular el panel va arriba y sus botones quedan fijos abajo.
   El plan y los pasos son filas colapsadas (`.filas`, `filaPlan`, `filaPaso`); lo abierto queda en `E.abiertos`.
+- **El plan se mejora solo** (`E.mejora`, `mejoraHTML`): «Hacer el plan» → `planListo` lanza la revisión a ciegas →
+  `revisionLista` aplica lo grave e importante (`replanear`, como acuerdos) → plan mejorado. Lo menor queda como sugerencias
+  opcionales. Se ve como tres etapas. Cada pantalla dice arriba del panel qué hacer ahora (`marcoPaso({ahora})`).
+- **Freno de gasto:** un paso que gastó más de `FRENO` (3) veces lo estimado no se reintenta solo (causa `gasto`); el tope de
+  la app vale en los dos modos (`sinTope`).
 - **Una app ya creada** (`creada()`): del plan va directo a construir; «Rehacer lo que falta» (`plan` con la app creada) deja los
   pasos listos y planifica solo el resto; revisar a ciegas también funciona.
 - **Pasos chicos y conectados:** el plan trae por paso `entrega` (lo que deja listo para otros, con nombres exactos) y `depende`
