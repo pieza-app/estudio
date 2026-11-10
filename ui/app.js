@@ -1341,7 +1341,7 @@
   const SIM = { proyectos: [], requisitos: { ok: true, instalador: "brew", herramientas: [
     { id: "git", nombre: "Git", para: "Guardar las versiones de tu app y publicarla", necesaria: true, hay: true, version: "2.47.0", puede_instalar: true, guia: "https://git-scm.com/downloads" },
     { id: "node", nombre: "Node.js", para: "Probar la interfaz de tu app", necesaria: true, hay: true, version: "22.11.0", puede_instalar: true, guia: "https://nodejs.org/" },
-    { id: "rust", nombre: "Rust", para: "Armar y probar la app de escritorio en tu computador (sin Rust, GitHub la arma igual al publicar)", necesaria: false, hay: false, version: "", puede_instalar: true, guia: "https://rustup.rs/" },
+    { id: "rust", nombre: "Rust", para: "Armar y probar la parte nativa de tu app (Rust + Tauri). Sin Rust, las pruebas de cada paso no la revisan.", necesaria: true, hay: false, version: "", puede_instalar: true, guia: "https://rustup.rs/" },
     { id: "gh", nombre: "GitHub CLI", para: "Publicar tu app con tu cuenta de GitHub", necesaria: false, hay: true, version: "2.62.0", puede_instalar: true, guia: "https://cli.github.com/" }] } };
   function planSimulado(d) {
     const id = d.nombre.normalize("NFKD").replace(/[^A-Za-z0-9]/g, "").toLowerCase().slice(0, 30);

@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.16.1
+- Rust pasa a ser necesario: las apps son Rust + Tauri, y sin Rust las pruebas de cada paso no revisan su parte nativa. Pieza te ofrece instalarlo. · *Rust is now required: apps are Rust + Tauri, and without Rust each step's tests don't check their native part. Pieza offers to install it.*
+
 ## 0.16.0
 - Los pasos se arreglan solos, también en «paso a paso»: si un paso falla, tu IA lo corrige con el error (hasta 2 veces) y, si sigue, Pieza lo divide en partes y sigue con la primera. Si tu IA se cortó, lo intenta otra vez. Solo te pregunta si nada de eso resulta. · *Steps fix themselves, also in “step by step”: if a step fails, your AI corrects it with the error (up to 2 times) and, if it still fails, Pieza splits it into parts and goes on with the first one. If your AI stopped, it tries again. It only asks you if none of that works.*
 
