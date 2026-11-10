@@ -13,7 +13,7 @@
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
     proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {}, abiertos: new Set(), cerrados: new Set(), mejora: null,
-    vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
+    vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, despues: { cambio: "", nota: "" }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
   const raiz = document.getElementById("app");
@@ -209,6 +209,7 @@
         <p class="suave">${esc("GitHub está armando la página y las descargas para Mac, Windows y Linux. Tarda unos 15 minutos.")}</p>
         <div class="enlaces-pub">${enlaces.map(([t, u]) => `<button type="button" class="pz-boton" data-abrir="${esc(u)}">${esc(t)}</button>`).join("")}</div>
         <p class="suave" data-sin-traducir>${esc(p.explorador ? Tp("Aparece en el explorador de Pieza.") : Tp("No aparece en el explorador de Pieza."))}</p></section>
+        ${errorHTML()}${despuesHTML(p, faltan)}
         <section class="proponer">${proponerHTML()}</section>`,
         { acciones: `<button type="button" class="pz-boton pz-principal" data-abrir="https://github.com/${esc(p.repo)}">Abrir en GitHub</button>
           <button type="button" class="pz-boton pz-plano" id="inicio">Volver al inicio</button>` });
@@ -248,6 +249,25 @@
       : "Todo revisado. Toca «Publicar».";
     return marcoPaso(principal, { lado, ahora, acciones: `<button type="button" class="pz-boton pz-principal" id="publicar"${donde && !faltan && !E.ocupado && subidaOk() ? "" : " disabled"}>Publicar</button>
       <button type="button" class="pz-boton pz-plano" id="atras"${E.ocupado ? " disabled" : ""}>Atrás</button>` });
+  }
+  // Después de publicar: pedir un cambio (vuelve al plan, con la revisión automática) y publicar una versión nueva.
+  function despuesHTML(p, faltan) {
+    const x = E.despues, ocupado = !!E.ocupado;
+    const version = p.version || "";
+    return `<section class="despues">
+      <div class="pub-paso"><h3>${esc("Pedir un cambio")}</h3>
+        <p class="suave">${esc("Cuenta qué quieres cambiar o sumar. Hago un plan solo para eso, lo reviso y lo corrijo antes de construir.")}</p>
+        <label class="pz-campo"><span>${esc("Qué cambia")}</span><textarea id="cambio" rows="3" maxlength="2000" placeholder="Ej.: que se pueda exportar a PDF">${esc(x.cambio)}</textarea></label>
+        <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="pedir-cambio"${x.cambio.trim() && !ocupado ? "" : " disabled"}>Hacer el plan del cambio</button></div></div>
+      <div class="pub-paso"><h3>${esc("Publicar versión nueva")}</h3>
+        ${version ? `<p class="suave" data-sin-traducir>${esc(Tp("Versión publicada: {v}", { v: version }))}</p>` : ""}
+        ${faltan ? `<p class="aviso-pasos">${esc(Tp("A tu app le faltan {n} pasos. Termínalos antes de publicarla.", { n: faltan }))}</p>`
+          : `<p class="suave">${esc("Subo el número de versión, reviso otra vez que no haya secretos ni datos personales y lo subo. Quien la instaló la recibe sola.")}</p>`}
+        <label class="pz-campo"><span>${esc("Qué cambió (para quien la usa)")}</span><input id="nota-version" maxlength="300" value="${esc(x.nota)}" placeholder="Ej.: Ahora puedes exportar a PDF."></label>
+        ${E.subida && E.ocupado !== "version" && E.versionRevision ? subidaHTML() : ""}
+        ${E.ocupado === "version" ? trabajando("Publicando la versión nueva…") : ""}
+        <div class="pz-pie"><button type="button" class="pz-boton" id="publicar-version"${faltan || ocupado || !x.nota.trim() ? " disabled" : ""}>Publicar versión nueva</button></div></div>
+    </section>`;
   }
   // Proponer una pieza: abre un issue prellenado en pieza-app/pieza (en el navegador, con la cuenta de la persona).
   function proponerHTML() {
@@ -339,7 +359,9 @@
     const p = E.proyecto;
     const listo = p && p.pasos && p.pasos.length;
     const mejorando = E.mejora && E.mejora.fase !== "listo" && E.ocupado;
-    const principal = mejoraHTML() + (listo && !mejorando ? mejoradoHTML(p) : "")
+    const cambio = p && creada() && (p.cambios || []).length ? p.cambios[p.cambios.length - 1] : "";
+    const principal = (cambio ? `<p class="cambio-pedido"><b>${esc("El cambio que pediste:")}</b> <span data-sin-traducir>${esc(cambio)}</span></p>` : "")
+      + mejoraHTML() + (listo && !mejorando ? mejoradoHTML(p) : "")
       + (listo ? `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{n} pasos · toca uno para ver qué hace", { n: p.pasos.length }))}</p>
         <button type="button" class="pz-plano" id="abrir-todo" data-que="plan">${esc(abiertos("plan") ? "Cerrar todos" : "Abrir todos")}</button></div>
         ${E.mejora ? "" : revisionHTML(p)}<ol class="filas plan${mejorando ? " atenuado" : ""}">${p.pasos.map((x, i) => filaPlan(p, x, i)).join("")}</ol>`
@@ -725,6 +747,18 @@
       host.enviar("publicarSubir", { id: E.proyecto.id, dueno: E.pub.dueno, visibilidad: E.pub.visibilidad,
         explorador: E.pub.visibilidad === "publico" && E.pub.explorador ? "si" : "no", datos_ok: E.pub.datosOk ? "si" : "no" });
     } else if (b.id === "proponer") host.enviar("abrirEnlace", { url: urlPropuesta() });
+    else if (b.id === "pedir-cambio") {
+      const n = E.nueva, cambio = E.despues.cambio.trim();
+      if (!cambio) return;
+      E.mejora = { fase: "plan", opcionales: [] }; E.aceptados = []; E.despues.cambio = "";
+      E.paso = 5;
+      ocupar("plan");
+      host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(),
+        acuerdos: (E.proyecto && E.proyecto.acuerdos) || [], plataformas: n.plataformas, piezas: n.piezas, cambio });
+    } else if (b.id === "publicar-version") {
+      ocupar("version");
+      host.enviar("publicarVersion", { id: E.proyecto.id, nota: E.despues.nota.trim(), datos_ok: E.pub.datosOk ? "si" : "no" });
+    }
     else if (b.dataset.seguir) seguir(b.dataset.seguir);
     else if (b.id === "hacer-plan") {
       const n = E.nueva;
@@ -896,6 +930,12 @@
       return;
     }
     if (id === "frase-rapida") { E.fraseRapida = ev.target.value; return; }
+    if (id === "cambio" || id === "nota-version") {
+      const clave = id === "cambio" ? "cambio" : "nota", antes = !!E.despues[clave].trim();
+      E.despues[clave] = ev.target.value;
+      if (antes !== !!E.despues[clave].trim()) pintar();
+      return;
+    }
     if (id === "detalle") {
       E.nueva.detalle = ev.target.value;
       const c = document.getElementById("contador-detalle");
@@ -1000,6 +1040,17 @@
       E.ocupado = "";
       if (r && r.ok) { E.proyecto = r.proyecto; toast("Tu app está en GitHub."); }
       else { E.error = (r && r.error) || Tp("No se pudo."); if (r && r.revision) E.subida = r.revision; }
+      pintar();
+    },
+    versionPublicada(r) {
+      E.ocupado = "";
+      if (r && r.ok) {
+        E.proyecto = r.proyecto; E.despues.nota = ""; E.versionRevision = false; E.subida = null;
+        toast("Publiqué la versión {v}. GitHub arma las descargas en unos 15 minutos.", { valores: { v: r.version } });
+      } else {
+        E.error = (r && r.error) || Tp("No se pudo.");
+        if (r && r.revision) { E.subida = r.revision; E.versionRevision = true; }
+      }
       pintar();
     },
     proyectoBorrado(r) {
@@ -1127,6 +1178,14 @@
   function planSimulado(d) {
     const id = d.nombre.normalize("NFKD").replace(/[^A-Za-z0-9]/g, "").toLowerCase().slice(0, 30);
     const ficha = fichaSimulada(d);
+    const antes = SIM.proyectos.find((x) => x.id === id);
+    if (antes && d.cambio && antes.estado !== "plan") {   // un cambio a una app ya creada: lo hecho queda, se suman pasos
+      const listos = antes.pasos.filter((x) => x.estado === "listo");
+      const nuevos = [["El cambio pedido", d.cambio.slice(0, 200), 5000, ["ui/app.js"], []], ["Sus pruebas y textos", "Pruebas del cambio y sus textos en inglés.", 3000, ["pruebas/test_app.py"], [listos.length]]]
+        .map(([titulo, que, tokens, archivos, dep]) => ({ titulo: Tp(titulo), que: titulo === "El cambio pedido" ? que : Tp(que), archivos, tokens, depende: dep, estado: "pendiente", gastado: 0 }));
+      Object.assign(antes, { pasos: [...listos, ...nuevos], estado: "pasos", revision: null, cambios: [...(antes.cambios || []), d.cambio] });
+      return { ok: true, proyecto: JSON.parse(JSON.stringify(antes)) };
+    }
     const pasos = [
       ["Lo que se guarda", "El formato de los datos y el script que los lee y escribe, con sus pruebas.", 6000, ["bin/datos.py"], []],
       ["La pantalla principal", "La lista y el formulario, con sus textos en inglés.", 9000, ["ui/app.js"], [0]],
@@ -1173,6 +1232,12 @@
       case "publicarConectar":
         c.luego(200, () => c.responder("publicarAvance", [{ t: "codigo", codigo: "AB12-CD34", url: "https://github.com/login/device" }]));
         return c.luego(700, () => { SIM.gh = true; c.responder("ghConectado", { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] }); });
+      case "publicarVersion": return c.luego(800, () => {
+        const p = SIM.proyectos.find((x) => x.id === d.id);
+        const [a, b] = (p.version || "0.1.0").split(".").map(Number);
+        p.version = `${a}.${b + 1}.0`;
+        c.responder("versionPublicada", { ok: true, proyecto: JSON.parse(JSON.stringify(p)), version: p.version });
+      });
       case "publicarSubir": return c.luego(800, () => {
         const p = SIM.proyectos.find((x) => x.id === d.id);
         Object.assign(p, { repo: `${d.dueno}/${p.id}`, publicado: d.visibilidad, explorador: d.explorador === "si",

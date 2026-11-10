@@ -135,6 +135,16 @@ await page.fill("#pz-nombre", "Lista de compras");
 await page.fill("#pz-que", "Arma una lista de compras desde recetas.");
 assert.ok(!(await page.isDisabled("#proponer")), "con nombre y qué resuelve, se puede proponer");
 await capturar(page, "3h-publicada-en");
+// Después de publicar: una versión nueva (con su nota) y pedir un cambio (vuelve al plan, que se revisa solo).
+assert.ok(await page.isDisabled("#publicar-version"), "sin decir qué cambió, no se publica una versión nueva");
+await page.fill("#nota-version", "Ahora puedes exportar a PDF.");
+await page.click("#publicar-version");
+await page.waitForSelector("text=Published version: 0.2.0");
+await page.fill("#cambio", "Que se pueda exportar a PDF.");
+await page.click("#pedir-cambio");
+await page.waitForSelector("text=The requested change");
+assert.equal(await page.locator(".filas > *").count() >= 3, true, "lo hecho se queda y se suman los pasos del cambio");
+await capturar(page, "3h2-pedir-cambio-en");
 await page.click("#ir-inicio");
 await page.click("#explorar");
 await page.waitForSelector(".apps li");

@@ -528,6 +528,22 @@
   "Listo: quedó instalada.": "Done: it's installed.",
   "Pieza no puede instalarla sola en este computador: bájala desde su página.": "Pieza can't install it by itself on this computer: download it from its page.",
   "La instalación tardó demasiado.": "The installation took too long.",
-  "Esta app todavía no tiene carpeta.": "This app doesn't have a folder yet."
+  "Esta app todavía no tiene carpeta.": "This app doesn't have a folder yet.",
+  "Pedir un cambio": "Ask for a change",
+  "Cuenta qué quieres cambiar o sumar. Hago un plan solo para eso, lo reviso y lo corrijo antes de construir.": "Tell me what you want to change or add. I make a plan just for that, then review and fix it before building.",
+  "Qué cambia": "What changes",
+  "Ej.: que se pueda exportar a PDF": "E.g.: export to PDF",
+  "Hacer el plan del cambio": "Plan the change",
+  "Publicar versión nueva": "Publish a new version",
+  "Versión publicada: {v}": "Published version: {v}",
+  "Subo el número de versión, reviso otra vez que no haya secretos ni datos personales y lo subo. Quien la instaló la recibe sola.": "I raise the version number, check again for secrets and personal data, and upload it. People who installed it get it automatically.",
+  "Qué cambió (para quien la usa)": "What changed (for the people who use it)",
+  "Ej.: Ahora puedes exportar a PDF.": "E.g.: Now you can export to PDF.",
+  "Publicando la versión nueva…": "Publishing the new version…",
+  "Publiqué la versión {v}. GitHub arma las descargas en unos 15 minutos.": "I published version {v}. GitHub builds the downloads in about 15 minutes.",
+  "El cambio pedido": "The requested change",
+  "Pruebas del cambio y sus textos en inglés.": "Tests for the change and its English texts.",
+  "Sus pruebas y textos": "Its tests and texts",
+  "El cambio que pediste:": "The change you asked for:"
  }
 }
