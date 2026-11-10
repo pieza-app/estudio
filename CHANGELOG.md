@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.8.0
+- Pieza desarrolla mejor tu app: el plan trae pasos más chicos que dicen qué deja listo cada uno y de cuáles dependen. Los pasos que no dependen entre sí se hacen a la vez. Un paso que no queda se divide en pasos más chicos (solo, en «Todo automático», o con «Dividirlo»). · *Pieza builds your app better: the plan has smaller steps that say what each one leaves ready and which ones they depend on. Steps that don't depend on each other run at the same time. A step that doesn't work is split into smaller steps (by itself in “Do it all”, or with “Split it”).*
+
 ## 0.7.2
 - Cuando un paso no queda, Pieza te dice por qué, muestra todo lo que hizo tu IA y lo puedes arreglar o saltar ahí mismo. En «Todo automático» lo intenta arreglar sola una vez. Un paso que ya estaba hecho ya no falla por «no cambiaste ningún archivo». Los botones de los pasos quedan arriba, siempre a la vista. · *When a step doesn't work, Pieza tells you why, shows everything your AI did, and you can fix or skip it right there. In “Do it all” it tries to fix it once by itself. A step that was already done no longer fails with “you changed no file”. The step buttons stay at the top, always in view.*
 

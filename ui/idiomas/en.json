@@ -363,6 +363,16 @@
   "La última vez · paso {n}": "Last time · step {n}",
   "El paso {n} no quedó. Le pido a tu IA que lo arregle.": "Step {n} didn't work. I'm asking your AI to fix it.",
   "El paso {n} no quedó. Abajo ves por qué y puedes arreglarlo.": "Step {n} didn't work. Below you can see why and fix it.",
-  "Arreglar el paso {n}": "Fix step {n}"
+  "Arreglar el paso {n}": "Fix step {n}",
+  "paso {n}": "step {n}",
+  "En vivo · {n} pasos a la vez": "Live · {n} steps at once",
+  "Usa lo del paso {lista}": "Uses step {lista}",
+  "Algunos pasos tocaban lo mismo: los hago después, uno a uno.": "Some steps touched the same thing: I'll do them later, one by one.",
+  "Dividí el paso {n} en {k} pasos más chicos.": "I split step {n} into {k} smaller steps.",
+  "El paso {n} sigue sin quedar. Lo divido en pasos más chicos.": "Step {n} still didn't work. I'm splitting it into smaller steps.",
+  "Dividirlo en pasos más chicos": "Split it into smaller steps",
+  "«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.": "“Fix it” gives this error to your AI so it can correct it. If the step is too big, split it. To go on with the others, skip it for now.",
+  "Tu IA está dividiendo el paso en pasos más chicos…": "Your AI is splitting the step into smaller steps…",
+  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué.": "Pieza does every step by itself, several at once when they don't depend on each other. If one fails, it fixes or splits it; if it still fails, it stops and tells you why."
  }
 }

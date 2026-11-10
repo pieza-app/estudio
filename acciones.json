@@ -106,6 +106,52 @@
    "limite": 330,
    "pieza": "app"
   },
+  "proyectoDividir": {
+   "script": "proyectos.py",
+   "args": [
+    "dividir"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "n": {
+     "tipo": "entero",
+     "min": 0,
+     "max": 39,
+     "requerido": true
+    }
+   },
+   "responde": "pasoDividido",
+   "limite": 1300,
+   "pieza": "app"
+  },
+  "proyectoLote": {
+   "script": "proyectos.py",
+   "args": [
+    "lote"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "ns": {
+     "tipo": "lista",
+     "max": 3,
+     "requerido": true
+    }
+   },
+   "responde": "loteListo",
+   "limite": 2400,
+   "progreso": "pasoAvance",
+   "pieza": "app"
+  },
   "proyectoPaso": {
    "script": "proyectos.py",
    "args": [
@@ -121,7 +167,7 @@
     "n": {
      "tipo": "entero",
      "min": 0,
-     "max": 15,
+     "max": 39,
      "requerido": true
     }
    },

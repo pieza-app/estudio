@@ -96,8 +96,10 @@ await page.click('[data-modo="auto"]');
 await page.waitForSelector("#tope");
 await capturar(page, "3f-pasos-en");
 await page.click("#hacer-paso");
+await page.waitForFunction(() => document.querySelector(".consola-titulo")?.textContent.includes("2"), null, { timeout: 15000 });  // dos a la vez
 await page.waitForSelector(".listo", { timeout: 15000 });
 assert.equal(await page.locator(".pasos .estado-listo").count(), 4, "en automático se hacen todos los pasos");
+assert.ok(await page.locator(".pasos .usa").first().isVisible(), "cada paso dice de qué paso usa lo hecho");
 await capturar(page, "3g-lista-en");
 // 4. Publicar con la cuenta de la persona (simulado) y proponer una pieza.
 await page.click("#revisar-publicar");
@@ -169,6 +171,11 @@ await page.waitForSelector("#paso-1.saltado");
 assert.equal(await page.getAttribute("#hacer-paso", "data-n"), "2", "saltado: sigue con el próximo");
 await page.click("#paso-1 [data-arreglar]");
 await page.waitForSelector("#paso-1.estado-listo");
+// Dividir un paso que no queda: dos pasos más chicos en su lugar, y los de después se corren.
+const total = await page.locator(".pasos > li").count();
+await page.evaluate(() => window.Pieza._probar((E) => Object.assign(E.proyecto.pasos[2], { estado: "fallo", causa: "pruebas", error: "x" })));
+await page.click("#paso-2 [data-dividir]");
+await page.waitForFunction((n) => document.querySelectorAll(".pasos > li").length === n + 1, total);
 await page.click("#inicio");
 await page.waitForSelector(".proyectos [data-seguir]");
 await sinDesborde(page, "inicio a 390 px");

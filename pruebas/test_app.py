@@ -3,6 +3,7 @@
 Una clase por script de bin/, con datos ficticios.
 """
 import json
+import re
 import os
 import subprocess
 import sys
@@ -158,12 +159,12 @@ class Proyectos(unittest.TestCase):
         self.assertIn("Guardar con respaldo.", self.pedidos[-1][0])
 
     def test_plan_reintenta_si_se_pasa_de_pasos(self):
-        muchos = {"pasos": [{"titulo": f"Paso {i}", "que": "x", "archivos": [], "tokens": 1} for i in range(20)]}
+        muchos = {"pasos": [{"titulo": f"Paso {i}", "que": "x", "archivos": [], "tokens": 1} for i in range(35)]}
         self.respuestas.append(json.dumps(muchos))
         self.respuestas.append('{"pasos": [{"titulo": "Recetas", "que": "Guardar recetas.", "archivos": [], "tokens": 900}]}')
         r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": []})
         self.assertTrue(r["ok"], r)
-        self.assertIn("trajo 20", self.pedidos[-1][0])
+        self.assertIn("trajo 35", self.pedidos[-1][0])
 
     def test_revisar_sin_plan(self):
         with self.assertRaises(ValueError):
@@ -299,6 +300,114 @@ class Proyectos(unittest.TestCase):
         self.assertIn("test_lista", self.pedidos[0])  # «Arreglarlo»: el error va desde el primer intento
         self.assertNotIn("causa", x)
         self.assertEqual([h["intento"] for h in x["historial"]], [1, 2, 3])
+
+    def plan_en_paralelo(self):
+        pasos = [{"titulo": "Datos", "que": "Formato de recetas.", "archivos": ["bin/datos.py"], "tokens": 900, "entrega": "datos.leer() → lista",
+                  "depende": []},
+                 {"titulo": "Lista", "que": "Pantalla de lista.", "archivos": ["bin/lista.py"], "tokens": 900, "entrega": "", "depende": [1]},
+                 {"titulo": "Buscar", "que": "Buscar recetas.", "archivos": ["bin/buscar.py"], "tokens": 900, "entrega": "", "depende": [1]},
+                 {"titulo": "Compras", "que": "Lista de compras.", "archivos": ["bin/compras.py"], "tokens": 900, "depende": [2, 3]}]
+        self.respuestas.append(json.dumps({"pasos": pasos}))
+        p = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": []})["proyecto"]
+        return p
+
+    def test_plan_con_pasos_chicos_y_conectados(self):
+        grande = {"pasos": [{"titulo": "Todo", "que": "x", "archivos": [f"bin/a{i}.py" for i in range(9)], "tokens": 900}]}
+        self.respuestas.append(json.dumps(grande))
+        p = self.plan_en_paralelo()
+        self.assertIn("es muy grande", self.pedidos[-1][0])  # se pidió de nuevo, dividiendo
+        self.assertEqual([x["depende"] for x in p["pasos"]], [[], [0], [0], [1, 2]])
+        self.assertEqual(self.p.listos_para_lote(p), [0])
+        p["pasos"][0]["estado"] = "listo"
+        p["pasos"][0]["resumen"] = "Dejé el formato."
+        self.assertEqual(self.p.listos_para_lote(p), [1, 2])  # no dependen entre sí ni comparten archivos
+        p["carpeta"] = self.tmp.name
+        pedido = self.p._prompt_paso(p, 1)
+        self.assertIn("(este paso lo usa)", pedido)
+        self.assertIn("datos.leer() → lista", pedido)
+
+    def test_lote_hace_pasos_a_la_vez_y_junta_los_cambios(self):
+        p = self.plan_en_paralelo()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        proyecto = self.p._leer("recetas")
+        proyecto["pasos"][0]["estado"] = "listo"
+        self.p._guardar(proyecto)
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+        en_antes = json.load(open(os.path.join(carpeta, "ui", "idiomas", "en.json")))
+
+        def edita(pedido, **opciones):
+            c = opciones["escribir"]
+            self.assertNotEqual(c, carpeta)  # cada paso en su copia
+            n = int(re.search(r"# Este paso \((\d+)\)", pedido).group(1))
+            open(os.path.join(c, "bin", f"paso{n}.py"), "w").write(f"print({n})\n")
+            en = json.load(open(os.path.join(c, "ui", "idiomas", "en.json")))
+            en.setdefault("textos", {})[f"Paso {n}"] = f"Step {n}"
+            json.dump(en, open(os.path.join(c, "ui", "idiomas", "en.json"), "w"), ensure_ascii=False, indent=1)
+            with open(os.path.join(c, "CHANGELOG.md"), "a") as f:
+                f.write(f"- Paso {n}\n")
+            return f"Hice el paso {n}.", None
+        self.p.ia.preguntar_vivo = edita
+        r = self.p.lote({"id": "recetas", "ns": [1, 2]})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["aplicados"], [1, 2])
+        self.assertEqual([x["estado"] for x in r["proyecto"]["pasos"]], ["listo", "listo", "listo", "pendiente"])
+        for n in (2, 3):
+            self.assertTrue(os.path.exists(os.path.join(carpeta, "bin", f"paso{n}.py")))
+        en = json.load(open(os.path.join(carpeta, "ui", "idiomas", "en.json")))
+        self.assertEqual((en["textos"]["Paso 2"], en["textos"]["Paso 3"]), ("Step 2", "Step 3"))  # las dos traducciones
+        self.assertEqual(len(en["textos"]), len(en_antes.get("textos", {})) + 2)
+        changelog = open(os.path.join(carpeta, "CHANGELOG.md")).read()
+        self.assertIn("- Paso 2", changelog)
+        self.assertIn("- Paso 3", changelog)
+        with self.assertRaises(ValueError):
+            self.p.lote({"id": "recetas", "ns": [0, 3]})  # el 1 ya está listo
+
+    def test_lote_aplaza_lo_que_choca(self):
+        self.plan_en_paralelo()
+        carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
+        proyecto = self.p._leer("recetas")
+        proyecto["pasos"][0]["estado"] = "listo"
+        self.p._guardar(proyecto)
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+        primera = open(os.path.join(carpeta, "ui", "app.js")).read().splitlines()[0]
+
+        def edita(pedido, **opciones):
+            n = re.search(r"# Este paso \((\d+)\)", pedido).group(1)
+            ruta = os.path.join(opciones["escribir"], "ui", "app.js")
+            lineas = open(ruta).read().splitlines(True)
+            lineas[0] = f"// paso {n}\n"
+            open(ruta, "w").write("".join(lineas))
+            return "Cambié la primera línea.", None
+        self.p.ia.preguntar_vivo = edita
+        r = self.p.lote({"id": "recetas", "ns": [1, 2]})
+        self.assertFalse(r["ok"])
+        self.assertEqual((r["aplicados"], r["aplazados"]), ([1], [2]))
+        self.assertEqual(r["proyecto"]["pasos"][2]["estado"], "pendiente")
+        self.assertEqual(open(os.path.join(carpeta, "ui", "app.js")).read().splitlines()[0], "// paso 2")
+        self.assertNotEqual(primera, "// paso 2")
+
+    def test_dividir_un_paso(self):
+        self.plan_en_paralelo()
+        self.respuestas.append(json.dumps({"pasos": [
+            {"titulo": "Lista: datos", "que": "a", "archivos": ["bin/lista.py"], "tokens": 500, "entrega": "lista.cargar()"},
+            {"titulo": "Lista: pantalla", "que": "b", "archivos": ["ui/app.js"], "tokens": 500, "depende": [1]}]}))
+        r = self.p.dividir({"id": "recetas", "n": 1})
+        self.assertTrue(r["ok"], r)
+        pasos = r["proyecto"]["pasos"]
+        self.assertEqual([x["titulo"] for x in pasos], ["Datos", "Lista: datos", "Lista: pantalla", "Buscar", "Compras"])
+        self.assertEqual([x["depende"] for x in pasos], [[], [0], [1], [0], [2, 3]])  # «Compras» ahora espera al último de la división
+        self.assertEqual(pasos[1]["dividido_de"], "Lista")
+
+    def test_juntar_cambios(self):
+        self.assertEqual(self.p._juntar_texto("a\nb\nc\n", "a\nB\nc\n", "a\nb\nc\nd\n"), "a\nB\nc\nd\n")
+        self.assertEqual(self.p._juntar_texto("a\n", "a\nx\n", "a\ny\n"), "a\nx\ny\n")
+        self.assertIsNone(self.p._juntar_texto("a\nb\n", "a\nX\n", "a\nY\n"))
+        self.assertEqual(self.p._juntar_json({"t": {"x": 1}}, {"t": {"x": 1, "y": 2}}, {"t": {"x": 1, "z": 3}}),
+                         {"t": {"x": 1, "y": 2, "z": 3}})
+        with self.assertRaises(ValueError):
+            self.p._juntar_json({"v": 1}, {"v": 2}, {"v": 3})
 
     def test_cambiado_cuenta_solo_lo_nuevo(self):
         self.assertEqual(self.p._cambiado(b"x" * 10000 + b"fin", b"x" * 10000 + b"nuevo fin"), 6)

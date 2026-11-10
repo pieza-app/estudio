@@ -27,9 +27,11 @@ no puede leer lo que no le sirve para programar (`NO_LEER`: lo generado, la app 
 Los tokens son los que la IA dice haber usado (Claude y Codex). Si no los dice (Gemini), se estiman con el largo del pedido, de
 la respuesta y de lo que cambió en los archivos (~4 caracteres por token).
 """
+import difflib
 import json
 import os
 import shutil
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 import re
 import subprocess
@@ -42,7 +44,12 @@ import piezas
 import trabajos
 
 CARACTERES_POR_TOKEN = 4
-MAX_PASOS = 16
+MAX_PASOS = 30       # en el plan; pasos chicos
+MAX_PASOS_TOTAL = 40  # con los que salen de dividir
+TOPE_PASO = 60_000   # tokens estimados: un paso más grande se divide
+MAX_ARCHIVOS_PASO = 6  # archivos propios por paso (sin contar en.json, CHANGELOG ni pruebas)
+MAX_LOTE = 3         # pasos que se hacen a la vez
+LIMITE_LOTE = 2400
 MAX_FRASE = 400
 MAX_ACUERDOS = 20  # cambios aceptados de la revisión
 MAX_HALLAZGOS = 6  # por enfoque
@@ -127,21 +134,43 @@ def _texto(v, maximo):
 
 # ── El plan ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-def validar_plan(datos):
-    """{pasos: [{titulo, que, archivos, tokens}]} → la lista limpia, o ValueError."""
+SIN_CONTAR = ("ui/idiomas/", "CHANGELOG.md", "AGENTS.md", "README.md", "pruebas/")
+
+
+def validar_plan(datos, maximo=MAX_PASOS, previos=0):
+    """{pasos: [{titulo, que, archivos, tokens, entrega, depende}]} → la lista limpia, o ValueError.
+    `depende` llega con los números de paso (1, 2…) y queda con índices (0, 1…); solo pasos anteriores. Sin `depende`, el paso
+    depende del anterior (un plan de antes). `previos`: pasos que ya existen antes de estos (al dividir)."""
     pasos = datos.get("pasos") if isinstance(datos, dict) else None
-    if not isinstance(pasos, list) or not 1 <= len(pasos) <= MAX_PASOS:
+    if not isinstance(pasos, list) or not 1 <= len(pasos) <= maximo:
         n = len(pasos) if isinstance(pasos, list) else 0
-        raise ValueError(f"El plan tiene que traer entre 1 y {MAX_PASOS} pasos (trajo {n}).")
+        raise ValueError(f"El plan tiene que traer entre 1 y {maximo} pasos (trajo {n}).")
     limpio = []
-    for x in pasos:
+    for i, x in enumerate(pasos):
         if not isinstance(x, dict) or not _texto(x.get("titulo"), 80):
             raise ValueError("Un paso del plan no tiene título.")
         archivos = [a for a in (x.get("archivos") or []) if isinstance(a, str) and _ruta_valida(a)][:MAX_ARCHIVOS]
         t = x.get("tokens")
-        limpio.append({"titulo": _texto(x.get("titulo"), 80), "que": _texto(x.get("que"), 500), "archivos": archivos,
-                       "tokens": int(t) if isinstance(t, (int, float)) and 0 <= t <= 500_000 else 0})
+        t = int(t) if isinstance(t, (int, float)) and 0 <= t <= 500_000 else 0
+        propios = [a for a in archivos if not a.startswith(SIN_CONTAR)]
+        if t > TOPE_PASO or len(propios) > MAX_ARCHIVOS_PASO:
+            raise ValueError(f"El paso {previos + i + 1} («{_texto(x.get('titulo'), 80)}») es muy grande: divídelo en pasos de "
+                             f"menos de {TOPE_PASO // 1000} mil tokens y {MAX_ARCHIVOS_PASO} archivos propios como máximo.")
+        dep = x.get("depende")
+        if isinstance(dep, list):
+            dep = sorted({d - 1 for d in dep if isinstance(d, int) and not isinstance(d, bool) and 1 <= d <= previos + i})
+        else:
+            dep = [previos + i - 1] if previos + i > 0 else []
+        limpio.append({"titulo": _texto(x.get("titulo"), 80), "que": _texto(x.get("que"), 500), "archivos": archivos, "tokens": t,
+                       "entrega": _texto(x.get("entrega"), 400), "depende": dep})
     return limpio
+
+
+def dependencias(p, i):
+    """Los pasos de los que depende el paso i (índices). Un plan de antes no los trae: depende del anterior."""
+    x = p["pasos"][i]
+    dep = x.get("depende")
+    return [d for d in dep if isinstance(d, int) and 0 <= d < i] if isinstance(dep, list) else ([i - 1] if i > 0 else [])
 
 
 def _detalle(p):
@@ -171,14 +200,21 @@ def _prompt_plan(p, ficha):
 {hechas}
 {bloque_por_hacer}
 # Lo que te pido
-Desglosa SOLO lo propio de esta app en pasos CHICOS (entre 3 y {MAX_PASOS}). Un paso chico:
+Desglosa SOLO lo propio de esta app en pasos CHICOS (entre 3 y {MAX_PASOS}). Más pasos chicos es mejor que pocos grandes. Un paso:
 - hace una sola cosa que se puede probar (un script con su acción, o una pantalla, o una mejora);
 - toca como máximo 4 archivos propios (sin contar ui/idiomas/en.json, el CHANGELOG ni las pruebas);
-- tu IA lo termina en menos de 10 minutos y deja las pruebas en verde.
-Si algo es grande, pártelo en dos pasos. El primer paso reemplaza el ejemplo de `pieza.py crear` (ui/app.js, bin/ejemplo.py, la
-acción «ejemplo»).
+- gasta menos de {TOPE_PASO // 1000} mil tokens: tu IA lo termina en pocos minutos y deja las pruebas en verde.
+Si algo es grande, pártelo. El primer paso reemplaza el ejemplo de `pieza.py crear` (ui/app.js, bin/ejemplo.py, la acción «ejemplo»).
+
+Los pasos se conectan por lo que cada uno deja listo:
+- En «entrega», escribe con nombres exactos lo que el paso deja para otros pasos: funciones (`modulo.funcion(args) → resultado`),
+  acciones de app.json (nombre, datos y respuesta), formato de los datos guardados, pantallas. Así el que viene después lo usa sin
+  adivinar. Lo compartido (un formato de datos, una acción base) va en un paso temprano y chico.
+- En «depende», los números de los pasos que tienen que estar listos antes (solo pasos anteriores). Un paso que no usa nada de
+  otro no depende de él: Pieza hace a la vez los pasos que no dependen entre sí y no tocan los mismos archivos.
 Responde SOLO este JSON, sin texto antes ni después:
-{{"pasos": [{{"titulo": "…", "que": "qué hace, en 1 a 3 frases", "archivos": ["ruta/relativa"], "tokens": 0}}]}}
+{{"pasos": [{{"titulo": "…", "que": "qué hace, en 1 a 3 frases", "archivos": ["ruta/relativa"], "tokens": 0,
+  "entrega": "lo que deja listo para otros pasos", "depende": [1]}}]}}
 En «tokens», tu estimado de lo que gastará ese paso."""
 
 
@@ -211,7 +247,8 @@ def plan(d):
         except ValueError as e:
             falla = str(e)
             # Una app grande a veces sale con más pasos de la cuenta o sin JSON: se pide de nuevo diciendo qué falló.
-            pedido = _prompt_plan(p, ficha) + f"\n\n# Tu respuesta anterior no sirvió\n{falla} Junta pasos si te pasaste. Responde solo el JSON."
+            pedido = _prompt_plan(p, ficha) + (f"\n\n# Tu respuesta anterior no sirvió\n{falla} Si te pasaste de pasos, junta los más "
+                                                f"chicos; si un paso es muy grande, divídelo. Responde solo el JSON.")
     p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
     p["gastado"] = p["gastado_plan"]
     if pasos is None:
@@ -415,13 +452,21 @@ def _mapa(carpeta):
 
 
 def _historia(p, n):
-    """Lo que hicieron los pasos anteriores que quedaron listos: su resumen y qué archivos tocaron."""
-    lineas = []
-    for i, x in enumerate(p["pasos"][:n]):
-        if x.get("estado") == "listo":
-            tocados = ", ".join((x.get("escritos") or [])[:12])
-            lineas.append(f"{i + 1}. {x['titulo']}: {_texto(x.get('resumen'), 300) or 'listo'}" + (f" (tocó {tocados})" if tocados else ""))
-    return "\n".join(lineas) or "Ninguno todavía."
+    """Lo que hicieron los pasos que quedaron listos: su resumen, lo que dejaron listo y qué archivos tocaron. Los pasos de los que
+    depende este van primero y completos; los demás, cortos."""
+    dep = set(dependencias(p, n))
+    primero, resto = [], []
+    for i, x in enumerate(p["pasos"]):
+        if i == n or x.get("estado") != "listo":
+            continue
+        tocados = ", ".join((x.get("escritos") or [])[:12])
+        entrega = f" Dejó listo: {x['entrega']}" if x.get("entrega") else ""
+        if i in dep:
+            primero.append(f"{i + 1}. {x['titulo']} (este paso lo usa): {_texto(x.get('resumen'), 600) or 'listo'}{entrega}"
+                           + (f" (tocó {tocados})" if tocados else ""))
+        else:
+            resto.append(f"{i + 1}. {x['titulo']}: {_texto(x.get('resumen'), 200) or 'listo'}{entrega}")
+    return "\n".join(primero + resto) or "Ninguno todavía."
 
 
 def _prompt_paso(p, n, error=None):
@@ -450,13 +495,23 @@ De piezas (no se cambian; su API está en AGENTS.md): {", ".join(de_piezas) or "
 # Este paso ({n + 1})
 {x['titulo']}
 {x['que']}
-Archivos que pensabas tocar: {', '.join(x['archivos']) or 'los que hagan falta'}{extra}
+Archivos que pensabas tocar: {', '.join(x['archivos']) or 'los que hagan falta'}{_entrega(p, n)}{extra}
 
 # Cómo responder
 Lee solo lo que necesitas (usa el mapa de arriba). Responde SOLO este JSON, sin texto antes ni después:
 {{"resumen": "qué hiciste, en 1 a 3 frases", "archivos": [{{"ruta": "ruta/relativa", "contenido": "el archivo completo"}}],
  "borrar": ["ruta/que/ya/no/sirve"]}}
 «borrar» es opcional (por ejemplo, el ejemplo de `pieza.py crear` que reemplazas)."""
+
+
+def _entrega(p, n):
+    """Lo que este paso tiene que dejar listo para los que vienen (con esos nombres exactos) y quiénes lo van a usar."""
+    x = p["pasos"][n]
+    usan = [str(j + 1) for j in range(n + 1, len(p["pasos"])) if n in dependencias(p, j)]
+    if not x.get("entrega") and not usan:
+        return ""
+    return ("\nLo que tiene que dejar listo, con estos nombres (otros pasos lo usan): " + (x.get("entrega") or "lo que hagas")
+            + (f" (lo usan los pasos {', '.join(usan)})" if usan else ""))
 
 
 def _gastar(x, uso, estimado):
@@ -561,6 +616,287 @@ def paso(d):
     p["estado"] = "pasos"
     p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
     return {"ok": x["estado"] == "listo", "proyecto": _guardar(p), "n": n}
+
+
+# ── Dividir un paso grande ───────────────────────────────────────────────────────────────────────────────────────────────
+
+def _prompt_dividir(p, n):
+    x = p["pasos"][n]
+    intentos = "\n".join(f"- Intento {h['intento']}: {h.get('causa') or 'quedó'}. {_texto(h.get('resumen'), 300)}"
+                          for h in (x.get("historial") or [])[-3:])
+    error = f"\n# El último error\n```\n{_texto(x.get('error'), 1200)}\n```" if x.get("error") else ""
+    return f"""Eres quien planifica los pasos de la app «{p['nombre']}» ({p['frase']}).
+{_detalle(p)}
+# El plan
+{chr(10).join(f"{i + 1}. {y['titulo']} ({y['estado']})" for i, y in enumerate(p['pasos']))}
+
+# El paso {n + 1} es muy grande o no quedó
+{x['titulo']}: {x['que']}
+Archivos: {', '.join(x.get('archivos') or []) or 'sin decir'}
+Lo que deja listo: {x.get('entrega') or 'sin decir'}
+{f"# Lo que pasó{chr(10)}{intentos}" if intentos else ""}{error}
+# Escritos por un intento anterior (siguen en la carpeta: úsalos, no partas de cero)
+{', '.join(x.get('escritos') or []) or 'ninguno'}
+
+# Lo que te pido
+Divide SOLO este paso en 2 a 4 pasos más chicos, en orden. Cada uno hace una sola cosa que se puede probar, toca pocos archivos
+y gasta menos de {TOPE_PASO // 1000} mil tokens. Entre todos hacen lo mismo que el paso original y dejan listo lo mismo.
+En «depende», los números DENTRO de esta división (1 = el primero de estos pasos); el primero hereda lo que necesitaba el original.
+Responde SOLO este JSON:
+{{"pasos": [{{"titulo": "…", "que": "…", "archivos": ["ruta"], "tokens": 0, "entrega": "…", "depende": []}}]}}"""
+
+
+def dividir(d):
+    """Cambia el paso n (que no quedó o es muy grande) por 2 a 4 pasos chicos. Los pasos que dependían de él pasan a depender del
+    último de los nuevos; los índices de después se corren."""
+    p = _leer(d.get("id"))
+    n = d.get("n")
+    if p.get("estado") not in ("plan", "creado", "pasos") or not isinstance(n, int) or not 0 <= n < len(p["pasos"]):
+        raise ValueError("Paso desconocido.")
+    x = p["pasos"][n]
+    if x.get("estado") == "listo":
+        raise ValueError("Ese paso ya está listo.")
+    pedido = _prompt_dividir(p, n)
+    nuevos, falla, gastado = None, "", 0
+    for _ in range(INTENTOS):
+        texto, error = ia.preguntar(pedido, timeout=600)
+        if error:
+            return {"ok": False, "error": ia.frase(error), "codigo": error["codigo"]}
+        gastado += tokens(pedido, texto)
+        try:
+            nuevos = validar_plan(_json_de(texto), maximo=4)
+            if len(nuevos) < 2:
+                raise ValueError("Divide el paso en 2 a 4 pasos.")
+            break
+        except ValueError as e:
+            falla, nuevos = str(e), None
+            pedido = _prompt_dividir(p, n) + f"\n\n# Tu respuesta anterior no sirvió\n{falla} Responde solo el JSON."
+    p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
+    if nuevos is None or len(p["pasos"]) - 1 + len(nuevos) > MAX_PASOS_TOTAL:
+        _guardar(p)
+        return {"ok": False, "error": falla or "La app ya tiene demasiados pasos para dividir más.", "codigo": "dividir"}
+    k = len(nuevos)
+    base = dependencias(p, n)
+    viejos = [dict(y, depende=dependencias(p, i)) for i, y in enumerate(p["pasos"])]
+    armados = []
+    for j, y in enumerate(nuevos):
+        # validar_plan los numeró desde 0 dentro de la división (y, sin «depende», del anterior): se pasan a índices del plan.
+        dentro = [n + d for d in y["depende"] if 0 <= d < j]
+        armados.append(dict(y, depende=sorted(set(base + dentro)) if j == 0 else sorted(set(dentro or [n + j - 1])),
+                            estado="pendiente", gastado=0, dividido_de=x["titulo"]))
+    if x.get("escritos"):
+        armados[0]["que"] = _texto(armados[0]["que"] + " (Un intento anterior dejó cambios en: " + ", ".join(x["escritos"][:8]) + ".)", 700)
+
+    def correr(d):
+        return d if d < n else n + k - 1 if d == n else d + k - 1
+    despues = [dict(y, depende=sorted({correr(d) for d in y["depende"]})) for y in viejos[n + 1:]]
+    p["pasos"] = viejos[:n] + armados + despues
+    p["gastado_plan"] += x.get("gastado", 0)  # lo que gastó el paso original no se pierde de la cuenta
+    p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p["gastado_plan"]
+    return {"ok": True, "proyecto": _guardar(p), "n": n, "nuevos": k}
+
+
+# ── Varios pasos a la vez ────────────────────────────────────────────────────────────────────────────────────────────────
+
+IGNORAR_COPIA = shutil.ignore_patterns(".git", "node_modules", "target", "dist", "__pycache__")
+
+
+def listos_para_lote(p, saltados=()):
+    """Los pasos que se pueden hacer ahora y a la vez: no están listos, todo lo que necesitan está listo y no comparten archivos
+    (los de traducciones, CHANGELOG y pruebas sí: se juntan solos). Como máximo MAX_LOTE."""
+    elegidos, tocados = [], set()
+    for i, x in enumerate(p["pasos"]):
+        if x.get("estado") == "listo" or i in saltados:
+            continue
+        if any(p["pasos"][d].get("estado") != "listo" for d in dependencias(p, i)):
+            continue
+        propios = {a for a in x.get("archivos") or [] if not a.startswith(SIN_CONTAR)}
+        if propios & tocados or (not propios and elegidos):
+            continue
+        elegidos.append(i)
+        tocados |= propios
+        if len(elegidos) == MAX_LOTE:
+            break
+    return elegidos
+
+
+def _juntar_texto(base, a, b):
+    """Junta dos cambios a un mismo texto si tocan líneas distintas (dos agregados en el mismo lugar van los dos). None si chocan."""
+    bl = base.splitlines(True)
+    trozos = []
+    for origen, quien in ((a.splitlines(True), 0), (b.splitlines(True), 1)):
+        for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, bl, origen, autojunk=False).get_opcodes():
+            if op != "equal":
+                trozos.append((i1, i2, origen[j1:j2], quien))
+    for x in trozos:
+        for y in trozos:
+            if x[3] < y[3]:
+                cruzan = max(x[0], y[0]) < min(x[1], y[1])
+                dentro = any(p[0] == p[1] and q[0] < p[0] < q[1] for p, q in ((x, y), (y, x)))
+                if cruzan or dentro:
+                    return None
+    trozos.sort(key=lambda t: (t[0], t[0] != t[1], t[3]))
+    salida, i = [], 0
+    for i1, i2, nuevo, _ in trozos:
+        salida.extend(bl[i:i1])
+        salida.extend(nuevo)
+        i = max(i, i2)
+    salida.extend(bl[i:])
+    return "".join(salida)
+
+
+_FALTA = object()
+
+
+def _juntar_json(base, a, b):
+    """Junta dos cambios a un JSON (app.json, idiomas/en.json) clave por clave, en cualquier nivel: lo que cambió uno solo se toma;
+    si los dos cambiaron lo mismo de forma distinta, ValueError."""
+    if a == b:
+        return a
+    if a == base:
+        return b
+    if b == base:
+        return a
+    if not all(isinstance(v, dict) for v in (a, b)) or not (base is _FALTA or isinstance(base, dict)):
+        raise ValueError("choque")
+    base = {} if base is _FALTA else base
+    salida = {}
+    for k in list(a) + [k for k in b if k not in a] + [k for k in base if k not in a and k not in b]:
+        v = _juntar_json(base.get(k, _FALTA), a.get(k, _FALTA), b.get(k, _FALTA))
+        if v is not _FALTA:
+            salida[k] = v
+    return salida
+
+
+def _juntar(base, actual, nuevo, rel):
+    """El archivo `rel` como queda con el cambio de un paso (`nuevo`) sobre lo que ya juntaron otros (`actual`). None si chocan."""
+    if actual == base:
+        return nuevo
+    if nuevo == base or nuevo == actual:
+        return actual
+    if base is None or actual is None or nuevo is None:
+        return None
+    if rel.endswith(".json"):
+        try:
+            sangria = 2 if actual.startswith(b'{\n  "') else 1
+            return (json.dumps(_juntar_json(json.loads(base), json.loads(actual), json.loads(nuevo)), ensure_ascii=False,
+                               indent=sangria) + "\n").encode()
+        except ValueError:
+            return None
+    try:
+        r = _juntar_texto(base.decode(), actual.decode(), nuevo.decode())
+    except UnicodeDecodeError:
+        return None
+    return r.encode() if r is not None else None
+
+
+def lote(d):
+    """Hace varios pasos a la vez (los que no dependen entre sí): cada uno en su copia de la carpeta, con la IA que edita. Después
+    junta los cambios en la carpeta de la app (los que chocan quedan para después, solos) y corre las pruebas una vez."""
+    p = _leer(d.get("id"))
+    ns = d.get("ns")
+    if p.get("estado") not in ("creado", "pasos") or not p.get("carpeta"):
+        raise ValueError("Primero crea la app.")
+    if not ia.puede_escribir():
+        raise ValueError("Hacer pasos a la vez necesita una IA que edite la carpeta (Claude o Codex).")
+    validos = set(listos_para_lote(p, set(range(len(p["pasos"]))) - set(ns if isinstance(ns, list) else [])))
+    if not isinstance(ns, list) or not 1 <= len(ns) <= MAX_LOTE or not set(ns) <= validos:
+        raise ValueError("Esos pasos no se pueden hacer a la vez.")
+    carpeta = p["carpeta"]
+    base = _foto(carpeta)
+
+    def uno(n):
+        x = p["pasos"][n]
+        copia = os.path.join(tempfile.mkdtemp(prefix="pieza-paso-"), "app")
+        try:
+            shutil.copytree(carpeta, copia, ignore=IGNORAR_COPIA, symlinks=True)
+            antes = _foto(copia)
+            error_previo = x.get("error") if x.get("estado") == "fallo" else None
+            pedido = _prompt_editar(p, n, error_previo)
+            trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": 1})
+            uso, registro = {}, []
+            texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=copia, no_leer=NO_LEER,
+                                             al_evento=_avisar(copia, n, 1, uso, registro))
+            escritos, cuidados, bytes_ = _cuidar(copia, antes)
+            final = _foto(copia)
+            cambios = {r: final.get(r) for r in escritos}
+            return n, {"texto": texto, "error": error, "escritos": escritos, "cuidados": cuidados, "cambios": cambios,
+                       "uso": uso, "estimado": tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN, "registro": registro}
+        finally:
+            shutil.rmtree(os.path.dirname(copia), ignore_errors=True)
+
+    with ThreadPoolExecutor(max_workers=len(ns)) as hilos:
+        resultados = dict(hilos.map(uno, ns))
+    actual = dict(base)
+    aplicados, aplazados = [], []
+    for n in sorted(resultados):
+        r, x = resultados[n], p["pasos"][n]
+        _gastar(x, r["uso"], r["estimado"])
+        if r["cuidados"]:
+            x["cuidados"] = sorted(set(x.get("cuidados", [])) | set(r["cuidados"]))
+        x["registro"] = r["registro"][-MAX_REGISTRO:]
+        historial = list(x.get("historial") or [])
+        if r["error"]:
+            x.update(estado="fallo", error=ia.frase(r["error"]), causa="ia", intentos=1)
+            historial.append({"intento": len(historial) + 1, "resumen": "", "escritos": [], "causa": "ia", "error": x["error"]})
+            x["historial"] = historial[-MAX_HISTORIAL:]
+            continue
+        juntado = {}
+        for rel, nuevo in r["cambios"].items():
+            j = _juntar(base.get(rel), actual.get(rel), nuevo, rel)
+            if j is None:
+                juntado = None
+                break
+            juntado[rel] = j
+        x.update(resumen=_texto(r["texto"], MAX_RESUMEN), escritos=r["escritos"])
+        if juntado is None:
+            # Choca con lo que hizo otro paso de este lote: queda pendiente para hacerlo solo, sobre lo ya juntado.
+            aplazados.append(n)
+            x.update(estado="pendiente", nota="choque")
+            continue
+        actual.update(juntado)
+        aplicados.append(n)
+    for rel in sorted(set(actual) | set(base)):
+        if actual.get(rel) == base.get(rel):
+            continue
+        destino = nucleo.ruta_en(carpeta, rel)
+        if actual.get(rel) is None:
+            if destino and os.path.isfile(destino):
+                os.remove(destino)
+            continue
+        os.makedirs(os.path.dirname(destino), exist_ok=True)
+        with open(destino, "wb") as f:
+            f.write(actual[rel])
+    ok, salida = True, ""
+    if aplicados:
+        if actual.get("app.json") != base.get("app.json"):
+            r = subprocess.run([sys.executable, _pieza_py(), "acciones", carpeta], capture_output=True, text=True, timeout=120,
+                               env=_entorno())
+            if r.returncode != 0:
+                ok, salida = False, "pieza.py acciones falló: " + (r.stderr or r.stdout).strip()[-1500:]
+        if ok:
+            trabajos.emitir({"t": "fase", "fase": "pruebas", "n": aplicados[0], "intento": 1})
+            ok, salida = probar(carpeta)
+    for n in aplicados:
+        x = p["pasos"][n]
+        x.pop("nota", None)
+        historial = list(x.get("historial") or [])
+        causa = "" if ok else ("acciones" if salida.startswith("pieza.py acciones") else "pruebas")
+        historial.append({"intento": len(historial) + 1, "resumen": x.get("resumen", ""), "escritos": x.get("escritos", [])[:40],
+                          "causa": causa, "error": "" if ok else salida[-1500:]})
+        x["historial"] = historial[-MAX_HISTORIAL:]
+        x["intentos"] = 1
+        if ok:
+            x.update(estado="listo", error="")
+            x.pop("causa", None)
+        else:
+            # Las pruebas corren una vez para todo el lote: no se sabe cuál de estos pasos las rompió. Cada uno queda en
+            # «fallo» con el error; al arreglar uno, los demás vuelven a correr las pruebas y quedan si ya pasan.
+            x.update(estado="fallo", error=salida[-1500:], causa=causa)
+    p["estado"] = "pasos"
+    p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
+    return {"ok": ok and not aplazados and all(p["pasos"][n]["estado"] == "listo" for n in ns), "proyecto": _guardar(p), "ns": ns,
+            "aplicados": aplicados, "aplazados": aplazados}
 
 
 def _foto(carpeta):
@@ -688,4 +1024,5 @@ def lista(_d):
 
 
 if __name__ == "__main__":
-    nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso, "borrar": borrar}, __doc__)
+    nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso, "lote": lote, "dividir": dividir,
+                   "borrar": borrar}, __doc__)
