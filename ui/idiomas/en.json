@@ -544,6 +544,8 @@
   "El cambio pedido": "The requested change",
   "Pruebas del cambio y sus textos en inglés.": "Tests for the change and its English texts.",
   "Sus pruebas y textos": "Its tests and texts",
-  "El cambio que pediste:": "The change you asked for:"
+  "El cambio que pediste:": "The change you asked for:",
+  "Windows y Linux van en beta: pruébalas antes de contarle a mucha gente.": "Windows and Linux are in beta: try them before telling a lot of people.",
+  "La primera vez que alguien la abre, Windows puede decir «Windows protegió su PC» y Mac pedir confirmarla en Ajustes → Privacidad y seguridad. Es normal en apps nuevas: cuéntalo en la página de tu app.": "The first time someone opens it, Windows may say “Windows protected your PC” and Mac may ask to confirm it in Settings → Privacy & Security. This is normal for new apps: mention it on your app's page."
  }
 }
