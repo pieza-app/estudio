@@ -7,6 +7,7 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 ## Sin publicar · Unreleased
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
+- Después de publicar tu app puedes pedirle un cambio (Pieza arma un plan solo para eso, lo revisa y lo corrige antes de construir) y publicar una versión nueva con un toque: sube el número, revisa otra vez que no haya secretos ni datos personales y quien la instaló la recibe sola. · *After publishing your app you can ask for a change (Pieza makes a plan just for that, reviews and fixes it before building) and publish a new version with one tap: it raises the number, checks again for secrets and personal data, and people who installed it get it automatically.*
 
 ## 0.12.0
 - Después de publicar tu app puedes pedirle un cambio (Pieza arma un plan solo para eso, lo revisa y lo corrige antes de construir) y publicar una versión nueva con un toque: sube el número, revisa otra vez que no haya secretos ni datos personales y quien la instaló la recibe sola. · *After publishing your app you can ask for a change (Pieza makes a plan just for that, reviews and fixes it before building) and publish a new version with one tap: it raises the number, checks again for secrets and personal data, and people who installed it get it automatically.*
