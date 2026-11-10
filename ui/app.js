@@ -242,6 +242,8 @@
         <li>${esc("El código de tu app, revisado: sin nombres, correos ni rutas reales.")}</li>
         ${pub.visibilidad === "publico" ? `<li data-sin-traducir>${esc(pagina ? Tp("Su página web: {url}", { url: pagina }) : Tp("Su página web, en GitHub Pages."))}</li>` : ""}
         <li>${esc("Las descargas para Mac, Windows y Linux, que arma GitHub solo (unos 15 minutos).")}</li>
+        <li>${esc("Windows y Linux van en beta: pruébalas antes de contarle a mucha gente.")}</li>
+        <li>${esc("La primera vez que alguien la abre, Windows puede decir «Windows protegió su PC» y Mac pedir confirmarla en Ajustes → Privacidad y seguridad. Es normal en apps nuevas: cuéntalo en la página de tu app.")}</li>
         <li>${esc("Las actualizaciones: cada versión nueva llega sola a quien la instaló.")}</li></ul></div>`;
     const ahora = faltan ? "Termina los pasos de tu app antes de publicarla." : !conectado ? "Conecta tu GitHub: es una sola vez."
       : !donde ? "Elige dónde va a vivir tu app." : !E.subida ? "Espera: estoy revisando lo que se va a subir."
