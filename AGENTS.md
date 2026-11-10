@@ -34,7 +34,7 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 | `ui/pieza.svg` | El ícono de Pieza que marca las piezas ya hechas («0 tokens»). |
 | `bin/proyectos.py` | Crear una app: `plan` (la IA desglosa lo propio en pasos, JSON validado), `crear` (`pieza.py crear`, sin IA), `paso` (la IA lee la carpeta y devuelve archivos; Pieza los revisa, los escribe y corre las pruebas; dos intentos) y `lista`. Registro en `<datos>/proyectos/<id>.json`; la app en `~/Pieza/<Nombre>`. |
 | `datos/pieza/` | Una copia de Pieza (`pieza.py`, `piezas/`, la guía para la IA): con ella se crean las apps sin internet. La pone al día `herramientas/catalogo_de_pieza.py`; `VERSION` dice el commit. No se edita aquí. |
-| `bin/publicar.py` | `explorar` (las apps con el topic «hecho-con-pieza», de la página de Pieza, pieza «red»), `revisar` (`gh` y su sesión, dueños posibles) y `subir` (con el `gh` de la persona: repo en `app.json` + `pieza.py generar`, revisión de privacidad, primer commit, `gh repo create`, Pages y el topic si elige el explorador). |
+| `bin/publicar.py` | `explorar` (las apps con el topic «hecho-con-pieza», de la página de Pieza, pieza «red»), `revisar` (`gh` y su sesión, dueños posibles) `version` (versión nueva de una app publicada) y `subir` (con el `gh` de la persona: repo en `app.json` + `pieza.py generar`, revisión de privacidad, primer commit, `gh repo create`, Pages y el topic si elige el explorador). |
 | `bin/vista.py` | «Ver mi app»: sirve la carpeta `ui/` de la app creada en `127.0.0.1` (un servidor aparte que se apaga a los 30 minutos) y abre el navegador. |
 | `datos/guias/reglas.md` | Las reglas que van en cada pedido a la IA (cortas: un paso por pedido). |
 
@@ -75,6 +75,12 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   `requisitoInstalado`): Git, Node, Rust y GitHub CLI, con para qué sirve cada uno; instala con Homebrew o winget, si no, la
   página para bajarla. Se ve al crear la app y en el panel de construir, con dónde se construye (`proyectoAbrir` abre la
   carpeta) y con qué tecnologías (`tecnologias`).
+- **Después de publicar** (`despuesHTML`, en el paso 8 cuando hay `repo`): «Pedir un cambio» manda `proyectoPlan` con `cambio`
+  (máx. `MAX_CAMBIO`, queda en `p["cambios"]`, últimos 20): el plan es solo para el cambio, lo hecho se queda y corre la mejora
+  automática (plan → revisión a ciegas → corrección). «Publicar versión nueva» (`publicar.py version`, acción `publicarVersion` →
+  `versionPublicada`): pide la nota para quien usa la app, revisa secretos, datos personales y privacidad como `subir`, sube
+  X.Y+1.0 en `app.json`, `tauri.conf.json`, `Cargo.toml` y `Cargo.lock` (`_subir_numero`), anota el CHANGELOG
+  (`_anotar_cambio`), hace el commit con el autor noreply y lo sube a `main`; el workflow de la app arma las descargas.
 - **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).

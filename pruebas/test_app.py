@@ -411,6 +411,26 @@ class Proyectos(unittest.TestCase):
         self.respuestas.extend(['{"hallazgos": []}'] * 3)
         self.assertTrue(self.p.revisar({"id": "recetas"})["ok"])
 
+    def test_pedir_un_cambio_a_una_app_creada(self):
+        """«Pedir un cambio»: el plan nuevo es solo para el cambio, lo hecho se queda y el cambio queda anotado."""
+        self.plan_en_paralelo()
+        self.p.crear({"id": "recetas"})
+        proyecto = self.p._leer("recetas")
+        for x in proyecto["pasos"]:
+            x.update(estado="listo", gastado=100)
+        proyecto["estado"] = "pasos"
+        self.p._guardar(proyecto)
+        self.respuestas.append(json.dumps({"pasos": [
+            {"titulo": "Exportar a PDF", "que": "a", "archivos": ["bin/pdf.py"], "tokens": 500, "depende": [1]}]}))
+        r = self.p.plan({"nombre": "Recetas", "frase": "Ordena las recetas de Ana Pérez.", "plataformas": ["mac"], "piezas": [],
+                         "cambio": "Que se pueda exportar a PDF."})
+        self.assertTrue(r["ok"], r)
+        p = r["proyecto"]
+        self.assertEqual(p["pasos"][-1]["titulo"], "Exportar a PDF")
+        self.assertEqual(len(p["pasos"]), len(proyecto["pasos"]) + 1)
+        self.assertEqual(p["cambios"], ["Que se pueda exportar a PDF."])
+        self.assertIn("Que se pueda exportar a PDF.", self.pedidos[-1][0])
+
     def test_dividir_un_paso(self):
         self.plan_en_paralelo()
         self.respuestas.append(json.dumps({"pasos": [
@@ -602,6 +622,52 @@ class Publicar(unittest.TestCase):
         self.assertTrue(apps[0]["revisada"])
         self.assertEqual(apps[1]["pagina"], "")
         self.assertEqual(self.m.limpiar_apps("no"), [])
+
+    def test_version_nueva_sube_los_numeros(self):
+        carpeta = os.path.join(self.tmp.name, "Recetas")
+        os.makedirs(os.path.join(carpeta, "escritorio"))
+        with open(os.path.join(carpeta, "app.json"), "w") as f:
+            json.dump({"id": "recetas", "version": "0.3.2"}, f)
+        with open(os.path.join(carpeta, "escritorio", "tauri.conf.json"), "w") as f:
+            json.dump({"productName": "Recetas", "version": "0.3.2"}, f)
+        with open(os.path.join(carpeta, "escritorio", "Cargo.toml"), "w") as f:
+            f.write('[package]\nname = "recetas"\nversion = "0.3.2"\n\n[dependencies]\nserde = { version = "1" }\n')
+        with open(os.path.join(carpeta, "escritorio", "Cargo.lock"), "w") as f:
+            f.write('[[package]]\nname = "serde"\nversion = "1.0.0"\n\n[[package]]\nname = "recetas"\nversion = "0.3.2"\n')
+        with open(os.path.join(carpeta, "CHANGELOG.md"), "w") as f:
+            f.write("# Cambios\n\n## 0.3.2\n- Antes.\n")
+        self.assertEqual(self.m._subir_numero(carpeta), ("0.3.2", "0.4.0"))
+        self.m._anotar_cambio(carpeta, "0.4.0", "Ahora puedes exportar a PDF.")
+        self.assertEqual(json.load(open(os.path.join(carpeta, "app.json")))["version"], "0.4.0")
+        self.assertEqual(json.load(open(os.path.join(carpeta, "escritorio", "tauri.conf.json")))["version"], "0.4.0")
+        cargo = open(os.path.join(carpeta, "escritorio", "Cargo.toml")).read()
+        self.assertIn('version = "0.4.0"', cargo)
+        self.assertIn('serde = { version = "1" }', cargo)
+        lock = open(os.path.join(carpeta, "escritorio", "Cargo.lock")).read()
+        self.assertIn('name = "serde"\nversion = "1.0.0"', lock)
+        self.assertIn('name = "recetas"\nversion = "0.4.0"', lock)
+        cambios = open(os.path.join(carpeta, "CHANGELOG.md")).read()
+        self.assertLess(cambios.index("## 0.4.0"), cambios.index("## 0.3.2"))
+        self.assertIn("- Ahora puedes exportar a PDF.", cambios)
+
+    def test_version_nueva_pide_publicar_y_revisa(self):
+        import proyectos
+        carpeta = os.path.join(self.tmp.name, "Recetas")
+        os.makedirs(carpeta)
+        with open(os.path.join(carpeta, "app.json"), "w") as f:
+            json.dump({"id": "recetas", "version": "0.1.0"}, f)
+        proyectos._guardar({"id": "recetas", "nombre": "Recetas", "frase": "x", "estado": "pasos", "pasos": [], "carpeta": carpeta})
+        with self.assertRaises(ValueError):  # sin publicar, no hay versión nueva
+            self.m.version({"id": "recetas", "nota": "x"})
+        p = proyectos._leer("recetas")
+        p["repo"] = "ana-perez/recetas"
+        proyectos._guardar(p)
+        self.m.revisar = lambda d: {"ok": True, "gh": True, "sesion": True, "usuario": "ana-perez", "duenos": ["ana-perez"]}
+        with open(os.path.join(carpeta, ".env"), "w") as f:
+            f.write("CLAVE=1\n")
+        r = self.m.version({"id": "recetas", "nota": "x"})
+        self.assertEqual(r["codigo"], "secretos")
+        self.assertEqual(json.load(open(os.path.join(carpeta, "app.json")))["version"], "0.1.0")  # no tocó nada
 
     def test_sin_sesion_no_publica(self):
         import proyectos

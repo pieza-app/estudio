@@ -50,6 +50,7 @@ TOPE_PASO = 60_000   # tokens estimados: un paso más grande se divide
 MAX_ARCHIVOS_PASO = 6  # archivos propios por paso (sin contar en.json, CHANGELOG ni pruebas)
 MAX_LOTE = 3         # pasos que se hacen a la vez
 LIMITE_LOTE = 2400
+MAX_CAMBIO = 2000  # «pedir un cambio» a una app ya creada o publicada
 MAX_FRASE = 400
 MAX_ACUERDOS = 20  # cambios aceptados de la revisión
 MAX_HALLAZGOS = 6  # por enfoque
@@ -182,7 +183,7 @@ def _detalle(p):
         f"\n# Cambios acordados en la revisión (también mandan)\n{acuerdos}\n" if acuerdos else "")
 
 
-def _prompt_plan(p, ficha, hechos=()):
+def _prompt_plan(p, ficha, hechos=(), cambio=""):
     cat = piezas.catalogo()
     hechas = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat and cat[i].get("estado") == "lista")
     por_hacer = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat and cat[i].get("estado") != "lista")
@@ -200,7 +201,7 @@ def _prompt_plan(p, ficha, hechos=()):
 # Lo que ya está hecho (piezas de Pieza, 0 tokens: no las planifiques)
 {hechas}
 {bloque_por_hacer}
-{_ya_hecho(hechos)}# Lo que te pido
+{_ya_hecho(hechos)}{f"# El cambio que pide la persona (planifica SOLO los pasos para este cambio){chr(10)}{cambio}{chr(10)}{chr(10)}" if cambio else ""}# Lo que te pido
 Desglosa SOLO lo propio de esta app en pasos CHICOS (entre 3 y {MAX_PASOS}). Más pasos chicos es mejor que pocos grandes. Un paso:
 - hace una sola cosa que se puede probar (un script con su acción, o una pantalla, o una mejora);
 - toca como máximo 4 archivos propios (sin contar ui/idiomas/en.json, el CHANGELOG ni las pruebas);
@@ -251,7 +252,11 @@ def plan(d):
         # Una app ya creada: sus piezas están en la carpeta. Se rehace solo lo que falta; los pasos listos se quedan.
         ficha = piezas.ficha({"plataformas": p["plataformas"], "piezas": p.get("piezas") or []})
     hechos = [x for x in p.get("pasos") or [] if creada and x.get("estado") == "listo"]
-    pedido, gastado, pasos = _prompt_plan(p, ficha, hechos), 0, None
+    # Un cambio a una app ya creada (o publicada): los pasos nuevos son solo para ese cambio y quedan después de los hechos.
+    cambio = _texto(d.get("cambio"), MAX_CAMBIO) if creada else ""
+    if cambio:
+        p["cambios"] = (p.get("cambios") or [])[-19:] + [cambio]
+    pedido, gastado, pasos = _prompt_plan(p, ficha, hechos, cambio), 0, None
     for intento in range(INTENTOS):
         texto, error = ia.preguntar(pedido, timeout=600)
         if error:
@@ -263,7 +268,7 @@ def plan(d):
         except ValueError as e:
             falla = str(e)
             # Una app grande a veces sale con más pasos de la cuenta o sin JSON: se pide de nuevo diciendo qué falló.
-            pedido = _prompt_plan(p, ficha, hechos) + (f"\n\n# Tu respuesta anterior no sirvió\n{falla} Si te pasaste de pasos, junta los más "
+            pedido = _prompt_plan(p, ficha, hechos, cambio) + (f"\n\n# Tu respuesta anterior no sirvió\n{falla} Si te pasaste de pasos, junta los más "
                                                 f"chicos; si un paso es muy grande, divídelo. Responde solo el JSON.")
     p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
     if pasos is None:

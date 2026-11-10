@@ -7,6 +7,7 @@
   publicar.py instalar <entrada.json {id}> <salida.json>
   publicar.py conectar <entrada.json {id}> <salida.json>
   publicar.py preparar <entrada.json {id}> <salida.json>
+  publicar.py version  <entrada.json {id, nota, datos_ok}> <salida.json>
 
 - `explorar`: las apps con el topic «hecho-con-pieza» que lista la página de Pieza (solo pieza-app.github.io, pieza «red»).
 - `revisar`: si `gh` está instalado y con sesión, el usuario y sus organizaciones (dónde puede crear el repo).
@@ -22,6 +23,10 @@
 
 - `preparar`: lo que se va a subir, antes de subir nada: la lista de archivos, secretos (bloquean), datos personales (la persona
   confirma que son de ejemplo) y qué hace la app (a qué dominios se conecta, si corre comandos). `subir` lo vuelve a revisar.
+
+- `version`: una versión nueva de una app ya publicada. Sube la versión (app.json, tauri.conf.json, Cargo.toml, Cargo.lock), anota
+  la nota en el CHANGELOG, revisa lo que se sube igual que `subir`, hace el commit y lo sube: GitHub arma las descargas y las apps
+  instaladas se actualizan solas.
 
 Lo que escribe la persona (la frase) nunca va como argumento: la descripción del repo va por un archivo de entrada a `gh api`.
 """
@@ -299,6 +304,91 @@ def subir(d):
     return {"ok": True, "proyecto": proyectos._guardar(p), "url": f"https://github.com/{repo}"}
 
 
+def _subir_numero(carpeta):
+    """La versión siguiente (X.Y+1.0) en todos los lugares que la llevan. Devuelve (antes, después)."""
+    ruta_app = os.path.join(carpeta, "app.json")
+    app = nucleo.leer_json(ruta_app, {}, maximo=1_000_000)
+    antes = app.get("version") if isinstance(app.get("version"), str) and re.fullmatch(r"\d+\.\d+\.\d+", app.get("version") or "") else "0.1.0"
+    x, y, _ = (int(n) for n in antes.split("."))
+    nueva = f"{x}.{y + 1}.0"
+    app["version"] = nueva
+    nucleo.escribir_json(ruta_app, app)
+    conf = os.path.join(carpeta, "escritorio", "tauri.conf.json")
+    if os.path.isfile(conf):
+        datos = nucleo.leer_json(conf, {}, maximo=1_000_000)
+        if isinstance(datos, dict) and "version" in datos:
+            datos["version"] = nueva
+            nucleo.escribir_json(conf, datos)
+    cargo = os.path.join(carpeta, "escritorio", "Cargo.toml")
+    if os.path.isfile(cargo):
+        with open(cargo, encoding="utf-8") as f:
+            texto = f.read()
+        nombre = re.search(r'(?m)^name = "([^"]+)"', texto)
+        texto = re.sub(r'(?m)^version = "[^"]*"', f'version = "{nueva}"', texto, count=1)
+        with open(cargo, "w", encoding="utf-8") as f:
+            f.write(texto)
+        lock = os.path.join(carpeta, "escritorio", "Cargo.lock")
+        if nombre and os.path.isfile(lock):
+            with open(lock, encoding="utf-8") as f:
+                texto = f.read()
+            texto = re.sub(r'(name = "' + re.escape(nombre.group(1)) + r'"\nversion = ")[^"]*"', r"\g<1>" + nueva + '"', texto, count=1)
+            with open(lock, "w", encoding="utf-8") as f:
+                f.write(texto)
+    return antes, nueva
+
+
+def _anotar_cambio(carpeta, nueva, nota):
+    ruta = os.path.join(carpeta, "CHANGELOG.md")
+    if not os.path.isfile(ruta) or not nota:
+        return
+    with open(ruta, encoding="utf-8") as f:
+        texto = f.read()
+    import datetime
+    bloque = f"## {nueva} · {datetime.date.today().isoformat()}\n- {nota}\n\n"
+    m = re.search(r"(?m)^## ", texto)
+    texto = texto[:m.start()] + bloque + texto[m.start():] if m else texto.rstrip() + "\n\n" + bloque
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write(texto)
+
+
+def version(d):
+    p = proyectos._leer(d.get("id"))
+    carpeta, repo = p.get("carpeta"), p.get("repo")
+    if not repo or not carpeta or not os.path.isdir(carpeta):
+        raise ValueError("Primero publica la app.")
+    nota = _texto(d.get("nota"), 300)
+    info = revisar({"id": p["id"]})
+    if not info.get("sesion"):
+        return {"ok": False, "codigo": "gh", "error": "Para publicar necesitas GitHub CLI (gh) con tu sesión iniciada."}
+    revision = revisar_subida(carpeta)
+    if revision["secretos"]:
+        return {"ok": False, "codigo": "secretos", "error": "Hay secretos en los archivos de tu app. Sácalos antes de publicar.", "revision": revision}
+    if revision["personales"] and d.get("datos_ok") != "si":
+        return {"ok": False, "codigo": "personales", "error": "Confirma que los datos personales que encontré son de ejemplo.", "revision": revision}
+    privacidad = os.path.join(carpeta, "herramientas", "revisar_privacidad.sh")
+    if os.path.isfile(privacidad):
+        r = subprocess.run(["bash", privacidad, "--generico"], cwd=carpeta, capture_output=True, text=True, timeout=120,
+                           env=proyectos._entorno())
+        if r.returncode != 0:
+            return {"ok": False, "codigo": "privacidad", "error": (r.stdout + r.stderr).strip()[-800:]}
+    antes, nueva = _subir_numero(carpeta)
+    _anotar_cambio(carpeta, nueva, nota)
+    usuario = info["usuario"]
+    _, uid, _ = _gh("api", "user", "--jq", ".id")
+    correo = f"{uid}+{usuario}@users.noreply.github.com" if uid.isdigit() else f"{usuario}@users.noreply.github.com"
+    _git(carpeta, "add", "-A")
+    _git(carpeta, "-c", f"user.name={usuario}", "-c", f"user.email={correo}", "commit", "-q", "-m", f"Versión {nueva}" + (f": {nota}" if nota else ""))
+    _gh("auth", "setup-git")  # git sube con la sesión de gh
+    try:
+        _git(carpeta, "push", "-q", "origin", "HEAD:main")
+    except ValueError as e:
+        return {"ok": False, "error": f"No pude subir la versión {nueva}: {e}"}
+    p["version"] = nueva
+    p["versiones"] = (p.get("versiones") or [])[-29:] + [{"version": nueva, "nota": nota}]
+    return {"ok": True, "proyecto": proyectos._guardar(p), "version": nueva, "antes": antes,
+            "url": f"https://github.com/{repo}/releases"}
+
+
 if __name__ == "__main__":
     nucleo.script({"explorar": explorar, "revisar": revisar, "subir": subir, "instalar": instalar, "conectar": conectar,
-                   "preparar": preparar}, __doc__)
+                   "preparar": preparar, "version": version}, __doc__)

@@ -226,6 +226,10 @@
     "piezas": {
      "tipo": "lista",
      "max": 60
+    },
+    "cambio": {
+     "tipo": "texto",
+     "max": 2000
     }
    },
    "responde": "planListo",
@@ -400,6 +404,34 @@
    },
    "responde": "publicado",
    "limite": 900,
+   "pieza": "app"
+  },
+  "publicarVersion": {
+   "script": "publicar.py",
+   "args": [
+    "version"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "nota": {
+     "tipo": "texto",
+     "max": 300
+    },
+    "datos_ok": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
+    }
+   },
+   "responde": "versionPublicada",
+   "limite": 600,
    "pieza": "app"
   },
   "requisitoInstalar": {
