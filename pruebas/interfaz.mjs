@@ -221,6 +221,14 @@ await page.evaluate(() => {
 });
 await page.waitForFunction((n) => document.querySelectorAll(".pasos > li").length === n + 1, conPartes);
 await page.waitForSelector(".pasos > li:nth-last-child(2).estado-listo");   // la primera parte ya se hizo sola
+// Un paso que falla se arregla solo también en «paso a paso»: tu IA lo corrige sin que la persona apriete nada.
+await page.evaluate(() => {
+  const E = window.Pieza._pruebas.E, n = 0;
+  const proyecto = JSON.parse(JSON.stringify(E.proyecto));
+  Object.assign(proyecto.pasos[n], { estado: "fallo", causa: "pruebas", error: "FAIL: test_x" });
+  window.Pieza.pasoListo({ ok: false, proyecto, n });
+});
+await page.waitForSelector("#paso-0.estado-listo");
 await page.click("#inicio");
 await page.waitForSelector(".proyectos [data-seguir]");
 await sinDesborde(page, "inicio a 390 px");

@@ -373,7 +373,6 @@
   "Dividirlo en pasos más chicos": "Split it into smaller steps",
   "«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.": "“Fix it” gives this error to your AI so it can correct it. If the step is too big, split it. To go on with the others, skip it for now.",
   "Tu IA está dividiendo el paso en pasos más chicos…": "Your AI is splitting the step into smaller steps…",
-  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué.": "Pieza does every step by itself, several at once when they don't depend on each other. If one fails, it fixes or splits it; if it still fails, it stops and tells you why.",
   "{n} pasos · toca uno para ver qué hace": "{n} steps · tap one to see what it does",
   "usa {lista}": "uses {lista}",
   "La revisión a ciegas: tres sesiones nuevas de tu IA leen solo tu idea y el plan, y buscan fallas.": "Blind review: three fresh sessions of your AI read only your idea and the plan, and look for flaws.",
@@ -566,7 +565,6 @@
   "{n} tokens": "{n} tokens",
   "Lo que falló": "What failed",
   "Ver el error completo": "See the full error",
-  "«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si ya lo arreglaste tú, «Probar de nuevo» corre solo las pruebas, sin IA y sin gastar tokens. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.": "“Fix it” gives this error to your AI so it fixes it. If you already fixed it yourself, “Test again” only runs the tests, without AI and without spending tokens. If the step is too big, split it. To go on with the others, skip it for now.",
   "Probar de nuevo (sin IA)": "Test again (no AI)",
   "Las pruebas pasaron: el paso quedó listo.": "The tests passed: the step is done.",
   "Las pruebas siguen fallando en el paso {n}. Abajo ves qué falló.": "The tests still fail in step {n}. Below you see what failed.",
@@ -596,6 +594,14 @@
   "El paso {n} llegó a tu tope por paso. Lo divido en partes y sigo con la primera.": "Step {n} reached your limit per step. I split it into parts and go on with the first one.",
   "Dividí el paso {n} en {k} partes: {lista}.": "I split step {n} into {k} parts: {lista}.",
   "El paso llegó a tu tope por paso y lo detuve. Lo que alcanzó a escribir quedó en la carpeta.": "The step reached your limit per step and I stopped it. What it managed to write stays in the folder.",
-  "Tu IA lleva {n} min sin empezar a leer. Si sigue así, detenla y vuelve a intentarlo.": "Your AI hasn't started reading for {n} min. If it stays like this, stop it and try again."
+  "Tu IA lleva {n} min sin empezar a leer. Si sigue así, detenla y vuelve a intentarlo.": "Your AI hasn't started reading for {n} min. If it stays like this, stop it and try again.",
+  "Tu IA se cortó en el paso {n}. Lo intento de nuevo.": "Your AI stopped in step {n}. I'm trying again.",
+  "El paso {n} no quedó. Tu IA lo arregla sola (vez {k} de {t}).": "Step {n} didn't work. Your AI fixes it on its own (try {k} of {t}).",
+  "El paso {n} sigue sin quedar. Lo divido en partes y sigo con la primera.": "Step {n} still doesn't work. I split it into parts and go on with the first one.",
+  "Intenté arreglar el paso {n} solo y no quedó. Abajo ves qué falló.": "I tried to fix step {n} on my own and it didn't work. Below you see what failed.",
+  "Ya intenté arreglarlo solo: tu IA lo corrigió con este error y, si seguía sin quedar, lo dividí. Puedes darle otra vuelta (vuelve a intentarlo solo), probar de nuevo sin IA si lo arreglaste tú, dividirlo o saltarlo por ahora.": "I already tried to fix it on my own: your AI corrected it with this error and, if it still didn't work, I split it. You can give it another go (it tries on its own again), test again without AI if you fixed it yourself, split it or skip it for now.",
+  "Intentarlo de nuevo": "Try again",
+  "Si un paso falla, tu IA lo arregla sola (hasta 2 veces) y, si sigue, lo divido en partes. Solo te pregunto si nada de eso resulta.": "If a step fails, your AI fixes it on its own (up to 2 times) and, if it still fails, I split it into parts. I only ask you if none of that works.",
+  "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí.": "Pieza does all the steps on its own, several at once when they don't depend on each other."
  }
 }
