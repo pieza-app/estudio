@@ -66,6 +66,16 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   (`publicarConectar` → `ghConectado`): `gh auth login --web`; el código de una vez sale en el avance (`publicarAvance`,
   `{"t": "codigo"}`), la interfaz lo muestra y abre github.com/login/device; gh guarda la sesión en el llavero. 2) Dónde (cuenta u
   organización, con la guía). 3) Cómo (pública o privada, explorador). Publicar exige todos los pasos listos.
+- **Pruebas aisladas** (`aislar`, `probar`): Mac con `sandbox-exec` (`_perfil_mac`), Linux con `bwrap` si está; sin red salvo
+  localhost, escriben solo en la carpeta y en temporales, no leen `PRIVADAS` (llaves, .ssh, Documentos…). `cargo fetch` va antes,
+  afuera. `lista` dice `aisladas`; Windows corre sin aislar y la interfaz lo dice.
+- **Revisión antes de subir** (`publicar.py preparar` → `subidaRevisada`, y otra vez en `subir`): archivos que sube git,
+  `SECRETOS` (bloquean), `PERSONALES` (la persona confirma que son de ejemplo, `datos_ok`), dominios y comandos de la app.
+- **Lo que usa el computador** (`bin/requisitos.py`, acciones `requisitosLista` → `requisitosListos` y `requisitoInstalar` →
+  `requisitoInstalado`): Git, Node, Rust y GitHub CLI, con para qué sirve cada uno; instala con Homebrew o winget, si no, la
+  página para bajarla. Se ve al crear la app y en el panel de construir, con dónde se construye (`proyectoAbrir` abre la
+  carpeta) y con qué tecnologías (`tecnologias`).
+- **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
   «En una organización nueva» (`__nueva__`) muestra la guía (`.guia-org`): abre GitHub para crearla y «Ya la creé: revisar» vuelve

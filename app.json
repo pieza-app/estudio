@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.10.0",
+ "version": "0.11.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -256,6 +256,13 @@
       "si",
       "no"
      ]
+    },
+    "datos_ok": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
     }
    },
    "responde": "publicado",
@@ -354,6 +361,69 @@
    "responde": "ghConectado",
    "limite": 960,
    "progreso": "publicarAvance"
+  },
+  "publicarPreparar": {
+   "script": "publicar.py",
+   "args": [
+    "preparar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "subidaRevisada",
+   "limite": 120
+  },
+  "requisitosLista": {
+   "script": "requisitos.py",
+   "args": [
+    "lista"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "requisitosListos",
+   "limite": 60
+  },
+  "requisitoInstalar": {
+   "script": "requisitos.py",
+   "args": [
+    "instalar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "enum",
+     "valores": [
+      "git",
+      "node",
+      "rust",
+      "gh"
+     ],
+     "requerido": true
+    }
+   },
+   "responde": "requisitoInstalado",
+   "limite": 1600
+  },
+  "proyectoAbrir": {
+   "script": "proyectos.py",
+   "args": [
+    "abrir"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "carpetaAbierta",
+   "limite": 30
   }
  },
  "actualizaciones": {

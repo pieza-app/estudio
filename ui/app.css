@@ -303,3 +303,35 @@ html[data-host="mac"] .panel-control { top: 44px; max-height: calc(100vh - 64px)
 .fila-meta, .fila-usa, .chip-estado, .etiqueta, .paso-n, .contador { font-size: 13.5px; }
 .consola { font-size: 13.5px; }
 .lista-cabeza .pz-plano { font-size: 14px; }
+
+/* Seguridad a la vista: el aislamiento de las pruebas y la revisión antes de subir */
+.aislamiento::before { content: "🔒 "; }
+.aislamiento.sin::before { content: "⚠️ "; }
+.revision-subida { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 15px; }
+.revision-subida > li { padding-left: 28px; position: relative; }
+.revision-subida > li::before { content: "•"; position: absolute; left: 8px; color: var(--texto-suave); }
+.revision-subida > .bien::before { content: "✓"; color: var(--ok); font-weight: 700; left: 4px; }
+.revision-subida > .mal::before { content: "✕"; color: var(--rojo); font-weight: 700; left: 4px; }
+.revision-subida > .ojo::before { content: "!"; color: var(--acento); font-weight: 800; left: 8px; }
+.revision-subida ul { margin: 6px 0; padding-left: 18px; font: 13.5px/1.5 var(--mono); overflow-wrap: anywhere; }
+
+/* Dónde y con qué se construye, y lo que usa el computador */
+.donde, .equipo { display: grid; gap: 8px; padding: 16px 18px; border: 1px solid var(--linea); border-radius: var(--radio-grande); background: var(--panel); }
+.donde.corto, .equipo.corto { padding: 12px 0 0; border: 0; border-top: 1px solid var(--linea); border-radius: 0; background: none; }
+.donde .etiqueta, .equipo .etiqueta { margin-top: 4px; }
+.carpeta { margin: 0; overflow-wrap: anywhere; font-size: 14px; }
+.donde .pz-boton { justify-self: start; }
+.contenido .tecnologias, .contenido .equipo ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tecnologias li { display: flex; justify-content: space-between; gap: 12px; font-size: 14.5px; }
+.tecnologias li span { color: var(--texto-suave); }
+.tecnologias li b { font-weight: 600; text-align: right; }
+.equipo li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--linea); }
+.equipo li:first-child { border-top: 0; }
+.equipo-nombre { font-weight: 600; font-size: 15px; }
+.equipo-nombre::before { content: "✓ "; color: var(--ok); }
+.equipo .falta .equipo-nombre::before { content: "✕ "; color: var(--rojo); }
+.equipo .opcional .equipo-nombre::before { content: "○ "; color: var(--texto-suave); }
+.equipo-nombre small { color: var(--texto-suave); font-weight: 400; }
+.equipo-para { grid-column: 1; color: var(--texto-suave); font-size: 14px; }
+.equipo li > .pz-boton, .equipo li > .trabajando { grid-column: 2; grid-row: 1 / span 2; }
+.equipo-ok::before { content: "✓ "; color: var(--ok); }

@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.11.0
+- Más seguro y más claro: las pruebas del código que escribe tu IA corren aisladas (sin internet ni acceso a tus llaves), y antes de publicar ves qué se sube, si hay secretos o datos personales y qué hace tu app. Pieza muestra dónde se construye tu app y con qué tecnologías, revisa lo que tu computador necesita (Git, Node, Rust, GitHub CLI) e instala lo que falta. Eliminar una app borra también su carpeta local (nunca el repo de GitHub). · *Safer and clearer: tests of the code your AI writes run isolated (no internet or access to your keys), and before publishing you see what's uploaded, whether there are secrets or personal data, and what your app does. Pieza shows where your app is built and with which technologies, checks what your computer needs (Git, Node, Rust, GitHub CLI) and installs what's missing. Deleting an app also deletes its local folder (never the GitHub repo).*
+
 ## 0.10.0
 - El plan se mejora solo: tu IA lo arma, tres revisores lo leen a ciegas y Pieza aplica lo grave e importante. Lo ves en tres etapas y al final sabes qué se corrigió. Cada pantalla dice arriba qué hacer ahora, los textos son más grandes, el tope de tokens vale también paso a paso, y un paso que gasta más de 3 veces lo estimado se detiene y te pregunta. · *The plan improves itself: your AI makes it, three reviewers read it blind and Pieza applies what's serious and important. You see it in three stages and at the end you know what was fixed. Every screen says at the top what to do now, text is bigger, the token limit also applies step by step, and a step that uses more than 3 times its estimate stops and asks you.*
 

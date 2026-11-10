@@ -64,6 +64,23 @@
    "limite": 150,
    "pieza": "ia"
   },
+  "proyectoAbrir": {
+   "script": "proyectos.py",
+   "args": [
+    "abrir"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "carpetaAbierta",
+   "limite": 30,
+   "pieza": "app"
+  },
   "proyectoBorrar": {
    "script": "proyectos.py",
    "args": [
@@ -307,6 +324,23 @@
    "progreso": "publicarAvance",
    "pieza": "app"
   },
+  "publicarPreparar": {
+   "script": "publicar.py",
+   "args": [
+    "preparar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "subidaRevisada",
+   "limite": 120,
+   "pieza": "app"
+  },
   "publicarRevisar": {
    "script": "publicar.py",
    "args": [
@@ -355,10 +389,50 @@
       "si",
       "no"
      ]
+    },
+    "datos_ok": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
     }
    },
    "responde": "publicado",
    "limite": 900,
+   "pieza": "app"
+  },
+  "requisitoInstalar": {
+   "script": "requisitos.py",
+   "args": [
+    "instalar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "enum",
+     "valores": [
+      "git",
+      "node",
+      "rust",
+      "gh"
+     ],
+     "requerido": true
+    }
+   },
+   "responde": "requisitoInstalado",
+   "limite": 1600,
+   "pieza": "app"
+  },
+  "requisitosLista": {
+   "script": "requisitos.py",
+   "args": [
+    "lista"
+   ],
+   "entrada": null,
+   "datos": {},
+   "responde": "requisitosListos",
+   "limite": 60,
    "pieza": "app"
   }
  }
