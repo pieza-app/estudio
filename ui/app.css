@@ -45,8 +45,8 @@ body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 
   .marca span { display: none; }
   .lateral-pie { margin: 0 0 0 auto; }
 }
-.contenido { flex: 999 1 560px; width: 100%; min-width: 0; padding: 40px 40px 64px; max-width: 1180px; }
-@media (max-width: 760px) { .contenido { padding: 24px 16px 48px; } }
+.contenido { flex: 999 1 560px; min-width: 0; padding: 40px 40px 64px; max-width: 1180px; }
+@media (max-width: 760px) { .contenido { width: 100%; padding: 24px 16px 48px; } }
 .contenido h2 { margin: 0 0 6px; font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -.015em; }
 .contenido h3 { margin: 24px 0 8px; font-size: 16px; }
 .contenido ul { margin: 4px 0; padding-left: 20px; }
@@ -190,7 +190,7 @@ body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 
 .vivo p { margin: 4px 0; overflow-wrap: anywhere; }
 
 /* ── Un paso del asistente: lo principal y el panel de control a la derecha ─────────────────────────────────────────────── */
-.paso-grilla { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; margin-top: 20px; }
+.paso-grilla { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 28px; align-items: start; margin-top: 20px; }
 .paso-principal { min-width: 0; display: grid; gap: 14px; align-content: start; }
 .panel-control { position: sticky; top: 20px; display: grid; gap: 14px; max-height: calc(100vh - 40px); overflow-y: auto;
   padding: 16px; border-radius: var(--radio-grande); background: var(--panel); border: 1px solid var(--linea);
@@ -242,6 +242,7 @@ html[data-host="mac"] .panel-control { top: 44px; max-height: calc(100vh - 64px)
 .filas .corriendo .fila-n { background: var(--acento-suave); }
 .filas .corriendo > details > summary { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acento) 45%, transparent); }
 .filas .chip-estado { flex: none; }
+.filas .corriendo .chip-estado { background: var(--acento-suave); color: var(--acento); }
 .filas .saltado { opacity: .7; }
 .paso-principal > .barra-avance { margin: -6px 0 0; }
 .revision { padding: 4px 14px 14px; border: 1px solid var(--linea); border-radius: var(--radio-grande); background: var(--panel); }

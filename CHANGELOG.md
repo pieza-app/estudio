@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.8.3
+- En «Paso a paso», cuando hay pasos que no dependen entre sí, puedes hacerlos a la vez («Hacer los pasos 4, 5 a la vez»). El panel de control ya no queda cortado en ventanas angostas. · *In “Step by step”, when some steps don't depend on each other, you can do them at once (“Do steps 4, 5 at once”). The control panel no longer gets cut off in narrow windows.*
+
 ## 0.8.2
 - Una copia o un respaldo en la carpeta de tus apps ya no aparece como otra app con el mismo nombre. · *A copy or backup in your apps folder no longer shows up as another app with the same name.*
 
