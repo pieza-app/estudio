@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.8.2
+- Una copia o un respaldo en la carpeta de tus apps ya no aparece como otra app con el mismo nombre. · *A copy or backup in your apps folder no longer shows up as another app with the same name.*
+
 ## 0.8.1
 - Los pasos del plan y de la construcción se ven en filas que se abren al tocarlas, sin un scroll gigante. Los botones, las cifras y el modo están en un panel de control a la derecha, siempre a la vista. En una app ya creada puedes revisar a ciegas, rehacer lo que falta (los pasos listos se quedan) e ir directo a construir. · *Plan and build steps are rows you tap to open, with no giant scroll. The buttons, numbers and mode are in a control panel on the right, always in view. In an app that's already created you can run the blind review, redo what's left (finished steps stay) and go straight to building.*
 

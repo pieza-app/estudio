@@ -1038,11 +1038,13 @@ def borrar(d):
 
 
 def lista(_d):
+    """Las apps del registro: solo `<id>.json` cuyo id es ese (una copia o un respaldo en la carpeta, como `x.antes.json`, no es otra
+    app: si no, aparecerían dos con el mismo id y se marcarían las dos)."""
     proyectos = []
     for nombre in sorted(os.listdir(_registro())):
         if nombre.endswith(".json"):
             p = nucleo.leer_json(os.path.join(_registro(), nombre), None, maximo=2_000_000)
-            if isinstance(p, dict) and p.get("id"):
+            if isinstance(p, dict) and p.get("id") and nombre == p["id"] + ".json":
                 proyectos.append(p)
     return {"ok": True, "proyectos": proyectos}
 
