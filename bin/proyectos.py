@@ -441,11 +441,57 @@ def _entorno():
     return {k: v for k, v in os.environ.items() if not k.startswith(nucleo.prefijo())}
 
 
+# Las pruebas corren código que escribió la IA: van aisladas. Sin internet (solo localhost), escriben solo en la carpeta de la app y
+# en temporales, y no leen llaves ni carpetas privadas. Mac: sandbox-exec. Linux: bubblewrap si está. Windows: sin aislar (se dice).
+PRIVADAS = (".ssh", ".gnupg", ".aws", ".config/gh", ".netrc", "Library/Keychains", "Library/Cookies", "Library/Mail", "Library/Messages",
+            "Documents", "Desktop", "Downloads", "Library/Application Support/Pieza")
+
+
+def _perfil_mac(carpeta):
+    h = os.path.expanduser("~")
+    lee = " ".join(f'({"literal" if x == ".netrc" else "subpath"} "{os.path.join(h, x)}")' for x in PRIVADAS)
+    return f"""(version 1)
+(allow default)
+(deny network-outbound)
+(allow network-outbound (remote ip "localhost:*"))
+(allow network-outbound (remote unix-socket))
+(deny file-write*)
+(allow file-write* (subpath "{carpeta}") (subpath "/private/tmp") (subpath "/private/var/folders") (subpath "/dev") (subpath "{h}/Library/Caches"))
+(deny file-read* {lee})
+"""
+
+
+def aislar(orden, carpeta):
+    """(la orden envuelta en el aislamiento del sistema, si quedó aislada)."""
+    carpeta = os.path.realpath(carpeta)
+    if '"' in carpeta or "\\" in carpeta:
+        return orden, False
+    if sys.platform == "darwin" and os.path.exists("/usr/bin/sandbox-exec"):
+        return ["/usr/bin/sandbox-exec", "-p", _perfil_mac(carpeta), *orden], True
+    if sys.platform.startswith("linux") and shutil.which("bwrap"):
+        h = os.path.expanduser("~")
+        tapar = [a for x in PRIVADAS if os.path.isdir(os.path.join(h, x)) for a in ("--tmpfs", os.path.join(h, x))]
+        return ["bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--tmpfs", "/tmp", *tapar,
+                "--bind", carpeta, carpeta, "--unshare-net", "--die-with-parent", "--chdir", carpeta, *orden], True
+    return orden, False
+
+
+def _preparar_rust(carpeta):
+    """Las dependencias de Rust se bajan antes, fuera del aislamiento (cargo fetch no compila ni corre nada): adentro no hay red."""
+    manifiesto = os.path.join(carpeta, "escritorio", "Cargo.toml")
+    if os.path.isfile(manifiesto) and shutil.which("cargo"):
+        try:
+            subprocess.run(["cargo", "fetch", "--manifest-path", manifiesto], cwd=carpeta, capture_output=True, timeout=600, env=_entorno())
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+
 def probar(carpeta):
-    """(ok, las últimas líneas) de bash pruebas/correr.sh."""
+    """(ok, las últimas líneas) de bash pruebas/correr.sh, aislado si el sistema lo permite."""
+    _preparar_rust(carpeta)
+    orden, _ = aislar(["bash", "pruebas/correr.sh"], carpeta)
     try:
-        r = subprocess.run(["bash", "pruebas/correr.sh"], cwd=carpeta, capture_output=True, text=True, timeout=LIMITE_PRUEBAS,
-                           env=_entorno())
+        r = subprocess.run(orden, cwd=carpeta, capture_output=True, text=True, timeout=LIMITE_PRUEBAS, env=_entorno())
     except FileNotFoundError:
         return False, "No encontré bash para correr las pruebas."
     except subprocess.TimeoutExpired:
@@ -1057,7 +1103,7 @@ def lista(_d):
             p = nucleo.leer_json(os.path.join(_registro(), nombre), None, maximo=2_000_000)
             if isinstance(p, dict) and p.get("id") and nombre == p["id"] + ".json":
                 proyectos.append(p)
-    return {"ok": True, "proyectos": proyectos}
+    return {"ok": True, "proyectos": proyectos, "aisladas": aislar(["true"], os.path.expanduser("~"))[1]}
 
 
 if __name__ == "__main__":

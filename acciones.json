@@ -307,6 +307,23 @@
    "progreso": "publicarAvance",
    "pieza": "app"
   },
+  "publicarPreparar": {
+   "script": "publicar.py",
+   "args": [
+    "preparar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "subidaRevisada",
+   "limite": 120,
+   "pieza": "app"
+  },
   "publicarRevisar": {
    "script": "publicar.py",
    "args": [
@@ -350,6 +367,13 @@
      "requerido": true
     },
     "explorador": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
+    },
+    "datos_ok": {
      "tipo": "enum",
      "valores": [
       "si",

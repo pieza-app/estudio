@@ -6,6 +6,7 @@
   publicar.py subir    <entrada.json {id, dueno, visibilidad, explorador}> <salida.json>
   publicar.py instalar <entrada.json {id}> <salida.json>
   publicar.py conectar <entrada.json {id}> <salida.json>
+  publicar.py preparar <entrada.json {id}> <salida.json>
 
 - `explorar`: las apps con el topic «hecho-con-pieza» que lista la página de Pieza (solo pieza-app.github.io, pieza «red»).
 - `revisar`: si `gh` está instalado y con sesión, el usuario y sus organizaciones (dónde puede crear el repo).
@@ -18,6 +19,9 @@
 - `conectar`: `gh auth login --web` con la cuenta de la persona. El código de una vez sale en el avance ({"t": "codigo"}) y la
   interfaz lo muestra con «Abrir GitHub» (github.com/login/device): la persona lo pega en GitHub y Pieza espera hasta que
   autoriza. Pieza nunca ve ni guarda la clave: la guarda gh en el llavero del sistema.
+
+- `preparar`: lo que se va a subir, antes de subir nada: la lista de archivos, secretos (bloquean), datos personales (la persona
+  confirma que son de ejemplo) y qué hace la app (a qué dominios se conecta, si corre comandos). `subir` lo vuelve a revisar.
 
 Lo que escribe la persona (la frase) nunca va como argumento: la descripción del repo va por un archivo de entrada a `gh api`.
 """
@@ -154,6 +158,77 @@ def conectar(d):
     return final
 
 
+# ── Antes de subir: secretos, datos personales y qué hace la app ────────────────────────────────────────────────────────
+
+SECRETOS = [
+    ("llave privada", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("token de GitHub", re.compile(r"\b(?:ghp|gho|ghs|ghu)_[A-Za-z0-9]{30,}|\bgithub_pat_[A-Za-z0-9_]{40,}")),
+    ("llave de Anthropic u OpenAI", re.compile(r"\bsk-(?:ant-)?[A-Za-z0-9_-]{24,}")),
+    ("llave de AWS", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("llave de Google", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
+    ("token de Slack", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}")),
+]
+PERSONALES = [
+    ("RUT", re.compile(r"\b\d{1,2}\.\d{3}\.\d{3}-[\dkK]\b")),
+    ("correo", re.compile(r"\b[A-Za-z0-9._%+-]+@(?!(?:users\.noreply\.github\.com|example\.(?:com|org|cl)|ejemplo\.cl)\b)[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
+    ("teléfono", re.compile(r"\+56\s?9\s?\d{4}\s?\d{4}\b")),
+    ("ruta de un usuario", re.compile(r"/(?:Users|home)/(?!ana|runner|usuario|user|tu-usuario)[a-z][a-z0-9._-]{2,}/")),
+]
+ARCHIVOS_SECRETOS = (".env", ".env.local", "id_rsa", "id_ed25519", ".npmrc", ".pypirc", "credentials.json")
+MAX_REVISAR = 2_000_000
+URL = re.compile(r"https?://([A-Za-z0-9.-]+\.[A-Za-z]{2,})")
+COMANDOS = re.compile(r"\bsubprocess\b|\bos\.system\(|\bos\.popen\(|Command::new\(|child_process")
+
+
+def _archivos(carpeta):
+    """Lo que git subiría: lo que no ignora .gitignore (la lista blanca de la app)."""
+    if not os.path.isdir(os.path.join(carpeta, ".git")):
+        _git(carpeta, "init", "-q", "-b", "main")
+    salida = _git(carpeta, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
+    return sorted(x for x in salida.split("\0") if x)
+
+
+def revisar_subida(carpeta):
+    archivos = _archivos(carpeta)
+    de_piezas = proyectos._de_piezas(carpeta)
+    secretos, personales, dominios, comandos = [], [], set(), []
+    for rel in archivos:
+        nombre = os.path.basename(rel)
+        if nombre in ARCHIVOS_SECRETOS or nombre.startswith(".env"):
+            secretos.append({"archivo": rel, "linea": 0, "tipo": "archivo de secretos"})
+            continue
+        ruta = os.path.join(carpeta, rel)
+        try:
+            if os.path.getsize(ruta) > MAX_REVISAR:
+                continue
+            with open(ruta, encoding="utf-8") as f:
+                texto = f.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for n, linea in enumerate(texto.splitlines(), 1):
+            for tipo, patron in SECRETOS:
+                if patron.search(linea):
+                    secretos.append({"archivo": rel, "linea": n, "tipo": tipo})
+            for tipo, patron in PERSONALES:
+                m = patron.search(linea)
+                if m:
+                    personales.append({"archivo": rel, "linea": n, "tipo": tipo, "muestra": m.group(0)[:60]})
+        if rel in de_piezas or rel.startswith(("pruebas/", "docs/", ".github/", "herramientas/")) or rel.endswith((".md", ".json", ".lock")):
+            continue  # qué hace la app: solo su propio código
+        dominios.update(h.lower() for h in URL.findall(texto) if not h.lower().endswith(("example.com", "github.com", "githubusercontent.com", "w3.org")))
+        if COMANDOS.search(texto):
+            comandos.append(rel)
+    return {"archivos": archivos, "secretos": secretos[:50], "personales": personales[:50], "dominios": sorted(dominios)[:30],
+            "comandos": comandos[:30]}
+
+
+def preparar(d):
+    p = proyectos._leer(d.get("id"))
+    if not p.get("carpeta") or not os.path.isdir(p["carpeta"]):
+        raise ValueError("Primero crea la app.")
+    return dict(revisar_subida(p["carpeta"]), ok=True)
+
+
 def subir(d):
     p = proyectos._leer(d.get("id"))
     if not p.get("carpeta") or not os.path.isdir(p["carpeta"]):
@@ -167,6 +242,15 @@ def subir(d):
     if dueno not in info["duenos"]:
         raise ValueError("No puedes crear repos ahí.")
     carpeta, repo = p["carpeta"], f"{dueno}/{p['id']}"
+    # 0. Lo que se sube, revisado otra vez (la persona ya lo vio en «preparar»): un secreto bloquea; datos personales, solo si
+    #    la persona confirmó que son de ejemplo.
+    revision = revisar_subida(carpeta)
+    if revision["secretos"]:
+        return {"ok": False, "codigo": "secretos", "error": "Hay secretos en los archivos de tu app. Sácalos antes de publicar.",
+                "revision": revision}
+    if revision["personales"] and d.get("datos_ok") != "si":
+        return {"ok": False, "codigo": "personales", "error": "Confirma que los datos personales que encontré son de ejemplo.",
+                "revision": revision}
     # 1. El repo va en app.json y en todo lo que se genera de él (README, instaladores, página, workflows).
     ruta_app = os.path.join(carpeta, "app.json")
     app = nucleo.leer_json(ruta_app, {}, maximo=1_000_000)
@@ -216,4 +300,5 @@ def subir(d):
 
 
 if __name__ == "__main__":
-    nucleo.script({"explorar": explorar, "revisar": revisar, "subir": subir, "instalar": instalar, "conectar": conectar}, __doc__)
+    nucleo.script({"explorar": explorar, "revisar": revisar, "subir": subir, "instalar": instalar, "conectar": conectar,
+                   "preparar": preparar}, __doc__)

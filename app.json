@@ -256,6 +256,13 @@
       "si",
       "no"
      ]
+    },
+    "datos_ok": {
+     "tipo": "enum",
+     "valores": [
+      "si",
+      "no"
+     ]
     }
    },
    "responde": "publicado",
@@ -354,6 +361,22 @@
    "responde": "ghConectado",
    "limite": 960,
    "progreso": "publicarAvance"
+  },
+  "publicarPreparar": {
+   "script": "publicar.py",
+   "args": [
+    "preparar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    }
+   },
+   "responde": "subidaRevisada",
+   "limite": 120
   }
  },
  "actualizaciones": {

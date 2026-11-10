@@ -118,6 +118,11 @@ await page.waitForSelector(".guia-org #org-nueva");
 assert.ok(await page.isDisabled("#publicar"), "con una organización por crear no se publica todavía");
 await capturar(page, "3h0-organizacion-en");
 await page.click('[data-dueno="ana-app"]');
+// Antes de subir: la revisión (secretos, datos personales, qué hace la app). Con datos que parecen personales, se confirma.
+await page.waitForSelector(".revision-subida #datos-ok");
+assert.ok(await page.isDisabled("#publicar"), "sin confirmar los datos, no se publica");
+await page.check("#datos-ok");
+await capturar(page, "3h1-revision-subida-en");
 await page.click("#publicar");
 await page.waitForSelector(".listo.publicar");
 assert.ok(await page.locator('.enlaces-pub [data-abrir="https://ana-app.github.io/receta/"]').count(), "la página de la app, a un toque");

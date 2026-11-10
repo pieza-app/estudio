@@ -176,6 +176,29 @@
     return `<p class="suave">${esc("Conéctalo con tu cuenta: GitHub te da un código, lo pegas en su página y listo. Sin terminal.")}</p>
       <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" id="conectar-gh"${E.ocupado ? " disabled" : ""}>Conectar mi GitHub</button></div>`;
   }
+  // La revisión antes de subir (publicar.py preparar): secretos bloquean, datos personales se confirman, y se ve qué hace la app.
+  function pedirRevisionSubida() { E.subida = null; E.ocupado = "preparar"; host.enviar("publicarPreparar", { id: E.proyecto.id }); }
+  function subidaOk() {
+    const r = E.subida;
+    return !!r && !(r.secretos || []).length && (!(r.personales || []).length || E.pub.datosOk);
+  }
+  function subidaHTML() {
+    const r = E.subida;
+    if (!r) return trabajando("Revisando lo que se va a subir…");
+    const linea = (x) => `<li data-sin-traducir>${esc(x.archivo)}${x.linea ? `:${esc(String(x.linea))}` : ""} · ${esc(Tp(x.tipo))}${x.muestra ? ` · «${esc(x.muestra)}»` : ""}</li>`;
+    return `<ul class="revision-subida">
+      ${(r.secretos || []).length ? `<li class="mal"><b>${esc("Encontré secretos. Sácalos de tu app antes de publicar:")}</b><ul>${r.secretos.map(linea).join("")}</ul>
+        <button type="button" class="pz-boton" id="revisar-subida">Ya los saqué: revisar de nuevo</button></li>`
+        : `<li class="bien">${esc("Sin secretos: ni llaves, ni tokens, ni contraseñas.")}</li>`}
+      ${(r.personales || []).length ? `<li class="ojo"><b>${esc("Encontré datos que parecen personales:")}</b><ul>${r.personales.map(linea).join("")}</ul>
+        <label class="opcion"><input type="checkbox" id="datos-ok"${E.pub.datosOk ? " checked" : ""}> <span>${esc("Son datos de ejemplo, no son reales")}</span></label></li>`
+        : `<li class="bien">${esc("Sin datos personales a la vista (RUT, correos, teléfonos, rutas de tu computador).")}</li>`}
+      <li>${(r.dominios || []).length ? `<span data-sin-traducir>${esc(Tp("Tu app se conecta a: {lista}", { lista: r.dominios.join(", ") }))}</span>` : esc("Tu app no se conecta a internet.")}</li>
+      <li>${(r.comandos || []).length ? `<span data-sin-traducir>${esc(Tp("Tu app corre comandos en el computador ({lista}).", { lista: r.comandos.join(", ") }))}</span>` : esc("Tu app no corre comandos en el computador.")}</li>
+      </ul>
+      <details><summary data-sin-traducir>${esc(Tp("Se suben {n} archivos", { n: (r.archivos || []).length }))}</summary><p class="archivos" data-sin-traducir>${esc((r.archivos || []).join(", "))}</p></details>
+      <p class="suave">${esc("Firmada quiere decir que la versión viene de ti, no que sea segura. Por eso revisas esto antes.")}</p>`;
+  }
   function pasoPublicar() {
     const p = E.proyecto;
     if (!p) return marcoPaso("", {});
@@ -212,15 +235,19 @@
       + tarjetaPub(1, "Conecta tu GitHub", conectado, conexionHTML())
       + tarjetaPub(2, "Dónde vive tu app", donde, `<fieldset class="grupo sin-borde">${duenos}</fieldset>`, conectado)
       + tarjetaPub(3, "Cómo la publicas", false, `<fieldset class="grupo sin-borde">${vis}</fieldset>`, conectado)
+      + tarjetaPub(4, "Revisión antes de subir", subidaOk(), subidaHTML(), donde)
       + (E.ocupado === "publicar" ? trabajando("Publicando…") : "");
+    if (donde && !E.subida && !E.ocupado) pedirRevisionSubida();
     const lado = `<div class="panel-bloque"><p class="etiqueta">Lo que se publica</p><ul class="se-publica">
         <li>${esc("El código de tu app, revisado: sin nombres, correos ni rutas reales.")}</li>
         ${pub.visibilidad === "publico" ? `<li data-sin-traducir>${esc(pagina ? Tp("Su página web: {url}", { url: pagina }) : Tp("Su página web, en GitHub Pages."))}</li>` : ""}
         <li>${esc("Las descargas para Mac, Windows y Linux, que arma GitHub solo (unos 15 minutos).")}</li>
         <li>${esc("Las actualizaciones: cada versión nueva llega sola a quien la instaló.")}</li></ul></div>`;
     const ahora = faltan ? "Termina los pasos de tu app antes de publicarla." : !conectado ? "Conecta tu GitHub: es una sola vez."
-      : !donde ? "Elige dónde va a vivir tu app." : "Revisa cómo la publicas y toca «Publicar».";
-    return marcoPaso(principal, { lado, ahora, acciones: `<button type="button" class="pz-boton pz-principal" id="publicar"${donde && !faltan && !E.ocupado ? "" : " disabled"}>Publicar</button>
+      : !donde ? "Elige dónde va a vivir tu app." : !E.subida ? "Espera: estoy revisando lo que se va a subir."
+      : (E.subida.secretos || []).length ? "Hay secretos en tu app: sácalos y revisa de nuevo." : !subidaOk() ? "Confirma que los datos personales que encontré son de ejemplo."
+      : "Todo revisado. Toca «Publicar».";
+    return marcoPaso(principal, { lado, ahora, acciones: `<button type="button" class="pz-boton pz-principal" id="publicar"${donde && !faltan && !E.ocupado && subidaOk() ? "" : " disabled"}>Publicar</button>
       <button type="button" class="pz-boton pz-plano" id="atras"${E.ocupado ? " disabled" : ""}>Atrás</button>` });
   }
   // Proponer una pieza: abre un issue prellenado en pieza-app/pieza (en el navegador, con la cuenta de la persona).
@@ -482,6 +509,9 @@
         <label class="tope"><span>Tope de la app (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>
         ${enFila ? `<p class="panel-nota">${esc("En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.")}</p>` : ""}
         <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p></div>`
+      + (E.aisladas === undefined ? "" : `<p class="panel-nota aislamiento${E.aisladas ? "" : " sin"}">${esc(E.aisladas
+        ? "Las pruebas corren aisladas: sin internet y sin acceso a tus llaves ni a tus carpetas privadas."
+        : "En este computador las pruebas corren sin aislar: revisa lo que hace tu app antes de publicarla.")}</p>`)
       + consolaHTML();
     const acciones = (fin ? `<button type="button" class="pz-boton pz-principal" id="siguiente">${esc(p.repo ? "Ver dónde está publicada" : "Siguiente: publicarla")}</button>` : "")
       + accion + `<button type="button" class="pz-boton" id="ver-app">Ver mi app</button>
@@ -653,6 +683,7 @@
     else if (b.id === "inicio" || b.id === "ir-inicio") { E.proyecto = null; E.vista = ""; E.gh = null; irA(0); host.enviar("proyectosLista"); }
     else if (b.id === "explorar" || b.id === "explorar-lateral") { E.vista = "explorar"; E.apps = null; E.error = ""; pintar(); host.enviar("publicarExplorar"); }
     else if (b.dataset.abrir) { if (/^https:\/\//.test(b.dataset.abrir)) host.enviar("abrirEnlace", { url: b.dataset.abrir }); }
+    else if (b.id === "revisar-subida") pedirRevisionSubida(), pintar();
     else if (b.id === "instalar-gh") { ocupar("instalar"); host.enviar("publicarInstalar", { id: E.proyecto.id }); }
     else if (b.id === "conectar-gh") { E.codigoGH = null; ocupar("conectar"); host.enviar("publicarConectar", { id: E.proyecto.id }); }
     else if (b.id === "copiar-codigo") { try { await navigator.clipboard.writeText(E.codigoGH.codigo); toast("Copié el código."); } catch { toast("No pude copiarlo: escríbelo a mano.", { error: true }); } }
@@ -660,7 +691,7 @@
     else if (b.id === "publicar") {
       ocupar("publicar");
       host.enviar("publicarSubir", { id: E.proyecto.id, dueno: E.pub.dueno, visibilidad: E.pub.visibilidad,
-        explorador: E.pub.visibilidad === "publico" && E.pub.explorador ? "si" : "no" });
+        explorador: E.pub.visibilidad === "publico" && E.pub.explorador ? "si" : "no", datos_ok: E.pub.datosOk ? "si" : "no" });
     } else if (b.id === "proponer") host.enviar("abrirEnlace", { url: urlPropuesta() });
     else if (b.dataset.seguir) seguir(b.dataset.seguir);
     else if (b.id === "hacer-plan") {
@@ -795,6 +826,7 @@
     } else if (t.dataset.dueno) { E.pub.dueno = t.dataset.dueno; pintar(); }
     else if (t.dataset.vis) { E.pub.visibilidad = t.dataset.vis; pintar(); }
     else if (t.id === "explorador") { E.pub.explorador = t.checked; }
+    else if (t.id === "datos-ok") { E.pub.datosOk = t.checked; pintar(); }
     else if (t.dataset.hallazgo) {
       const id = t.dataset.hallazgo, a = E.aceptados || [];
       E.aceptados = t.checked ? [...new Set([...a, id])] : a.filter((x) => x !== id);
@@ -916,9 +948,15 @@
       else E.error = (r && r.error) || Tp("No se pudo.");
       pintar();
     },
+    subidaRevisada(r) {
+      E.ocupado = "";
+      if (r && r.ok) E.subida = r; else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
     publicado(r) {
       E.ocupado = "";
-      if (r && r.ok) { E.proyecto = r.proyecto; toast("Tu app está en GitHub."); } else E.error = (r && r.error) || Tp("No se pudo.");
+      if (r && r.ok) { E.proyecto = r.proyecto; toast("Tu app está en GitHub."); }
+      else { E.error = (r && r.error) || Tp("No se pudo."); if (r && r.revision) E.subida = r.revision; }
       pintar();
     },
     proyectoBorrado(r) {
@@ -926,7 +964,7 @@
       else toast((r && r.error) || "No se pudo.", { error: true });
       pintar();
     },
-    proyectosListos(r) { if (r && r.ok) { E.proyectos = r.proyectos || []; if (E.paso === 0) pintar(); } },
+    proyectosListos(r) { if (r && r.ok) { E.proyectos = r.proyectos || []; E.aisladas = r.aisladas; if (E.paso === 0) pintar(); } },
     revisionLista(r) {
       E.ocupado = "";
       if (r && r.ok) {
@@ -1079,6 +1117,8 @@
         { nombre: "Recetas de Ana", repo: "ana-perez/recetas", descripcion: Tp("Guarda recetas y arma la lista de compras."), pagina: "https://ana-perez.github.io/recetas/", revisada: true },
         { nombre: "Gastos de la casa", repo: "matias-soto/gastos", descripcion: Tp("Cuentas compartidas, sin servidores."), pagina: "", revisada: false }] }));
       case "publicarRevisar": return c.luego(300, () => c.responder("publicarRevisado", SIM.gh ? { ok: true, gh: true, sesion: true, usuario: "ana-perez", duenos: ["ana-perez", "ana-app"] } : { ok: true, gh: true, sesion: false }));
+      case "publicarPreparar": return c.luego(300, () => c.responder("subidaRevisada", { ok: true, archivos: ["app.json", "bin/recetas.py", "ui/app.js"],
+        secretos: [], personales: [{ archivo: "ui/demo.json", linea: 3, tipo: "correo", muestra: "ana@correo.cl" }], dominios: [], comandos: [] }));
       case "publicarInstalar": return c.luego(300, () => c.responder("ghInstalado", { ok: true, gh: true, sesion: false, instalado: true }));
       case "publicarConectar":
         c.luego(200, () => c.responder("publicarAvance", [{ t: "codigo", codigo: "AB12-CD34", url: "https://github.com/login/device" }]));
@@ -1089,7 +1129,7 @@
           pagina: d.visibilidad === "publico" ? `https://${d.dueno}.github.io/${p.id}/` : "" });
         c.responder("publicado", { ok: true, proyecto: p, url: `https://github.com/${p.repo}` });
       });
-      case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos });
+      case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos, aisladas: true });
       case "proyectoBorrar": SIM.proyectos = SIM.proyectos.filter((x) => x.id !== d.id);
         return c.luego(150, () => c.responder("proyectoBorrado", { ok: true, id: d.id, carpeta: d.carpeta === "si" }));
       case "proyectoPlan": return c.luego(900, () => c.responder("planListo", planSimulado(d)));

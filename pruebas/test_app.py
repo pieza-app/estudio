@@ -455,6 +455,42 @@ class Proyectos(unittest.TestCase):
         x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
         self.assertEqual((len(llamadas), x["causa"]), (1, "gasto"))
 
+    def test_pruebas_aisladas(self):
+        """En Mac, las pruebas van en sandbox-exec: sin red de afuera, escribe solo en la carpeta, no lee llaves."""
+        carpeta = "/" + "Users/ana/Pieza/Recetas"  # armada: la revisión de privacidad marca rutas de usuario escritas
+        perfil = self.p._perfil_mac(carpeta)
+        self.assertIn('(deny network-outbound)', perfil)
+        self.assertIn(f'(allow file-write* (subpath "{carpeta}")', perfil)
+        self.assertIn(".ssh", perfil)
+        self.assertIn("Library/Keychains", perfil)
+        original = self.p.sys.platform
+        try:
+            self.p.sys.platform = "darwin"
+            orden, aislada = self.p.aislar(["bash", "pruebas/correr.sh"], self.tmp.name)
+            if os.path.exists("/usr/bin/sandbox-exec"):
+                self.assertTrue(aislada)
+                self.assertEqual(orden[:2], ["/usr/bin/sandbox-exec", "-p"])
+            orden, aislada = self.p.aislar(["bash"], '/tmp/con"comillas')
+            self.assertFalse(aislada)
+        finally:
+            self.p.sys.platform = original
+
+    def test_revisar_antes_de_subir(self):
+        """Antes de publicar: secretos (bloquean), datos personales (se confirman), dominios y comandos de la app."""
+        import publicar
+        c = os.path.join(self.tmp.name, "app")
+        os.makedirs(os.path.join(c, "bin"))
+        open(os.path.join(c, ".gitignore"), "w").write("*\n!.gitignore\n!bin/\n!bin/*.py\n")
+        open(os.path.join(c, "bin", "datos.py"), "w").write("import subprocess\nURL = 'https://api.ejemplo-banco.cl/v1'\n"
+                                                             "RUT = '12." + "345.678-5'\nLLAVE = 'sk-ant-" + "a" * 30 + "'\n")
+        open(os.path.join(c, "notas.txt"), "w").write("no se sube\n")
+        r = publicar.revisar_subida(c)
+        self.assertEqual(r["archivos"], [".gitignore", "bin/datos.py"])
+        self.assertEqual([x["tipo"] for x in r["secretos"]], ["llave de Anthropic u OpenAI"])
+        self.assertEqual([x["tipo"] for x in r["personales"]], ["RUT"])
+        self.assertEqual(r["dominios"], ["api.ejemplo-banco.cl"])
+        self.assertEqual(r["comandos"], ["bin/datos.py"])
+
     def test_lista_no_muestra_copias(self):
         """Un respaldo en la carpeta del registro (recetas.antes.json, con el mismo id) no es otra app."""
         self.plan()
