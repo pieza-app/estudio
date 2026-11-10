@@ -181,7 +181,7 @@ def _detalle(p):
         f"\n# Cambios acordados en la revisión (también mandan)\n{acuerdos}\n" if acuerdos else "")
 
 
-def _prompt_plan(p, ficha):
+def _prompt_plan(p, ficha, hechos=()):
     cat = piezas.catalogo()
     hechas = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat and cat[i].get("estado") == "lista")
     por_hacer = "\n".join(f"- {i}: {cat[i].get('descripcion', '')}" for i in ficha["piezas"] if i in cat and cat[i].get("estado") != "lista")
@@ -199,7 +199,7 @@ def _prompt_plan(p, ficha):
 # Lo que ya está hecho (piezas de Pieza, 0 tokens: no las planifiques)
 {hechas}
 {bloque_por_hacer}
-# Lo que te pido
+{_ya_hecho(hechos)}# Lo que te pido
 Desglosa SOLO lo propio de esta app en pasos CHICOS (entre 3 y {MAX_PASOS}). Más pasos chicos es mejor que pocos grandes. Un paso:
 - hace una sola cosa que se puede probar (un script con su acción, o una pantalla, o una mejora);
 - toca como máximo 4 archivos propios (sin contar ui/idiomas/en.json, el CHANGELOG ni las pruebas);
@@ -218,6 +218,16 @@ Responde SOLO este JSON, sin texto antes ni después:
 En «tokens», tu estimado de lo que gastará ese paso."""
 
 
+def _ya_hecho(hechos):
+    """Al rehacer el plan de una app ya creada: los pasos listos siguen en la carpeta. El plan nuevo es solo lo que falta."""
+    if not hechos:
+        return ""
+    lineas = "\n".join(f"{i + 1}. {x['titulo']}: {_texto(x.get('resumen') or x.get('que'), 300)}"
+                       + (f" Dejó listo: {x['entrega']}" if x.get("entrega") else "") for i, x in enumerate(hechos))
+    return (f"# Lo que ya está hecho en la carpeta (pasos 1 a {len(hechos)}: no los repitas)\n{lineas}\n"
+            f"Planifica SOLO lo que falta. Tus pasos se numeran desde el {len(hechos) + 1}; en «depende» puedes usar los ya hechos.\n\n")
+
+
 def plan(d):
     nombre = _texto(d.get("nombre"), 40)
     frase = _texto(d.get("frase"), MAX_FRASE)
@@ -231,30 +241,44 @@ def plan(d):
         p = _leer(pid)
     except ValueError:
         p = {"id": pid, "estado": "nuevo", "pasos": [], "gastado": 0, "gastado_plan": 0}
-    if p.get("estado") not in (None, "nuevo", "plan"):
-        raise ValueError("Esa app ya está creada: sigue con sus pasos.")
-    p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "acuerdos": acuerdos, "revision": None, "plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or []
-              if x in ficha["piezas"]], "ahorro": ficha["tokens_ahorrados"]})
-    pedido, gastado, pasos = _prompt_plan(p, ficha), 0, None
+    creada = p.get("estado") in ("creado", "pasos")
+    p.update({"nombre": nombre, "frase": frase, "detalle": detalle, "acuerdos": acuerdos, "revision": None})
+    if not creada:
+        p.update({"plataformas": ficha["plataformas"], "piezas": [x for x in d.get("piezas") or [] if x in ficha["piezas"]],
+                  "ahorro": ficha["tokens_ahorrados"]})
+    else:
+        # Una app ya creada: sus piezas están en la carpeta. Se rehace solo lo que falta; los pasos listos se quedan.
+        ficha = piezas.ficha({"plataformas": p["plataformas"], "piezas": p.get("piezas") or []})
+    hechos = [x for x in p.get("pasos") or [] if creada and x.get("estado") == "listo"]
+    pedido, gastado, pasos = _prompt_plan(p, ficha, hechos), 0, None
     for intento in range(INTENTOS):
         texto, error = ia.preguntar(pedido, timeout=600)
         if error:
             return {"ok": False, "error": ia.frase(error), "codigo": error["codigo"]}
         gastado += tokens(pedido, texto)
         try:
-            pasos = validar_plan(_json_de(texto))
+            pasos = validar_plan(_json_de(texto), maximo=min(MAX_PASOS, MAX_PASOS_TOTAL - len(hechos)), previos=len(hechos))
             break
         except ValueError as e:
             falla = str(e)
             # Una app grande a veces sale con más pasos de la cuenta o sin JSON: se pide de nuevo diciendo qué falló.
-            pedido = _prompt_plan(p, ficha) + (f"\n\n# Tu respuesta anterior no sirvió\n{falla} Si te pasaste de pasos, junta los más "
+            pedido = _prompt_plan(p, ficha, hechos) + (f"\n\n# Tu respuesta anterior no sirvió\n{falla} Si te pasaste de pasos, junta los más "
                                                 f"chicos; si un paso es muy grande, divídelo. Responde solo el JSON.")
     p["gastado_plan"] = p.get("gastado_plan", 0) + gastado
-    p["gastado"] = p["gastado_plan"]
     if pasos is None:
+        p["gastado"] = p["gastado_plan"] + sum(x.get("gastado", 0) for x in p.get("pasos") or [])
         _guardar(p)
         return {"ok": False, "error": falla, "codigo": "plan", "gastado": gastado}
-    p.update({"estado": "plan", "pasos": [dict(x, estado="pendiente", gastado=0) for x in pasos]})
+    if creada:
+        # Lo que gastaron los pasos que se van (no listos) sigue en la cuenta.
+        p["gastado_plan"] += sum(x.get("gastado", 0) for x in p["pasos"] if x.get("estado") != "listo")
+        nuevo_indice = {i: j for j, i in enumerate(i for i, x in enumerate(p["pasos"]) if x.get("estado") == "listo")}
+        p["pasos"] = [dict(p["pasos"][i], depende=[nuevo_indice[d] for d in dependencias(p, i) if d in nuevo_indice])
+                      for i in sorted(nuevo_indice)]
+    p["pasos"] = (p["pasos"] if creada else []) + [dict(x, estado="pendiente", gastado=0) for x in pasos]
+    if not creada:
+        p["estado"] = "plan"
+    p["gastado"] = p["gastado_plan"] + sum(x.get("gastado", 0) for x in p["pasos"])
     return {"ok": True, "proyecto": _guardar(p)}
 
 
@@ -299,7 +323,7 @@ def validar_revision(datos, enfoque):
 
 def revisar(d):
     p = _leer(d.get("id"))
-    if p.get("estado") != "plan" or not p.get("pasos"):
+    if p.get("estado") not in ("plan", "creado", "pasos") or not p.get("pasos"):
         raise ValueError("Primero haz el plan.")
 
     def uno(enfoque):

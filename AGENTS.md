@@ -68,6 +68,12 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 - **En vivo:** `proyectoPaso` tiene `"progreso": "pasoAvance"`: `proyectos.py` emite (`trabajos.emitir`) la fase (`ia`,
   `pruebas`) y lo que la IA lee y escribe; la interfaz lo muestra con el tiempo que lleva (`vivoHTML`).
 - **Revisión a ciegas** (`proyectos.py revisar`, acción `proyectoRevisar`): el patrón «elefante y pez dorado». Tres sesiones nuevas de la IA (`ENFOQUES`: riesgos, uso, pasos) leen solo la idea y el plan, en paralelo, y devuelven hallazgos validados (`validar_revision`). Lo que la persona acepta vuelve a `plan` como `acuerdos` y va a cada pedido (`_detalle`).
+- **Cada paso del asistente** se arma con `marcoPaso(principal, {acciones, lado})`: lo principal a la izquierda y el panel de
+  control (`.panel-control`) a la derecha, fijo al bajar, con los botones arriba (`pie()` da Siguiente/Atrás) y las cifras
+  (`medidor`, `.panel-cifras`) y lo que ayuda a decidir abajo. En el celular el panel va arriba y sus botones quedan fijos abajo.
+  El plan y los pasos son filas colapsadas (`.filas`, `filaPlan`, `filaPaso`); lo abierto queda en `E.abiertos`.
+- **Una app ya creada** (`creada()`): del plan va directo a construir; «Rehacer lo que falta» (`plan` con la app creada) deja los
+  pasos listos y planifica solo el resto; revisar a ciegas también funciona.
 - **Pasos chicos y conectados:** el plan trae por paso `entrega` (lo que deja listo para otros, con nombres exactos) y `depende`
   (índices de pasos anteriores; sin él, del anterior). `validar_plan` rechaza un paso de más de `TOPE_PASO` tokens o
   `MAX_ARCHIVOS_PASO` archivos propios (sin contar `SIN_CONTAR`) y se pide de nuevo. Cada paso recibe primero lo que dejaron
