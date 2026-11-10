@@ -196,7 +196,7 @@ class Proyectos(unittest.TestCase):
         carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
         nucleo_antes = open(os.path.join(carpeta, "bin", "nucleo.py"), encoding="utf-8").read()
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
 
         def edita(pedido, **opciones):
             self.pedidos.append((pedido, opciones))
@@ -230,7 +230,7 @@ class Proyectos(unittest.TestCase):
         self.plan()
         carpeta = self.p.crear({"id": "recetas"})["proyecto"]["carpeta"]
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
 
         def edita(pedido, **opciones):
             self.pedidos.append((pedido, opciones))
@@ -259,7 +259,7 @@ class Proyectos(unittest.TestCase):
         self.plan()
         self.p.crear({"id": "recetas"})
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
 
         def nada(pedido, **opciones):
             opciones["al_evento"]({"t": "lee", "ruta": os.path.join(opciones["escribir"], "bin", "recetas.py")})
@@ -277,7 +277,7 @@ class Proyectos(unittest.TestCase):
         self.plan()
         self.p.crear({"id": "recetas"})
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (False, "FALLA: test_lista esperaba 3 recetas")
+        self.p.probar = lambda c, n=None: (False, "FALLA: test_lista esperaba 3 recetas")
         self.pedidos.clear()
 
         def edita(pedido, **opciones):
@@ -294,7 +294,7 @@ class Proyectos(unittest.TestCase):
         self.assertNotIn("El intento anterior no quedó", self.pedidos[0])
         self.assertIn("test_lista", self.pedidos[1])
         self.pedidos.clear()
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
         x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
         self.assertEqual(x["estado"], "listo")
         self.assertIn("test_lista", self.pedidos[0])  # «Arreglarlo»: el error va desde el primer intento
@@ -333,7 +333,7 @@ class Proyectos(unittest.TestCase):
         proyecto["pasos"][0]["estado"] = "listo"
         self.p._guardar(proyecto)
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
         en_antes = json.load(open(os.path.join(carpeta, "ui", "idiomas", "en.json")))
 
         def edita(pedido, **opciones):
@@ -370,7 +370,7 @@ class Proyectos(unittest.TestCase):
         proyecto["pasos"][0]["estado"] = "listo"
         self.p._guardar(proyecto)
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
         primera = open(os.path.join(carpeta, "ui", "app.js")).read().splitlines()[0]
 
         def edita(pedido, **opciones):
@@ -454,7 +454,7 @@ class Proyectos(unittest.TestCase):
         json.dump(app, open(os.path.join(carpeta, "app.json"), "w"))
         open(os.path.join(carpeta, "bin", "recetas.py"), "w").write("print('recetas')\n")
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
         self.p.ia.preguntar_vivo = lambda pedido, **o: ("Ya estaba hecho.", None)
         self.assertTrue(self.p.paso({"id": "recetas", "n": 0})["ok"])
         self.assertIn("recetasListar", json.load(open(os.path.join(carpeta, "acciones.json")))["acciones"])
@@ -464,7 +464,7 @@ class Proyectos(unittest.TestCase):
         self.plan()
         self.p.crear({"id": "recetas"})
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (False, "falla")
+        self.p.probar = lambda c, n=None: (False, "falla")
         llamadas = []
 
         def cara(pedido, **o):
@@ -483,7 +483,7 @@ class Proyectos(unittest.TestCase):
         p["pasos"][0].update(gastado=900_000, estado="fallo", error="falla de antes")
         self.p._guardar(p)
         self.p.ia.puede_escribir = lambda ia=None: True
-        self.p.probar = lambda c: (False, "falla")
+        self.p.probar = lambda c, n=None: (False, "falla")
         llamadas = []
 
         def cara(pedido, **o):
@@ -502,11 +502,11 @@ class Proyectos(unittest.TestCase):
         p["pasos"][0].update(estado="fallo", error="falla", causa="gasto")
         self.p._guardar(p)
         self.p.ia.preguntar_vivo = lambda *a, **o: self.fail("no debe llamar a la IA")
-        self.p.probar = lambda c: (False, "FAIL: test_x\nAssertionError: 1 != 2")
+        self.p.probar = lambda c, n=None: (False, "FAIL: test_x\nAssertionError: 1 != 2")
         r = self.p.reprobar({"id": "recetas", "n": 0})
         self.assertFalse(r["ok"])
         self.assertEqual(r["proyecto"]["pasos"][0]["causa"], "pruebas")
-        self.p.probar = lambda c: (True, "ok")
+        self.p.probar = lambda c, n=None: (True, "ok")
         r = self.p.reprobar({"id": "recetas", "n": 0})
         self.assertTrue(r["ok"])
         self.assertEqual(r["proyecto"]["pasos"][0]["estado"], "listo")
@@ -624,7 +624,7 @@ class Proyectos(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.p.validar_archivos({"archivos": [{"ruta": "x.txt", "contenido": "x"}], "borrar": ["bin/nucleo.py"]}, carpeta)
         pruebas = []
-        self.p.probar = lambda c: (pruebas.append(c) or (len(pruebas) > 1, "falló algo"))
+        self.p.probar = lambda c, n=None: (pruebas.append(c) or (len(pruebas) > 1, "falló algo"))
         respuesta = json.dumps({"resumen": "Listo.", "archivos": [{"ruta": "bin/recetas.py", "contenido": "print('hola')\n"}]})
         self.respuestas += [respuesta, respuesta]
         r = self.p.paso({"id": "recetas", "n": 0})
@@ -647,6 +647,24 @@ class EnVivo(unittest.TestCase):
 
     def test_cargo_de_rustup_esta_en_el_path(self):
         self.assertIn(os.path.join(os.path.expanduser("~"), ".cargo", "bin"), self.p.RUTAS_EXTRA)
+
+    def test_probar_cuenta_cada_linea_en_vivo(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "pruebas"))
+            with open(os.path.join(tmp, "pruebas", "correr.sh"), "w") as f:
+                f.write('echo Sintaxis\necho Python\necho "FAIL: test_x" >&2\nexit 1\n')
+            vistos = []
+            antes, self.p.trabajos.emitir = self.p.trabajos.emitir, vistos.append
+            antes_aislar, self.p.aislar = self.p.aislar, lambda orden, carpeta: (orden, False)
+            try:
+                ok, salida = self.p.probar(tmp, 4)
+            finally:
+                self.p.trabajos.emitir, self.p.aislar = antes, antes_aislar
+        self.assertFalse(ok)
+        self.assertIn("FAIL: test_x", salida)
+        self.assertEqual([e["linea"] for e in vistos], ["Sintaxis", "Python", "FAIL: test_x"])
+        self.assertEqual({e["n"] for e in vistos}, {4})
 
     def test_ultima_linea_dice_que_fallo(self):
         salida = "Sintaxis\nPython\nFAIL: test_retomar (pruebas.test_app.Historial)\nRan 30 tests\nFAILED (failures=1)"

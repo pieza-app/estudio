@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.14.0",
+ "version": "0.15.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -197,6 +197,11 @@
      "min": 0,
      "max": 39,
      "requerido": true
+    },
+    "tope": {
+     "tipo": "entero",
+     "min": 5000,
+     "max": 5000000
     }
    },
    "responde": "pasoListo",
@@ -354,6 +359,11 @@
      "tipo": "lista",
      "max": 3,
      "requerido": true
+    },
+    "tope": {
+     "tipo": "entero",
+     "min": 5000,
+     "max": 5000000
     }
    },
    "responde": "loteListo",
@@ -377,6 +387,11 @@
      "min": 0,
      "max": 39,
      "requerido": true
+    },
+    "tope": {
+     "tipo": "entero",
+     "min": 5000,
+     "max": 5000000
     }
    },
    "responde": "pasoDividido",

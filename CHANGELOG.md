@@ -8,6 +8,11 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.15.0
+- Arreglo: en la app de escritorio no llegaba el avance de un paso (se quedaba en «Prepara») ni el código para conectar GitHub. Ahora llegan. · *Fix: in the desktop app a step's progress didn't arrive (it stayed on “Prepare”), nor did the code to connect GitHub. Now they arrive.*
+- Cada etapa de un paso dice exactamente qué hace: qué le pasa Pieza a tu IA, qué archivos leyó y qué buscó, qué escribió, qué revisa y qué prueba corre en este momento. · *Each stage of a step says exactly what it does: what Pieza gives your AI, which files it read and what it searched for, what it wrote, what it checks and which test is running right now.*
+- Tope por paso: si un paso llega al tope, Pieza lo detiene, lo divide en partes (5.1, 5.2) y sigue con la primera. Un paso que se estima más grande que el tope se divide antes de empezar. Los topes se recuerdan. · *Limit per step: if a step reaches the limit, Pieza stops it, splits it into parts (5.1, 5.2) and goes on with the first one. A step estimated above the limit is split before it starts. The limits are remembered.*
+
 ## 0.14.0
 - «Probar de nuevo (sin IA)»: si un paso falló y ya está arreglado, corre solo las pruebas y lo deja listo sin gastar tokens. Lo que falló se ve en una línea, sin abrir el error completo. · *“Test again (no AI)”: if a step failed and it's already fixed, it only runs the tests and marks it done without spending tokens. What failed shows in one line, without opening the full error.*
 - El freno de gasto mira solo lo que el paso gastó esta vez: lo gastado antes ya no corta un «Arreglarlo» en el primer intento. · *The spending brake only looks at what the step spent this time: earlier spending no longer stops a “Fix it” on the first try.*

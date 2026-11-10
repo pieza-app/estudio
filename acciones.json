@@ -140,6 +140,11 @@
      "min": 0,
      "max": 39,
      "requerido": true
+    },
+    "tope": {
+     "tipo": "entero",
+     "min": 5000,
+     "max": 5000000
     }
    },
    "responde": "pasoDividido",
@@ -162,6 +167,11 @@
      "tipo": "lista",
      "max": 3,
      "requerido": true
+    },
+    "tope": {
+     "tipo": "entero",
+     "min": 5000,
+     "max": 5000000
     }
    },
    "responde": "loteListo",
@@ -186,6 +196,11 @@
      "min": 0,
      "max": 39,
      "requerido": true
+    },
+    "tope": {
+     "tipo": "entero",
+     "min": 5000,
+     "max": 5000000
     }
    },
    "responde": "pasoListo",
