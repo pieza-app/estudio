@@ -7,6 +7,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 ## Sin publicar · Unreleased
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
+
+## 0.12.1
+- Piezas al día: las piezas nuevas o arregladas de Pieza ya se pueden usar al crear una app. · *Pieces up to date: new or fixed Pieza pieces can now be used when creating an app.*
 - Al publicar, Pieza avisa que Windows y Linux van en beta y qué verá quien abra tu app por primera vez (el aviso de Windows y la confirmación de Mac). · *When publishing, Pieza says that Windows and Linux are in beta and what people see the first time they open your app (the Windows warning and the Mac confirmation).*
 
 ## 0.12.0

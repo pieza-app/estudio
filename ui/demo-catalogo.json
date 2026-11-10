@@ -281,7 +281,7 @@
   {
    "id": "componentes",
    "nombre": "Componentes",
-   "version": "0.3.1",
+   "version": "0.4.0",
    "estado": "lista",
    "categoria": "interfaz",
    "descripcion": "Diálogo accesible, confirmar, avisos (toast) en cola, filas de Tu IA, actualizaciones «Paso n de 3», Acerca de y comentarios a GitHub.",
@@ -329,7 +329,7 @@
     "cuando": "Siempre.",
     "palabras": []
    },
-   "bytes": 51838
+   "bytes": 58356
   },
   {
    "id": "conectores",
@@ -867,7 +867,7 @@
      "analizar"
     ]
    },
-   "bytes": 77277
+   "bytes": 33103
   },
   {
    "id": "mcp",
@@ -1103,7 +1103,7 @@
   {
    "id": "pagina",
    "nombre": "Página pública",
-   "version": "0.1.3",
+   "version": "0.1.4",
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "La página pública bilingüe (GitHub Pages) generada desde docs/pagina.json: descarga según el sistema, demo, permisos e internet que salen de sus piezas, preguntas frecuentes con su JSON-LD, SEO y el sello «Hecho con Pieza».",
@@ -1145,7 +1145,7 @@
     "cuando": "Siempre.",
     "palabras": []
    },
-   "bytes": 74520
+   "bytes": 75186
   },
   {
    "id": "privacidad",
@@ -1207,7 +1207,7 @@
   {
    "id": "tema",
    "nombre": "Temas: claro, oscuro y vidrio",
-   "version": "0.3.0",
+   "version": "0.4.0",
    "estado": "lista",
    "categoria": "interfaz",
    "descripcion": "Sistema, claro, oscuro o vidrio (paneles esmerilados) con un solo juego de tokens CSS y light-dark(). Suma temas de afuera (universos, comunidad) validados: solo colores.",
@@ -1237,7 +1237,7 @@
     "cuando": "Siempre.",
     "palabras": []
    },
-   "bytes": 17352
+   "bytes": 18018
   },
   {
    "id": "trabajos",
@@ -1378,7 +1378,7 @@
      "personalizar"
     ]
    },
-   "bytes": 21210
+   "bytes": 11201
   },
   {
    "id": "youtube",
