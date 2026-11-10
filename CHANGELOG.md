@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.7.2
+- Cuando un paso no queda, Pieza te dice por qué, muestra todo lo que hizo tu IA y lo puedes arreglar o saltar ahí mismo. En «Todo automático» lo intenta arreglar sola una vez. Un paso que ya estaba hecho ya no falla por «no cambiaste ningún archivo». Los botones de los pasos quedan arriba, siempre a la vista. · *When a step doesn't work, Pieza tells you why, shows everything your AI did, and you can fix or skip it right there. In “Do it all” it tries to fix it once by itself. A step that was already done no longer fails with “you changed no file”. The step buttons stay at the top, always in view.*
+
 ## 0.7.1
 - Pieza toma las piezas nuevas de la familia (tema 0.4.0 y componentes 0.4.0): los mismos colores, sin cambios que se noten. · *Pieza takes the family's new pieces (theme 0.4.0 and components 0.4.0): the same colors, no visible changes.*
 

@@ -55,6 +55,9 @@ MAX_DETALLE = 12_000  # la idea completa (opcional): reglas, pantallas, datos; v
 MAX_ARCHIVOS = 30
 MAX_BYTES_ARCHIVO = 300_000
 INTENTOS = 2
+MAX_RESUMEN = 4000    # lo que la IA cuenta que hizo, completo (la interfaz lo muestra al abrir el paso)
+MAX_HISTORIAL = 6    # intentos guardados por paso
+MAX_REGISTRO = 300   # lo que leyó y escribió en la última vez
 LIMITE_PRUEBAS = 600
 LIMITE_IA = 1500  # por intento; la acción de la app tiene 3600 s para dos intentos y las pruebas
 # Lo que la IA nunca escribe: lo que arma pieza.py. app.json sí (sus acciones), pero sin tocar lo que la identifica.
@@ -427,7 +430,8 @@ def _prompt_paso(p, n, error=None):
     plan_ = "\n".join(f"{i + 1}. {x['titulo']} ({x['estado']})" for i, x in enumerate(p["pasos"]))
     x = p["pasos"][n]
     propios, de_piezas = _mapa(p["carpeta"])
-    extra = f"\n\n# Las pruebas fallaron con tu respuesta anterior\nArréglalo. Las últimas líneas:\n```\n{error}\n```" if error else ""
+    extra = (f"\n\n# El intento anterior no quedó\nArregla la causa (puede que lo del paso ya esté hecho y solo falte arreglar esto). "
+             f"Las últimas líneas:\n```\n{error}\n```") if error else ""
     return f"""{reglas}
 
 # La app «{p['nombre']}»
@@ -474,8 +478,17 @@ def paso(d):
     if not isinstance(n, int) or not 0 <= n < len(p["pasos"]):
         raise ValueError("Paso desconocido.")
     carpeta, x = p["carpeta"], p["pasos"][n]
-    error_prueba, resumen, escritos = None, "", []
+    # Si el paso ya falló, el error de la vez anterior va desde el primer intento: así «Arreglarlo» le dice a la IA qué pasó.
+    error_prueba = x.get("error") if x.get("estado") == "fallo" and x.get("error") else None
+    resumen, escritos = "", []
     edita = ia.puede_escribir()
+    registro, historial = [], list(x.get("historial") or [])[-(MAX_HISTORIAL - INTENTOS):]
+    x.pop("causa", None)
+
+    def anotar(intento, causa=""):
+        """Lo que hizo cada intento, para que la persona vea qué pasó (y por qué falló) aunque el paso no quede."""
+        historial.append({"intento": len(historial) + 1, "resumen": resumen, "escritos": escritos[:40],
+                          "causa": causa, "error": (x.get("error") or "")[-1500:] if causa else ""})
     for intento in range(1, INTENTOS + 1):
         if edita:
             # La IA edita la carpeta directamente; después Pieza devuelve lo que no le toca.
@@ -484,35 +497,36 @@ def paso(d):
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
             uso = {}
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, no_leer=NO_LEER,
-                                             al_evento=_avisar(carpeta, n, intento, uso))
+                                             al_evento=_avisar(carpeta, n, intento, uso, registro))
             nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
             _gastar(x, uso, tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN)
             if cuidados:
                 x["cuidados"] = sorted(set(x.get("cuidados", [])) | set(cuidados))
             if error:
-                x.update(estado="fallo", error=ia.frase(error), intentos=intento, escritos=sorted(set(escritos) | set(nuevos)))
+                escritos = sorted(set(escritos) | set(nuevos))
+                x.update(estado="fallo", error=ia.frase(error), intentos=intento, escritos=escritos)
+                anotar(intento, "ia")
                 break
-            resumen = _texto(texto, 600)
+            resumen = _texto(texto, MAX_RESUMEN)
             escritos = sorted(set(escritos) | set(nuevos))
-            if not nuevos:
-                error_prueba = "No cambiaste ningún archivo. Haz el paso editando la carpeta."
-                x.update(estado="fallo", error=error_prueba, intentos=intento)
-                continue
+            # Sin cambios no es un fallo: lo que pide el paso puede estar hecho de antes. Mandan las pruebas (más abajo).
         else:
             pedido = _prompt_paso(p, n, error_prueba)
             trabajos.emitir({"t": "fase", "fase": "ia", "n": n, "intento": intento})
             uso = {}
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, leer=carpeta, no_leer=NO_LEER,
-                                             al_evento=_avisar(carpeta, n, intento, uso))
+                                             al_evento=_avisar(carpeta, n, intento, uso, registro))
             _gastar(x, uso, tokens(pedido, texto))
             if error:
                 x.update(estado="fallo", error=ia.frase(error), intentos=intento)
+                anotar(intento, "ia")
                 break
             try:
                 resumen, archivos, borrar = validar_archivos(_json_de(texto), carpeta)
             except ValueError as e:
                 error_prueba = f"La respuesta no se pudo usar: {e}"
                 x.update(estado="fallo", error=str(e), intentos=intento)
+                anotar(intento, "respuesta")
                 continue
             _escribir(carpeta, archivos)
             for ruta in borrar:
@@ -527,15 +541,23 @@ def paso(d):
             if r.returncode != 0:
                 error_prueba = "pieza.py acciones falló: " + (r.stderr or r.stdout).strip()[-1500:]
                 x.update(estado="fallo", error=error_prueba, intentos=intento, resumen=resumen, escritos=escritos)
+                anotar(intento, "acciones")
                 continue
         trabajos.emitir({"t": "fase", "fase": "pruebas", "n": n, "intento": intento})
+        registro.append({"t": "prueba", "ruta": "pruebas/correr.sh", "intento": intento})
         ok, salida = probar(carpeta)
         x.update(intentos=intento, resumen=resumen, escritos=escritos)
         if ok:
             x.update(estado="listo", error="")
+            anotar(intento)
             break
         error_prueba = salida
         x.update(estado="fallo", error=salida[-1500:])
+        anotar(intento, "pruebas")
+    x["historial"] = historial[-MAX_HISTORIAL:]
+    x["registro"] = registro[-MAX_REGISTRO:]
+    if x["estado"] == "fallo":
+        x["causa"] = historial[-1]["causa"] if historial else "ia"
     p["estado"] = "pasos"
     p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
     return {"ok": x["estado"] == "listo", "proyecto": _guardar(p), "n": n}
@@ -605,9 +627,10 @@ def _cambiado(antes, ahora):
     return len(ahora) - i - j
 
 
-def _avisar(carpeta, n, intento, uso=None):
+def _avisar(carpeta, n, intento, uso=None, registro=None):
     """En vivo para la interfaz (pieza «trabajos», acción con «progreso»): qué lee y qué escribe la IA, con rutas de la app.
-    Los tokens que la IA dice haber usado ({"t": "uso"}) se suman en `uso`."""
+    Los tokens que la IA dice haber usado ({"t": "uso"}) se suman en `uso`. Lo que lee y escribe queda en `registro` (se guarda
+    en el paso: así se ve después qué hizo)."""
     def al_evento(e):
         if e.get("t") == "uso" and uso is not None:
             for k in ("entrada", "cache", "salida"):
@@ -619,6 +642,8 @@ def _avisar(carpeta, n, intento, uso=None):
             ruta = os.path.relpath(ruta, carpeta).replace(os.sep, "/")
         if e.get("t") in ("lee", "escribe") and ruta and not ruta.startswith(".."):
             trabajos.emitir({"t": e["t"], "ruta": ruta[:200], "n": n, "intento": intento})
+            if registro is not None and (not registro or registro[-1].get("ruta") != ruta[:200] or registro[-1].get("t") != e["t"]):
+                registro.append({"t": e["t"], "ruta": ruta[:200], "intento": intento})
     return al_evento
 
 

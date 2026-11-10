@@ -152,6 +152,23 @@ await page.click("#hacer-paso");
 await page.waitForSelector(".pasos .estado-listo");
 await sinDesborde(page, "pasos a 390 px");
 await capturar(page, "4b-pasos-390");
+// Un paso que no quedó: dice por qué, muestra lo que hizo y se arregla o se salta desde ahí.
+await page.evaluate(() => window.Pieza._probar((E) => Object.assign(E.proyecto.pasos[1], {
+  estado: "fallo", causa: "pruebas", error: "FALLA: test_lista esperaba 3 recetas", resumen: "Hice la lista de recetas. ".repeat(30),
+  escritos: ["bin/recetas.py"], historial: [{ intento: 1, causa: "pruebas", resumen: "", escritos: [], error: "x" }, { intento: 2, causa: "pruebas", resumen: "", escritos: [], error: "x" }],
+  registro: [{ t: "lee", ruta: "AGENTS.md", intento: 1 }, { t: "escribe", ruta: "bin/recetas.py", intento: 1 }, { t: "prueba", ruta: "pruebas/correr.sh", intento: 1 }] })));
+await page.waitForSelector("#paso-1 .por-que [data-arreglar]");
+assert.equal(await page.locator(".barra-pasos #hacer-paso").count(), 1, "el botón del próximo paso va en la barra de arriba");
+await page.click("#paso-1 .detalle-paso summary");
+assert.equal(await page.locator("#paso-1 .intentos li").count(), 2, "se ve cada intento");
+assert.ok(await page.locator(".columna-lado .consola").textContent().then((t) => t.includes("bin/recetas.py")), "la consola muestra lo que hizo la última vez");
+await sinDesborde(page, "paso con fallo a 390 px");
+await capturar(page, "4b2-paso-fallo-390");
+await page.click("#paso-1 [data-saltar]");
+await page.waitForSelector("#paso-1.saltado");
+assert.equal(await page.getAttribute("#hacer-paso", "data-n"), "2", "saltado: sigue con el próximo");
+await page.click("#paso-1 [data-arreglar]");
+await page.waitForSelector("#paso-1.estado-listo");
 await page.click("#inicio");
 await page.waitForSelector(".proyectos [data-seguir]");
 await sinDesborde(page, "inicio a 390 px");

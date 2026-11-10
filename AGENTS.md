@@ -68,6 +68,11 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 - **En vivo:** `proyectoPaso` tiene `"progreso": "pasoAvance"`: `proyectos.py` emite (`trabajos.emitir`) la fase (`ia`,
   `pruebas`) y lo que la IA lee y escribe; la interfaz lo muestra con el tiempo que lleva (`vivoHTML`).
 - **Revisión a ciegas** (`proyectos.py revisar`, acción `proyectoRevisar`): el patrón «elefante y pez dorado». Tres sesiones nuevas de la IA (`ENFOQUES`: riesgos, uso, pasos) leen solo la idea y el plan, en paralelo, y devuelven hallazgos validados (`validar_revision`). Lo que la persona acepta vuelve a `plan` como `acuerdos` y va a cada pedido (`_detalle`).
+- **Cuando un paso no queda:** `paso` guarda en cada paso `historial` (cada intento: resumen, archivos, `causa` —`pruebas`, `ia`,
+  `respuesta`, `acciones`— y el error), `registro` (lo que leyó y escribió la última vez) y `causa`. Sin cambios no es un fallo:
+  mandan las pruebas (lo del paso puede estar hecho de antes). Al reintentar, el error anterior va desde el primer intento
+  («Arreglarlo con mi IA»). En «Todo automático», un paso que falla se reintenta solo una vez antes de detenerse; la persona puede
+  saltarlo por ahora (`E.saltados`). La barra con el modo y el botón del próximo paso queda fija arriba (`.barra-pasos`).
 - **Tokens:** los reales que da la IA (`{"t": "uso"}` de la pieza «ia»: Claude y Codex); con Gemini se estiman con el largo del pedido, de la respuesta y de lo que cambió (÷ 4). Cada paso lleva el mapa de archivos (`_mapa`), lo que hicieron los pasos anteriores (`_historia`) y `no_leer=NO_LEER`. «Todo automático» sigue mientras cada paso quede bien,
   la persona no pida «Detener» y lo gastado no pase el tope (`E.tope`).
 
