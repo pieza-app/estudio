@@ -14,8 +14,9 @@ import shutil
 import subprocess
 import sys
 
-import ia  # noqa: F401 — prepara el PATH (Homebrew, cargo, npm…) igual que para la IA
+import ia  # noqa: F401 — prepara el PATH (Homebrew, npm…) igual que para la IA
 import nucleo
+import proyectos  # noqa: F401 — suma ~/.cargo/bin (Rust con rustup) al PATH
 import trabajos
 
 # id: (nombre, para qué, si hace falta, orden de versión, Homebrew, winget, guía)
@@ -51,9 +52,9 @@ def lista(_d=None):
     instalador = _instalador()
     salida = []
     for hid, (nombre, para, necesaria, orden, _, _, guia) in HERRAMIENTAS.items():
-        hay = bool(shutil.which(EJECUTABLE[hid]))
-        salida.append({"id": hid, "nombre": nombre, "para": para, "necesaria": necesaria, "hay": hay,
-                       "version": _version(orden) if hay else "", "puede_instalar": bool(instalador), "guia": guia})
+        version = _version(orden) if shutil.which(EJECUTABLE[hid]) else ""
+        salida.append({"id": hid, "nombre": nombre, "para": para, "necesaria": necesaria, "hay": bool(version),
+                       "version": version, "puede_instalar": bool(instalador), "guia": guia})
     return {"ok": True, "herramientas": salida, "instalador": instalador}
 
 
@@ -63,8 +64,9 @@ def instalar(d):
         raise ValueError("Herramienta desconocida.")
     _, _, _, _, brew, winget, guia = HERRAMIENTAS[hid]
     instalador = _instalador()
-    if shutil.which(EJECUTABLE[hid]):
-        return dict(lista(), instalada=hid)
+    # Primero se revisa de nuevo: si ya está (por ejemplo Rust con rustup en ~/.cargo/bin), no se instala otra vez.
+    if _version(HERRAMIENTAS[hid][3]) and shutil.which(EJECUTABLE[hid]):
+        return dict(lista(), instalada=hid, ya=True)
     if not instalador:
         return dict(lista(), ok=False, guia=guia, error="Pieza no puede instalarla sola en este computador: bájala desde su página.")
     orden = (["brew", "install", brew] if instalador == "brew"

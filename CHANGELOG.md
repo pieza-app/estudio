@@ -8,6 +8,11 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.13.0
+- Un paso en curso muestra sus etapas (prepara, lee tu código, escribe, revisa los cambios, prueba), qué hace en este momento, cuántos archivos leyó y escribió y cuántos tokens lleva. Si las pruebas fallan, ves qué falló mientras tu IA lo arregla. · *A running step shows its stages (prepare, read your code, write, check the changes, test), what it's doing right now, how many files it read and wrote, and how many tokens it has used. If the tests fail, you see what failed while your AI fixes it.*
+- Pieza encuentra Rust instalado con rustup y ya no lo instala de nuevo. Antes de instalar algo, revisa otra vez si ya lo tienes. · *Pieza finds Rust installed with rustup and no longer installs it again. Before installing anything, it checks again whether you already have it.*
+- El panel de la derecha ya no tapa la lista de pasos en ventanas medianas. · *The right panel no longer covers the list of steps in medium-size windows.*
+
 ## 0.12.1
 - Piezas al día: las piezas nuevas o arregladas de Pieza ya se pueden usar al crear una app. · *Pieces up to date: new or fixed Pieza pieces can now be used when creating an app.*
 - Al publicar, Pieza avisa que Windows y Linux van en beta y qué verá quien abra tu app por primera vez (el aviso de Windows y la confirmación de Mac). · *When publishing, Pieza says that Windows and Linux are in beta and what people see the first time they open your app (the Windows warning and the Mac confirmation).*

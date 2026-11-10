@@ -64,6 +64,8 @@
   const PASOS = ["¿Para qué sistemas?", "¿Qué hace tu app?", "Las piezas", "La ficha", "El plan", "Crear la app", "Paso a paso", "Publícala"];
   const ESTADOS = { pendiente: "Pendiente", listo: "Listo", fallo: "Falló" };
   const miles = (n) => Math.round(n || 0).toLocaleString(i18n.idioma);
+  // Cifras cortas para filas: 982.066 → «982 mil» (en inglés «982K»), 1.637.474 → «1,6 M».
+  const corto = (n) => new Intl.NumberFormat(i18n.idioma, { notation: "compact", maximumFractionDigits: 1 }).format(Math.round(n || 0));
   const CATEGORIAS = { base: "Base", plataforma: "Plataforma", interfaz: "Interfaz", ia: "IA", datos: "Datos", conexiones: "Conexiones",
     medios: "Medios", repo: "El repo" };
   // El nombre y la descripción de una pieza en el idioma elegido (pieza.json → "en"; si no lo trae, el español).
@@ -281,17 +283,39 @@
       <label class="pz-campo"><span>Archivos de tu app que la forman</span><input id="pz-archivos" maxlength="300" value="${esc(x.archivos)}" placeholder="bin/recetas.py, ui/recetas.js"></label>
       <div class="pz-pie"><button type="button" class="pz-boton" id="proponer"${x.nombre.trim() && x.que.trim() ? "" : " disabled"}>Proponer en GitHub</button></div>`;
   }
-  // En vivo: cuánto lleva, en qué fase va y qué archivos lee y escribe la IA (eventos de la acción, `pasoAvance`).
+  // En vivo: las etapas de un paso (prepara → lee → escribe → revisa → prueba), cuál va ahora, qué hace en este momento, cuánto
+  // lleva y cuánto gastó este intento. Sale de los eventos de la acción (`pasoAvance`). Si la IA lleva rato sin leer ni escribir,
+  // se dice que está pensando (no que se colgó).
+  const ETAPAS_PASO = [["preparar", "Prepara"], ["leer", "Lee tu código"], ["escribir", "Escribe"], ["revisar", "Revisa los cambios"], ["pruebas", "Prueba"]];
+  function etapaPaso(v) {
+    if (v.fase === "ia") return v.escritos && v.escritos.size ? "escribir" : "leer";
+    if (v.fase === "acciones") return "revisar";
+    return v.fase || "preparar";
+  }
   function vivoHTML(n) {
     const v = E.vivos[n] || {};
-    const min = Math.max(0, Math.floor((Date.now() - (v.inicio || Date.now())) / 60000));
-    const fase = v.fase === "pruebas" ? Tp("Corriendo las pruebas…") : v.intento > 1 ? Tp("Segundo intento: tu IA arregla lo que falló…")
-      : Tp("Tu IA está en este paso…");
+    const ahora = Date.now();
+    const min = Math.max(0, Math.floor((ahora - (v.inicio || ahora)) / 60000));
+    const quieto = Math.floor((ahora - (v.ultimo || ahora)) / 60000);
+    const etapa = etapaPaso(v), i = ETAPAS_PASO.findIndex(([e]) => e === etapa);
+    const x = (E.proyecto && E.proyecto.pasos[n]) || {};
+    const ahoraHace = etapa === "preparar" ? Tp("Armando el pedido con el plan, lo que dejaron los pasos anteriores y AGENTS.md.")
+      : etapa === "pruebas" ? Tp("Corriendo las pruebas de tu app, aisladas.")
+      : etapa === "revisar" ? Tp("Revisando lo que cambió: que no toque piezas ni archivos que no le tocan.")
+      : quieto >= 1 ? Tp("Tu IA está pensando: lleva {n} min sin leer ni escribir. Es normal en pasos grandes.", { n: quieto })
+      : v.busca ? Tp("Buscando «{x}»", { x: v.busca })
+      : v.leyendo && etapa === "leer" ? Tp("Leyendo {ruta}", { ruta: v.leyendo })
+      : etapa === "escribir" ? Tp("Escribiendo {ruta}", { ruta: [...v.escritos].slice(-1)[0] })
+      : Tp("Tu IA está empezando…");
     const escritos = [...(v.escritos || [])].slice(-6);
-    return `<div class="vivo" role="status"><p class="trabajando"><span class="pz-giro" aria-hidden="true"></span>
-      <span data-sin-traducir>${esc(fase)} · ${esc(Tp("{n} min", { n: min }))}</span></p>
-      ${v.leyendo ? `<p class="suave" data-sin-traducir>${esc(Tp("Leyendo {ruta}", { ruta: v.leyendo }))}</p>` : ""}
-      ${escritos.length ? `<p class="suave" data-sin-traducir>${esc(Tp("Escribió: {lista}", { lista: escritos.join(", ") }))}</p>` : ""}</div>`;
+    const cifras = [Tp("{n} min", { n: min }), v.leidos ? Tp("{n} archivos leídos", { n: v.leidos }) : "", v.escritos && v.escritos.size ? Tp("{n} escritos", { n: v.escritos.size }) : "",
+      v.tokens ? Tp("~{n} tokens este intento (estimado del paso: ~{e})", { n: miles(v.tokens), e: miles(x.tokens) }) : ""].filter(Boolean);
+    return `<div class="vivo" role="status">
+      <ol class="etapas-paso">${ETAPAS_PASO.map(([e, t], j) => `<li class="${j < i ? "hecha" : j === i ? "actual" : ""}"><span class="etapa-punto" aria-hidden="true">${j < i ? "✓" : j === i ? '<span class="pz-giro"></span>' : ""}</span><span>${esc(t)}</span></li>`).join("")}</ol>
+      ${v.intento > 1 ? `<p class="vivo-intento" data-sin-traducir>${esc(Tp("Intento {n} de {t}: las pruebas fallaron y tu IA lo arregla.", { n: v.intento, t: 2 }))}${v.fallo ? `<br><code>${esc(v.fallo)}</code>` : ""}</p>` : ""}
+      <p class="vivo-ahora" data-sin-traducir>${esc(ahoraHace)}</p>
+      <p class="vivo-cifras suave" data-sin-traducir>${esc(cifras.join(" · "))}</p>
+      ${escritos.length ? `<p class="suave archivos" data-sin-traducir>${esc(Tp("Escribió: {lista}", { lista: escritos.join(", ") }))}</p>` : ""}</div>`;
   }
   // La consola en vivo: lo que tu IA lee y escribe en el paso actual (o un resumen si no hay nada corriendo).
   function consolaHTML() {
@@ -511,8 +535,8 @@
     const dep = depende(p, i);
     const abierto = corre || x.estado === "fallo" || E.abiertos.has(`paso:${i}`);
     const saltado = E.saltados.has(i) && x.estado !== "listo";
-    const tokens = x.gastado ? (x.medido ? Tp("{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens gastados", { n: miles(x.gastado) }))
-      : Tp("~{n} tokens estimados", { n: miles(x.tokens) });
+    // Corto, para que la fila quepa al lado del panel: «982 mil tokens» / «~55 mil tokens»; el detalle va al abrirla.
+    const tokens = x.gastado ? Tp(x.medido ? "{n} tokens" : "~{n} tokens", { n: corto(x.gastado) }) : Tp("~{n} tokens", { n: corto(x.tokens) });
     return `<li class="estado-${esc(x.estado)}${saltado ? " saltado" : ""}${corre ? " corriendo" : ""}" id="paso-${i}"><details data-abierto="paso:${i}"${abierto ? " open" : ""}><summary>
       <span class="fila-n">${corre ? `<span class="pz-giro" aria-hidden="true"></span>` : esc(ICONO_ESTADO[x.estado] || "") || String(i + 1).padStart(2, "0")}</span>
       <span class="fila-titulo" data-sin-traducir>${esc(x.titulo)}</span>
@@ -834,7 +858,7 @@
     }
     return false;
   }
-  const nuevoVivo = () => ({ inicio: Date.now(), fase: "ia", intento: 1, escritos: new Set(), leyendo: "" });
+  const nuevoVivo = () => ({ inicio: Date.now(), ultimo: Date.now(), fase: "preparar", intento: 1, escritos: new Set(), leyendo: "", busca: "", tokens: 0, leidos: 0, fallo: "" });
   // El tope vale en los dos modos: sin espacio, no se empieza nada (la persona lo sube en el panel si quiere seguir).
   function sinTope() {
     if (E.proyecto.gastado < E.tope) return false;
@@ -862,7 +886,7 @@
     host.enviar("proyectoDividir", { id: E.proyecto.id, n });
   }
   // Mientras corre un paso, el reloj se pinta cada 20 s (sin tocar nada más).
-  setInterval(() => { if (E.ocupado === "paso" && E.paso === 7) pintar(); }, 20000);
+  setInterval(() => { if (E.ocupado === "paso" && E.paso === 7) pintar(); }, 15000);
   // Una app que ya se empezó: vuelve al paso donde quedó.
   function seguir(id) {
     const p = E.proyectos.find((x) => x.id === id);
@@ -981,10 +1005,17 @@
         if (!e || typeof e !== "object") continue;
         const v = E.vivos[e.n] || E.vivos[E.enCurso[0]];
         if (!v) continue;
+        v.ultimo = Date.now();
         if (e.t === "fase" && e.fase === "pruebas") Object.values(E.vivos).forEach((w) => { w.fase = "pruebas"; });
-        if (e.t === "fase") { v.fase = e.fase; v.intento = e.intento || 1; }
-        else if (e.t === "lee" && typeof e.ruta === "string") v.leyendo = e.ruta;
-        else if (e.t === "escribe" && typeof e.ruta === "string") { v.escritos.delete(e.ruta); v.escritos.add(e.ruta); v.leyendo = ""; }
+        if (e.t === "fase") {
+          if ((e.intento || 1) > v.intento) { v.escritos = new Set(); v.leidos = 0; v.tokens = 0; }   // intento nuevo: cuenta de nuevo
+          v.fase = e.fase; v.intento = e.intento || 1; v.busca = "";
+        }
+        else if (e.t === "lee" && typeof e.ruta === "string") { if (v.leyendo !== e.ruta) v.leidos++; v.leyendo = e.ruta; v.busca = ""; }
+        else if (e.t === "busca" && typeof e.patron === "string") v.busca = e.patron;
+        else if (e.t === "escribe" && typeof e.ruta === "string") { v.escritos.delete(e.ruta); v.escritos.add(e.ruta); v.leyendo = ""; v.busca = ""; }
+        else if (e.t === "uso" && Number.isFinite(e.tokens)) v.tokens = e.tokens;
+        else if (e.t === "prueba" && e.ok === false) v.fallo = typeof e.ultima === "string" ? e.ultima : "";
       }
       if (E.paso === 7) pintar();
     },
@@ -1027,7 +1058,7 @@
     requisitoInstalado(r) {
       const id = E.instalando; E.instalando = "";
       if (r && r.herramientas) E.requisitos = r;
-      if (r && r.ok) toast("Listo: quedó instalada.");
+      if (r && r.ok) toast(r.ya ? "Ya la tenías instalada: no instalé nada." : "Listo: quedó instalada.");
       else { E.error = (r && r.error) || Tp("No se pudo."); if (r && r.guia) host.enviar("abrirEnlace", { url: r.guia }); }
       if (id === "gh") E.gh = null;
       pintar();

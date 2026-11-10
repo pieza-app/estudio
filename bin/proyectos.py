@@ -441,6 +441,21 @@ def _escribir(carpeta, archivos):
         nucleo.escribir_atomico(destino, contenido)
 
 
+# Donde suelen quedar herramientas que no están en el PATH de una app (Rust con rustup, cargo install). La pieza «ia» ya suma las
+# de los CLI de IA, Homebrew y Node.
+RUTAS_EXTRA = [os.path.join(os.path.expanduser("~"), ".cargo", "bin")]
+
+
+def sumar_rutas():
+    actual = os.environ.get("PATH", "").split(os.pathsep)
+    nuevas = [d for d in RUTAS_EXTRA if os.path.isdir(d) and d not in actual]
+    if nuevas:
+        os.environ["PATH"] = os.pathsep.join(actual + nuevas)
+
+
+sumar_rutas()
+
+
 def _entorno():
     """Lo que corre en la carpeta de la app no recibe las variables de Pieza."""
     return {k: v for k, v in os.environ.items() if not k.startswith(nucleo.prefijo())}
@@ -590,6 +605,17 @@ def _entrega(p, n):
             + (f" (lo usan los pasos {', '.join(usan)})" if usan else ""))
 
 
+def _ultima_linea(salida):
+    """La línea que mejor dice qué falló (para verla en vivo): primero la de la prueba que falló («FAIL:», «AssertionError»…), si
+    no la última que hable de un error, y si no, la última."""
+    lineas = [l.strip() for l in (salida or "").splitlines() if l.strip()]
+    for patron in (r"^(FAIL|ERROR):|AssertionError|Error:|✕|falló", r"error|fail|fall[óo]|assert"):
+        for l in reversed(lineas):
+            if re.search(patron, l, re.I) and not l.startswith("FAILED ("):
+                return l[:200]
+    return lineas[-1][:200] if lineas else ""
+
+
 def _gastar(x, uso, estimado):
     """Suma al paso los tokens reales si la IA los dijo; si no, la estimación. `cache` (lo que la IA reusó, mucho más barato) va
     aparte y no entra en «gastado»."""
@@ -629,6 +655,7 @@ def paso(d):
             uso = {}
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=carpeta, no_leer=NO_LEER,
                                              al_evento=_avisar(carpeta, n, intento, uso, registro))
+            trabajos.emitir({"t": "fase", "fase": "revisar", "n": n, "intento": intento})
             nuevos, cuidados, bytes_ = _cuidar(carpeta, antes)
             _gastar(x, uso, tokens(pedido, texto) + bytes_ // CARACTERES_POR_TOKEN)
             if cuidados:
@@ -667,6 +694,7 @@ def paso(d):
             escritos = sorted(set(escritos) | {r for r, _ in archivos})
         # acciones.json lo arma Pieza desde app.json (la IA no puede tocarlo): siempre antes de las pruebas, aunque app.json haya
         # cambiado en un intento anterior. Si no, el contrato falla con «acciones.json no está al día» y la IA no lo puede arreglar.
+        trabajos.emitir({"t": "fase", "fase": "acciones", "n": n, "intento": intento})
         falla = _armar_acciones(carpeta)
         if falla:
             error_prueba = falla
@@ -683,6 +711,7 @@ def paso(d):
             break
         error_prueba = salida
         x.update(estado="fallo", error=salida[-1500:])
+        trabajos.emitir({"t": "prueba", "ok": False, "n": n, "intento": intento, "ultima": _ultima_linea(salida)})
         # Freno de gasto: si el paso ya gastó más de FRENO veces lo estimado, no se intenta de nuevo solo; la persona decide.
         if x.get("tokens") and x.get("gastado", 0) > FRENO * x["tokens"] and intento < INTENTOS:
             anotar(intento, "gasto")
@@ -896,6 +925,7 @@ def lote(d):
             uso, registro = {}, []
             texto, error = ia.preguntar_vivo(pedido, timeout=LIMITE_IA, escribir=copia, no_leer=NO_LEER,
                                              al_evento=_avisar(copia, n, 1, uso, registro))
+            trabajos.emitir({"t": "fase", "fase": "revisar", "n": n, "intento": 1})
             escritos, cuidados, bytes_ = _cuidar(copia, antes)
             final = _foto(copia)
             cambios = {r: final.get(r) for r in escritos}
@@ -1058,6 +1088,11 @@ def _avisar(carpeta, n, intento, uso=None, registro=None):
             for k in ("entrada", "cache", "salida"):
                 v = e.get(k)
                 uso[k] = uso.get(k, 0) + (v if isinstance(v, int) and v >= 0 else 0)
+            # Cuánto va gastando este intento, para verlo en vivo (lo mismo que se cobra al terminar).
+            trabajos.emitir({"t": "uso", "n": n, "intento": intento, "tokens": uso.get("entrada", 0) + uso.get("salida", 0)})
+            return
+        if e.get("t") == "busca" and isinstance(e.get("patron"), str):
+            trabajos.emitir({"t": "busca", "patron": e["patron"][:80], "n": n, "intento": intento})
             return
         ruta = e.get("ruta") if isinstance(e.get("ruta"), str) else ""
         if ruta.startswith(carpeta):
