@@ -12,7 +12,7 @@
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
-    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false,
+    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {},
     vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
@@ -202,13 +202,21 @@
   // La consola en vivo: lo que tu IA lee y escribe en el paso actual (o un resumen si no hay nada corriendo).
   function consolaHTML() {
     const v = E.ocupado === "paso" ? E.vivo || {} : null;
-    if (!v) return `<div class="consola"><p class="consola-titulo">En vivo</p><p class="consola-linea">${esc("Aquí ves lo que lee y escribe tu IA mientras trabaja.")}</p></div>`;
+    if (!v) {
+      // Sin nada corriendo: lo que hizo la última vez (el paso que falló o el último que corrió).
+      const pasos = (E.proyecto && E.proyecto.pasos) || [];
+      let i = pasos.findIndex((x) => x.estado === "fallo" && (x.registro || []).length);
+      if (i < 0) for (let j = pasos.length - 1; j >= 0; j--) if ((pasos[j].registro || []).length) { i = j; break; }
+      if (i < 0) return `<div class="consola"><p class="consola-titulo">En vivo</p><p class="consola-linea">${esc("Aquí ves lo que lee y escribe tu IA mientras trabaja.")}</p></div>`;
+      return `<div class="consola" role="log"><p class="consola-titulo" data-sin-traducir>${esc(Tp("La última vez · paso {n}", { n: i + 1 }))}</p>${pasos[i].registro.slice(-12).map((r) =>
+        `<p class="consola-linea"><span class="consola-${esc(r.t)}">${esc(QUE_HIZO[r.t] || r.t)}</span><span data-sin-traducir>${esc(r.ruta)}</span></p>`).join("")}</div>`;
+    }
     const lineas = [];
     if (v.leyendo) lineas.push(["lee", v.leyendo]);
     for (const r of [...(v.escritos || [])].slice(-8)) lineas.push(["escribe", r]);
     if (v.fase === "pruebas") lineas.push(["prueba", Tp("Corriendo las pruebas…")]);
     return `<div class="consola" role="log"><p class="consola-titulo">En vivo</p>${lineas.map(([t, x]) =>
-      `<p class="consola-linea"><span class="consola-${t}">${t}</span><span data-sin-traducir>${esc(x)}</span></p>`).join("")}</div>`;
+      `<p class="consola-linea"><span class="consola-${t}">${QUE_HIZO[t]}</span><span data-sin-traducir>${esc(x)}</span></p>`).join("")}</div>`;
   }
   function trabajando(texto) {
     return `<p class="trabajando" role="status"><span class="pz-giro" aria-hidden="true"></span> <span>${esc(texto)}</span></p>`;
@@ -263,35 +271,73 @@
       + `<div class="pz-pie"><button type="button" class="pz-boton" id="atras">Atrás</button>
         <button type="button" class="pz-boton pz-principal" id="crear"${E.ocupado ? " disabled" : ""}>Crear la app</button></div>`;
   }
+  // Por qué no quedó un paso, en palabras de persona (la causa la anota proyectos.py; el error técnico va aparte).
+  const CAUSAS = {
+    pruebas: "Las pruebas de la app no pasaron en ninguno de los dos intentos.",
+    ia: "Tu IA no terminó el paso: se cortó, llegó a su límite o no está lista.",
+    respuesta: "La respuesta de tu IA no se pudo usar.",
+    acciones: "Las acciones nuevas de app.json no se pudieron armar.",
+  };
+  const QUE_HIZO = { lee: "lee", escribe: "escribe", prueba: "prueba" };
+  // El próximo paso por hacer: el primero que no está listo y que la persona no saltó.
+  function proximo(p) { return p.pasos.findIndex((x, i) => x.estado !== "listo" && !E.saltados.has(i)); }
+  function detallePaso(x) {
+    const intentos = (x.historial || []).map((h) => `<li data-sin-traducir>${esc(h.causa
+      ? Tp("Intento {n}: no quedó ({causa})", { n: h.intento, causa: Tp(CAUSAS[h.causa] || "") || h.causa })
+      : Tp("Intento {n}: quedó", { n: h.intento }))}</li>`).join("");
+    const registro = (x.registro || []).slice(-40).map((r) =>
+      `<p class="consola-linea"><span class="consola-${esc(r.t)}">${esc(QUE_HIZO[r.t] || r.t)}</span><span data-sin-traducir>${esc(r.ruta)}</span></p>`).join("");
+    if (!x.resumen && !intentos && !registro && !(x.escritos || []).length) return "";
+    return `<details class="detalle-paso"><summary>Ver lo que hizo</summary>
+      ${x.resumen ? `<p class="resumen-completo" data-sin-traducir>${esc(x.resumen)}</p>` : ""}
+      ${(x.escritos || []).length ? `<p class="etiqueta">Archivos que cambió</p><p class="archivos" data-sin-traducir>${esc(x.escritos.join(", "))}</p>` : ""}
+      ${intentos ? `<p class="etiqueta">Intentos</p><ul class="intentos">${intentos}</ul>` : ""}
+      ${registro ? `<p class="etiqueta">Lo que leyó y escribió</p><div class="consola registro">${registro}</div>` : ""}</details>`;
+  }
+  function falloHTML(x, i) {
+    const corre = !!E.ocupado;
+    return `<div class="por-que" role="group" aria-label="Por qué no quedó"><p class="etiqueta">Por qué no quedó</p>
+      <p data-sin-traducir>${esc(Tp(CAUSAS[x.causa] || "El paso no quedó."))}</p>
+      ${x.error ? `<details><summary>Ver el error</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
+      <p class="suave">«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si quieres seguir con los demás, sáltalo por ahora.</p>
+      <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-arreglar="${i}"${corre || !E.config.ia ? " disabled" : ""}>Arreglarlo con mi IA</button>
+      ${E.saltados.has(i) ? "" : `<button type="button" class="pz-boton" data-saltar="${i}"${corre ? " disabled" : ""}>Saltarlo por ahora</button>`}</div></div>`;
+  }
   function pasoPasos() {
     const p = E.proyecto;
-    const siguiente = p.pasos.findIndex((x) => x.estado !== "listo");
-    const filas = p.pasos.map((x, i) => `<li class="estado-${esc(x.estado)}">
-      <span class="chip-estado">${esc(ESTADOS[x.estado] || x.estado)}</span>
+    const siguiente = proximo(p);
+    const faltan = p.pasos.filter((x) => x.estado !== "listo").length;
+    const filas = p.pasos.map((x, i) => `<li class="estado-${esc(x.estado)}${E.saltados.has(i) ? " saltado" : ""}" id="paso-${i}">
+      <span class="chip-estado">${esc(E.saltados.has(i) && x.estado !== "listo" ? "Saltado" : ESTADOS[x.estado] || x.estado)}</span>
       <b data-sin-traducir>${esc(x.titulo)}</b>
       <small class="suave" data-sin-traducir>${esc(x.gastado ? (x.medido ? Tp("{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens gastados", { n: miles(x.gastado) })) : Tp("~{n} tokens estimados", { n: miles(x.tokens) }))}</small>
-      ${x.resumen ? `<span class="suave" data-sin-traducir>${esc(x.resumen)}</span>` : ""}
-      ${x.estado === "fallo" && x.error ? `<details><summary>Ver el error</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
-      ${E.ocupado === "paso" && E.enCurso === i ? vivoHTML() : ""}</li>`).join("");
+      ${x.resumen ? `<p class="resumen-paso" data-sin-traducir>${esc(x.resumen)}</p>` : ""}
+      ${E.ocupado === "paso" && E.enCurso === i ? vivoHTML() : x.estado === "fallo" ? falloHTML(x, i) : ""}
+      ${E.ocupado === "paso" && E.enCurso === i ? "" : detallePaso(x)}</li>`).join("");
     const modos = [["paso", "Paso a paso"], ["auto", "Todo automático"]].map(([m, n]) =>
       `<button type="button" data-modo="${m}" aria-pressed="${E.modo === m}"${E.ocupado ? " disabled" : ""}>${esc(n)}</button>`).join("");
-    const fin = siguiente < 0;
-    const accion = fin ? "" : E.ocupado === "paso"
+    const fin = faltan === 0;
+    const accion = siguiente < 0 ? "" : E.ocupado === "paso"
       ? (E.modo === "auto" ? `<button type="button" class="pz-boton" id="parar"${E.parar ? " disabled" : ""}>${esc(E.parar ? "Se detiene al terminar este paso" : "Detener")}</button>` : "")
       : `<button type="button" class="pz-boton pz-principal" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${E.config.ia ? "" : " disabled"}>${
-        esc(E.modo === "auto" ? Tp("Hacer todo desde el paso {n}", { n: siguiente + 1 }) : Tp("Hacer el paso {n}", { n: siguiente + 1 }))}</button>`;
-    return cabeza() + medidor(p)
-      + `<div class="modo"><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
-        ${E.modo === "auto" ? `<label class="pz-campo tope"><span>Detener al llegar a (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>` : ""}</div>
-      <p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola. Se detiene si un paso falla dos veces o al llegar al tope." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
-      + sinIA() + errorHTML() + `<div class="dos-columnas"><div class="columna-principal"><ol class="pasos">${filas}</ol></div>
+        esc(p.pasos[siguiente].estado === "fallo" ? Tp("Arreglar el paso {n}", { n: siguiente + 1 })
+          : E.modo === "auto" ? Tp("Hacer todo desde el paso {n}", { n: siguiente + 1 }) : Tp("Hacer el paso {n}", { n: siguiente + 1 }))}</button>`;
+    // Lo que se hace va arriba y queda a la vista al bajar (barra fija): el modo, el tope y el botón del próximo paso.
+    const barra = `<div class="barra-pasos"><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
+      ${E.modo === "auto" ? `<label class="tope"><span>Tope</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}" aria-label="Detener al llegar a (tokens)"></label>` : ""}
+      <span class="barra-pasos-espacio"></span>
+      <button type="button" class="pz-boton" id="ver-app">Ver mi app</button>${accion}</div>`;
+    const quedan = !fin && siguiente < 0
+      ? `<p class="aviso-pasos">${esc(Tp("Quedan {n} pasos sin terminar. Arréglalos para que tu app quede lista.", { n: faltan }))}</p>` : "";
+    return cabeza() + medidor(p) + barra
+      + `<p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola. Si uno falla, intenta arreglarlo una vez; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
+      + sinIA() + errorHTML() + quedan + `<div class="dos-columnas"><div class="columna-principal"><ol class="pasos">${filas}</ol></div>
         <aside class="columna-lado">${consolaHTML()}</aside></div>`
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
         <p class="suave">Para instalarla como app: publícala en GitHub (abajo). GitHub la arma para Mac, Windows y Linux en unos 15 minutos y la deja en «Releases» para descargar.</p></div>
         <section class="publicar">${publicarHTML(p)}</section><section class="proponer">${proponerHTML()}</section>` : "")
-      + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button>
-        <button type="button" class="pz-boton" id="ver-app">Ver mi app</button>${accion}</div>`;
+      + `<div class="pz-pie"><button type="button" class="pz-boton" id="inicio"${E.ocupado ? " disabled" : ""}>Volver al inicio</button></div>`;
   }
   // Las etapas que ve la persona: los 7 pasos del asistente, agrupados en 4.
   const ETAPAS = [["Tu idea", [1, 2]], ["Piezas", [3, 4]], ["Plan", [5, 6]], ["Construir", [7]]];
@@ -459,6 +505,11 @@
     else if (b.id === "hacer-paso") hacerPaso(Number(b.dataset.n));
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
     else if (b.id === "parar") { E.parar = true; pintar(); }
+    else if (b.dataset.arreglar) { const n = Number(b.dataset.arreglar); E.saltados.delete(n); hacerPaso(n); }
+    else if (b.dataset.saltar) {
+      E.saltados.add(Number(b.dataset.saltar)); E.error = "";
+      if (E.modo === "auto" && proximo(E.proyecto) >= 0) hacerPaso(proximo(E.proyecto)); else pintar();
+    }
     else if (b.dataset.modo) { E.modo = b.dataset.modo; pintar(); }
   });
   function urlPropuesta() {
@@ -482,6 +533,7 @@
     const p = E.proyectos.find((x) => x.id === id);
     if (!p) return;
     E.proyecto = p;
+    E.saltados = new Set(); E.reparados = {};
     E.nueva = { plataformas: p.plataformas, nombre: p.nombre, frase: p.frase, detalle: p.detalle || "", piezas: p.piezas, tocadas: p.piezas };
     irA(p.estado === "plan" ? 5 : p.estado === "nuevo" ? 5 : 7);
   }
@@ -636,16 +688,26 @@
       if (r && r.proyecto) E.proyecto = r.proyecto;
       const p = E.proyecto;
       if (!r || !r.proyecto) E.error = (r && r.error) || Tp("No se pudo.");
-      else if (!r.ok) E.error = Tp("El paso {n} no quedó: revisa el error. Puedes intentarlo de nuevo.", { n: r.n + 1 });
+      else if (!r.ok) {
+        const x = p.pasos[r.n];
+        // Todo automático: un paso que falla se intenta arreglar solo una vez (la IA recibe el error) antes de detenerse.
+        if (E.modo === "auto" && !E.parar && !E.reparados[r.n] && x.causa !== "ia" && p.gastado < E.tope) {
+          E.reparados[r.n] = true;
+          toast(Tp("El paso {n} no quedó. Le pido a tu IA que lo arregle.", { n: r.n + 1 }));
+          return hacerPaso(r.n);
+        }
+        E.error = Tp("El paso {n} no quedó. Abajo ves por qué y puedes arreglarlo.", { n: r.n + 1 });
+      } else delete E.reparados[r.n];
       // Todo automático: sigue con el próximo mientras no falle, no se pida parar y no se pase del tope.
-      const sig = p ? p.pasos.findIndex((x) => x.estado !== "listo") : -1;
+      const sig = p ? proximo(p) : -1;
       if (E.modo === "auto" && r && r.ok && !E.parar && sig >= 0) {
         if (p.gastado >= E.tope) E.error = Tp("Me detuve: llegaste al tope de {n} tokens.", { n: miles(E.tope) });
         else return hacerPaso(sig);
       }
       E.parar = false;
       pintar();
-      if (sig < 0 && E.paso === 7) toast("Tu app está lista.");
+      if (r && !r.ok && E.paso === 7) { const el = document.getElementById(`paso-${r.n}`); if (el) el.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      if (p && p.pasos.every((x) => x.estado === "listo") && E.paso === 7) toast("Tu app está lista.");
     },
     iaLista(r) { E.ias = (r && r.ias) || []; pintar(); },
     iaProbada: (r) => ui.iaProbada(r),

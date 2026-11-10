@@ -253,6 +253,53 @@ class Proyectos(unittest.TestCase):
         self.assertIn("Hice la lista de recetas.", historia)
         self.assertIn("bin/recetas.py", historia)
 
+    def test_paso_sin_cambios_queda_si_las_pruebas_pasan(self):
+        """Si lo del paso ya estaba hecho, la IA no cambia nada: mandan las pruebas, no «no cambiaste ningún archivo»."""
+        self.plan()
+        self.p.crear({"id": "recetas"})
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (True, "ok")
+
+        def nada(pedido, **opciones):
+            opciones["al_evento"]({"t": "lee", "ruta": os.path.join(opciones["escribir"], "bin", "recetas.py")})
+            return "Revisé el paso: ya estaba hecho.", None
+        self.p.ia.preguntar_vivo = nada
+        r = self.p.paso({"id": "recetas", "n": 0})
+        self.assertTrue(r["ok"], r)
+        x = r["proyecto"]["pasos"][0]
+        self.assertEqual(x["resumen"], "Revisé el paso: ya estaba hecho.")
+        self.assertEqual(x["registro"][0], {"t": "lee", "ruta": "bin/recetas.py", "intento": 1})
+        self.assertEqual(x["historial"][-1]["causa"], "")
+
+    def test_reintentar_lleva_el_error_y_guarda_cada_intento(self):
+        """Un paso que falló: cada intento queda anotado con su causa, y al reintentar la IA recibe el error de la vez anterior."""
+        self.plan()
+        self.p.crear({"id": "recetas"})
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (False, "FALLA: test_lista esperaba 3 recetas")
+        self.pedidos.clear()
+
+        def edita(pedido, **opciones):
+            self.pedidos.append(pedido)
+            with open(os.path.join(opciones["escribir"], "bin", "recetas.py"), "a") as f:
+                f.write("x = 1\n")
+            return "Hice la lista. " + "más detalle " * 100, None
+        self.p.ia.preguntar_vivo = edita
+        x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
+        self.assertEqual((x["estado"], x["causa"]), ("fallo", "pruebas"))
+        self.assertEqual([h["intento"] for h in x["historial"]], [1, 2])
+        self.assertIn("test_lista", x["historial"][0]["error"])
+        self.assertGreater(len(x["resumen"]), 600)  # completo: la interfaz lo muestra al abrir el paso
+        self.assertNotIn("El intento anterior no quedó", self.pedidos[0])
+        self.assertIn("test_lista", self.pedidos[1])
+        self.pedidos.clear()
+        self.p.probar = lambda c: (True, "ok")
+        x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
+        self.assertEqual(x["estado"], "listo")
+        self.assertIn("test_lista", self.pedidos[0])  # «Arreglarlo»: el error va desde el primer intento
+        self.assertNotIn("causa", x)
+        self.assertEqual([h["intento"] for h in x["historial"]], [1, 2, 3])
+
     def test_cambiado_cuenta_solo_lo_nuevo(self):
         self.assertEqual(self.p._cambiado(b"x" * 10000 + b"fin", b"x" * 10000 + b"nuevo fin"), 6)
         self.assertEqual(self.p._cambiado(b"", b"hola"), 4)
