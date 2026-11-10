@@ -6,6 +6,17 @@ mod pieza;
 mod progreso;
 #[path = "pieza/actualizaciones.rs"]
 mod actualizaciones;
+mod requisitos;
+// Piezas en Rust que la lógica de Pieza va a usar al pasar de Python a Rust (docs/rust.md de Pieza).
+#[path = "pieza/ia.rs"]
+#[allow(dead_code)]
+mod ia;
+#[path = "pieza/red.rs"]
+#[allow(dead_code)]
+mod red;
+#[path = "pieza/trabajos.rs"]
+#[allow(dead_code)]
+mod trabajos;
 
 use pieza::host::{arrancar, Opciones};
 #[allow(unused_imports)]
@@ -20,7 +31,9 @@ fn main() {
         actualizaciones: actualizaciones::Actualizaciones::nuevas("pieza-app/estudio", "Pieza").ok().map(|a| Arc::new(a) as _),
         ..Default::default()
     };
-    arrancar(tauri::generate_context!(), op, |_host| {
-        // _host.registrar("exportar", |datos, host, ctx| { … host.llamar("exportado", serde_json::json!({"ok": true}), ctx.destino()); });
+    arrancar(tauri::generate_context!(), op, |host| {
+        // Acciones en Rust («rust»: true en app.json): el host valida sus datos igual que para un script (docs/rust.md de Pieza).
+        host.funcion("requisitosLista", |_, _| requisitos::lista());
+        host.funcion("requisitoInstalar", |d, avance| requisitos::instalar(&d, &|e| avance.emitir(e)));
     });
 }

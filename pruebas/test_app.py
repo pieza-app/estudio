@@ -77,7 +77,8 @@ class Piezas(unittest.TestCase):
             a = json.load(f)["acciones"]
         self.assertEqual(a["piezasFicha"]["entrada"], "archivo")
         for x in a.values():
-            self.assertFalse(any(arg.startswith("$") for arg in x["args"]))
+            self.assertFalse(any(arg.startswith("$") for arg in x.get("args", [])))   # las acciones en Rust no tienen args
+        self.assertTrue(a["requisitosLista"].get("rust"), "requisitos va en Rust (escritorio/src/requisitos.rs)")
 
 
 if __name__ == "__main__":

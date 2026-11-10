@@ -21,7 +21,7 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 
 | Ruta | Qué es |
 |---|---|
-| `bin/` | Python **solo biblioteca estándar**: lo que corren las apps. El último argumento siempre es el JSON de salida; lo que escribe la persona llega en un JSON de entrada, nunca como argumento. |
+| `bin/` | Python **solo biblioteca estándar** (pasa a Rust por fases: lo nuevo va en `escritorio/src/`, ver «Todo en Rust»): lo que corren las apps. El último argumento siempre es el JSON de salida; lo que escribe la persona llega en un JSON de entrada, nunca como argumento. |
 | `ui/` | La interfaz única (`index.html` con CSP, `app.js`, `app.css`), las piezas de interfaz (ver «Piezas») e `idiomas/en.json`. |
 | `escritorio/` | App de escritorio para Mac, Windows y Linux (Rust + Tauri): `src/main.rs` es lo propio; `src/pieza/` es de la pieza «host-tauri». `Cargo.toml`, `tauri.conf.json` y `pruebas/arranque.sh` los genera la pieza. |
 | `docs/` | `favicon.svg` (el logo de Pieza: de ahí salen los íconos con `herramientas/iconos.mjs`) y `wiki/`. La página es una sola, la de [Pieza](https://pieza-app.github.io/pieza/): ahí va la vista previa (`/app/`). |
@@ -37,6 +37,12 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 | `bin/publicar.py` | `explorar` (las apps con el topic «hecho-con-pieza», de la página de Pieza, pieza «red»), `revisar` (`gh` y su sesión, dueños posibles) `version` (versión nueva de una app publicada) y `subir` (con el `gh` de la persona: repo en `app.json` + `pieza.py generar`, revisión de privacidad, primer commit, `gh repo create`, Pages y el topic si elige el explorador). |
 | `bin/vista.py` | «Ver mi app»: sirve la carpeta `ui/` de la app creada en `127.0.0.1` (un servidor aparte que se apaga a los 30 minutos) y abre el navegador. |
 | `datos/guias/reglas.md` | Las reglas que van en cada pedido a la IA (cortas: un paso por pedido). |
+
+## Todo en Rust
+Pieza es Rust + Tauri y su lógica pasa de `bin/*.py` a Rust por fases (`docs/rust.md` de Pieza). Una acción en Rust lleva
+`"rust": true` en `app.json` (sin script) y su función se registra en `escritorio/src/main.rs` con `host.funcion(nombre, |entrada,
+avance| …)`: el host valida los datos igual. Ya en Rust: `requisitos.rs`. Lo nuevo se escribe en Rust, con sus pruebas
+(`cd escritorio && cargo test`).
 
 ## Cómo funciona
 - **El asistente** (`ui/app.js`, `E.paso`): `inicio` → `sistemas` → `idea` → `piezas` → `ficha` → `plan` → `crear` → `pasos`. Cada
@@ -71,7 +77,8 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   afuera. `lista` dice `aisladas`; Windows corre sin aislar y la interfaz lo dice.
 - **Revisión antes de subir** (`publicar.py preparar` → `subidaRevisada`, y otra vez en `subir`): archivos que sube git,
   `SECRETOS` (bloquean), `PERSONALES` (la persona confirma que son de ejemplo, `datos_ok`), dominios y comandos de la app.
-- **Lo que usa el computador** (`bin/requisitos.py`, acciones `requisitosLista` → `requisitosListos` y `requisitoInstalar` →
+- **Lo que usa el computador** (en Rust: `escritorio/src/requisitos.rs`, acciones `"rust": true` registradas con `host.funcion` en
+  `main.rs`: `requisitosLista` → `requisitosListos` y `requisitoInstalar` →
   `requisitoInstalado`): Git, Node, Rust y GitHub CLI, con para qué sirve cada uno; instala con Homebrew o winget, si no, la
   página para bajarla. Se ve al crear la app y en el panel de construir, con dónde se construye (`proyectoAbrir` abre la
   carpeta) y con qué tecnologías (`tecnologias`).
@@ -143,18 +150,18 @@ Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se
 | `actualizaciones` | 0.5.0 | `escritorio/src/pieza/actualizaciones.rs` | Revisa los Releases de `pieza-app/estudio` al abrir y cada 6 h. Exige la firma Ed25519 (`app.json` → `actualizaciones.llaves`; la privada está en el entorno «publicar»). |
 | `bienvenida` | 0.4.1 | `ui/bienvenida.css`, `ui/bienvenida.js` | El primer uso: idioma → `hola` → `ia`. |
 | `componentes` | 0.3.0 | `ui/componentes.css`, `ui/componentes.js` | Botones, diálogos, avisos y «Tu IA» en Ajustes. |
-| `contrato` | 0.1.3 | `pruebas/contrato.py` | Revisa que cada acción tenga quien la atienda. |
+| `contrato` | 0.1.4 | `pruebas/contrato.py` | Revisa que cada acción tenga quien la atienda. |
 | `empaquetado` | 0.2.2 | `herramientas/python.lock` | Arma la app con su Python portátil (`carpetas`: `datos`). |
 | `esqueleto` | 0.2.0 |  | El punto de partida (`pieza.py crear`). Ya no se actualiza. |
 | `github` | 0.3.1 |  | Workflows, plantillas de issues, Dependabot y la wiki. |
-| `host-tauri` | 0.1.1 | `escritorio/iconos/128x128.png`, `escritorio/iconos/128x128@2x.png`, `escritorio/iconos/32x32.png`, `escritorio/iconos/icon.icns`, `escritorio/iconos/icon.ico`, `escritorio/iconos/icono.png`, `escritorio/src/pieza/enchufe.rs`, `escritorio/src/pieza/host.rs`, `escritorio/src/pieza/mod.rs`, `escritorio/src/pieza/procesador.rs`, `escritorio/src/pieza/protocolo.rs`, `escritorio/src/pieza/sistema.rs`, `escritorio/src/pieza/vigilante.rs` | La ventana, el puente y las acciones declaradas. |
+| `host-tauri` | 0.2.0 | `escritorio/iconos/128x128.png`, `escritorio/iconos/128x128@2x.png`, `escritorio/iconos/32x32.png`, `escritorio/iconos/icon.icns`, `escritorio/iconos/icon.ico`, `escritorio/iconos/icono.png`, `escritorio/src/pieza/enchufe.rs`, `escritorio/src/pieza/host.rs`, `escritorio/src/pieza/mod.rs`, `escritorio/src/pieza/procesador.rs`, `escritorio/src/pieza/protocolo.rs`, `escritorio/src/pieza/sistema.rs`, `escritorio/src/pieza/vigilante.rs` | La ventana, el puente y las acciones declaradas (con script o en Rust: `host.funcion`). |
 | `host-ui` | 0.3.0 | `ui/host.js` | `host.enviar` y `host.responder`. |
 | `i18n` | 0.3.1 | `ui/i18n.js` | `T`, `Tp`, `traducirDOM` y `idiomas/en.json`. |
-| `ia` | 0.7.1 | `bin/ia.py` | La IA de la persona: el plan y cada paso (`preguntar`, con `escribir` = la carpeta de la app; con Gemini, `leer`). |
+| `ia` | 0.8.0 | `bin/ia.py`, `escritorio/src/pieza/ia.rs` | La IA de la persona: el plan y cada paso (`preguntar`, con `escribir` = la carpeta de la app; con Gemini, `leer`). |
 | `nucleo` | 0.7.1 | `bin/nucleo.py` | `app.json`, la carpeta de datos y la config. |
-| `red` | 0.2.0 | `bin/red.py` | El explorador: solo `pieza-app.github.io`, sin redirecciones y con tope. |
+| `red` | 0.3.0 | `bin/red.py`, `escritorio/src/pieza/red.rs` | El explorador: solo `pieza-app.github.io`, sin redirecciones y con tope. |
 | `tema` | 0.2.1 | `ui/tema.css`, `ui/tema.js` | Claro y oscuro. |
-| `trabajos` | 0.2.2 | `bin/trabajos.py`, `escritorio/src/pieza/progreso.rs` | Todavía no se usa: los pasos corren con su límite de tiempo (`limite` en `app.json`). |
+| `trabajos` | 0.3.0 | `bin/trabajos.py`, `escritorio/src/pieza/progreso.rs`, `escritorio/src/pieza/trabajos.rs` | Todavía no se usa: los pasos corren con su límite de tiempo (`limite` en `app.json`). |
 
 - **No edites a mano los archivos de una pieza.** Se actualizan con «Pieza al día» (`.github/workflows/pieza-al-dia.yml`, una vez por
   semana abre un PR o un issue) o con `python3 <pieza>/herramientas/pieza.py actualizar .`. Si hay que cambiar algo, el cambio va

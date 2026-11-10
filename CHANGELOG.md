@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.17.0
+- Pieza empieza a pasar a Rust: revisar e instalar lo que necesita tu computador (Git, Node, Rust y GitHub CLI) ya corre en Rust, dentro de la app. Las piezas de la IA, de la red y de los trabajos también vienen en Rust. · *Pieza starts moving to Rust: checking and installing what your computer needs (Git, Node, Rust and GitHub CLI) now runs in Rust, inside the app. The AI, network and jobs pieces also come in Rust.*
+
 ## 0.16.1
 - Rust pasa a ser necesario: las apps son Rust + Tauri, y sin Rust las pruebas de cada paso no revisan su parte nativa. Pieza te ofrece instalarlo. · *Rust is now required: apps are Rust + Tauri, and without Rust each step's tests don't check their native part. Pieza offers to install it.*
 

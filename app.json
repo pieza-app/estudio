@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.16.1",
+ "version": "0.17.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -448,21 +448,13 @@
    "limite": 120
   },
   "requisitosLista": {
-   "script": "requisitos.py",
-   "args": [
-    "lista"
-   ],
-   "entrada": null,
+   "rust": true,
    "datos": {},
    "responde": "requisitosListos",
    "limite": 60
   },
   "requisitoInstalar": {
-   "script": "requisitos.py",
-   "args": [
-    "instalar"
-   ],
-   "entrada": "archivo",
+   "rust": true,
    "datos": {
     "id": {
      "tipo": "enum",
