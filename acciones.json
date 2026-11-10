@@ -474,11 +474,7 @@
    "pieza": "app"
   },
   "requisitoInstalar": {
-   "script": "requisitos.py",
-   "args": [
-    "instalar"
-   ],
-   "entrada": "archivo",
+   "rust": true,
    "datos": {
     "id": {
      "tipo": "enum",
@@ -496,11 +492,7 @@
    "pieza": "app"
   },
   "requisitosLista": {
-   "script": "requisitos.py",
-   "args": [
-    "lista"
-   ],
-   "entrada": null,
+   "rust": true,
    "datos": {},
    "responde": "requisitosListos",
    "limite": 60,
