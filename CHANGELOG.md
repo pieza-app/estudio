@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.10.0
+- El plan se mejora solo: tu IA lo arma, tres revisores lo leen a ciegas y Pieza aplica lo grave e importante. Lo ves en tres etapas y al final sabes qué se corrigió. Cada pantalla dice arriba qué hacer ahora, los textos son más grandes, el tope de tokens vale también paso a paso, y un paso que gasta más de 3 veces lo estimado se detiene y te pregunta. · *The plan improves itself: your AI makes it, three reviewers read it blind and Pieza applies what's serious and important. You see it in three stages and at the end you know what was fixed. Every screen says at the top what to do now, text is bigger, the token limit also applies step by step, and a step that uses more than 3 times its estimate stops and asks you.*
+
 ## 0.9.0
 - Publicar es su propia etapa, guiada: Pieza instala GitHub CLI, lo conecta con un código que pegas en GitHub (sin terminal), te ayuda a elegir tu cuenta o crear una organización, y al publicar te deja la página y las descargas a un toque. Un paso ya no queda fallando porque «acciones.json no está al día»: Pieza lo arma siempre antes de las pruebas. · *Publishing is its own guided stage: Pieza installs GitHub CLI, connects it with a code you paste on GitHub (no terminal), helps you pick your account or create an organization, and after publishing gives you the page and downloads one tap away. A step no longer keeps failing with “acciones.json is out of date”: Pieza always builds it before the tests.*
 

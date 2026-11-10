@@ -439,6 +439,22 @@ class Proyectos(unittest.TestCase):
         self.assertTrue(self.p.paso({"id": "recetas", "n": 0})["ok"])
         self.assertIn("recetasListar", json.load(open(os.path.join(carpeta, "acciones.json")))["acciones"])
 
+    def test_freno_de_gasto(self):
+        """Un paso que ya gastó más de 3 veces lo estimado no se reintenta solo: queda con causa «gasto» para que la persona decida."""
+        self.plan()
+        self.p.crear({"id": "recetas"})
+        self.p.ia.puede_escribir = lambda ia=None: True
+        self.p.probar = lambda c: (False, "falla")
+        llamadas = []
+
+        def cara(pedido, **o):
+            llamadas.append(1)
+            o["al_evento"]({"t": "uso", "entrada": 5000, "salida": 0})  # el paso estimó 900
+            return "Intenté.", None
+        self.p.ia.preguntar_vivo = cara
+        x = self.p.paso({"id": "recetas", "n": 0})["proyecto"]["pasos"][0]
+        self.assertEqual((len(llamadas), x["causa"]), (1, "gasto"))
+
     def test_lista_no_muestra_copias(self):
         """Un respaldo en la carpeta del registro (recetas.antes.json, con el mismo id) no es otra app."""
         self.plan()
