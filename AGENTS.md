@@ -93,6 +93,9 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
   llevan `grupo` (la cadena de divisiones) y se numeran 5.1, 5.2 (`numeros`); los pasos de después no se corren.
 - **Avance:** el host de escritorio manda `{eventos: [...]}` a la función de «progreso» (`eventosDe` acepta eso y una lista).
   `probar` manda cada línea de `pruebas/correr.sh` (`{"t": "probando"}`).
+- **Arreglo automático** (`autoReparar`, `repararPendiente`, en los dos modos): falla → la IA lo arregla con el error (`REPARAR`
+  veces) → se divide (`dividirPaso` + `seguirTras`) → la persona decide. Causa «ia»: un reintento. Se detiene con «parar» o el tope
+  de la app.
 - **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).

@@ -589,8 +589,8 @@
       <p data-sin-traducir>${esc(Tp(CAUSAS[x.causa] || "El paso no quedó."))}</p>
       ${linea ? `<p class="fallo-linea"><span class="etiqueta">${esc("Lo que falló")}</span><code data-sin-traducir>${esc(linea)}</code></p>` : ""}
       ${x.error ? `<details><summary>Ver el error completo</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
-      <p class="suave">«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si ya lo arreglaste tú, «Probar de nuevo» corre solo las pruebas, sin IA y sin gastar tokens. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.</p>
-      <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-arreglar="${i}"${corre || !E.config.ia ? " disabled" : ""}>Arreglarlo con mi IA</button>
+      <p class="suave">Ya intenté arreglarlo solo: tu IA lo corrigió con este error y, si seguía sin quedar, lo dividí. Puedes darle otra vuelta (vuelve a intentarlo solo), probar de nuevo sin IA si lo arreglaste tú, dividirlo o saltarlo por ahora.</p>
+      <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-arreglar="${i}"${corre || !E.config.ia ? " disabled" : ""}>Intentarlo de nuevo</button>
       ${x.error && x.causa !== "ia" ? `<button type="button" class="pz-boton" data-reprobar="${i}"${corre ? " disabled" : ""}>Probar de nuevo (sin IA)</button>` : ""}
       <button type="button" class="pz-boton" data-dividir="${i}"${corre || !E.config.ia ? " disabled" : ""}>Dividirlo en pasos más chicos</button>
       ${E.saltados.has(i) ? "" : `<button type="button" class="pz-boton" data-saltar="${i}"${corre ? " disabled" : ""}>Saltarlo por ahora</button>`}</div></div>`;
@@ -654,7 +654,8 @@
         <p class="panel-nota">${esc("Si un paso llega a este tope, lo detengo y lo divido en partes (por ejemplo 5.1 y 5.2). Después sigo con la primera parte.")}</p>
         <label class="tope"><span>Tope de toda la app (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>
         ${enFila ? `<p class="panel-nota">${esc("En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.")}</p>` : ""}
-        <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p></div>`
+        <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>
+        <p class="panel-nota">${esc("Si un paso falla, tu IA lo arregla sola (hasta 2 veces) y, si sigue, lo divido en partes. Solo te pregunto si nada de eso resulta.")}</p></div>`
       + (E.aisladas === undefined ? "" : `<p class="panel-nota aislamiento${E.aisladas ? "" : " sin"}">${esc(E.aisladas
         ? "Las pruebas corren aisladas: sin internet y sin acceso a tus llaves ni a tus carpetas privadas."
         : "En este computador las pruebas corren sin aislar: revisa lo que hace tu app antes de publicarla.")}</p>`)
@@ -892,7 +893,7 @@
       ocupar("paso");
       host.enviar("proyectoReprobar", { id: E.proyecto.id, n });
     }
-    else if (b.dataset.arreglar) { const n = Number(b.dataset.arreglar); E.saltados.delete(n); hacerPaso(n); }
+    else if (b.dataset.arreglar) { const n = Number(b.dataset.arreglar); E.saltados.delete(n); E.reparados[n] = 0; hacerPaso(n); }
     else if (b.dataset.saltar) {
       E.saltados.add(Number(b.dataset.saltar)); E.error = "";
       if (!(E.modo === "auto" && seguirAuto())) pintar();
@@ -917,20 +918,39 @@
   function ocupar(que) { E.ocupado = que; E.error = ""; E.parar = false; pintar(); }
   // Todo automático, cuando un paso no queda: primero tu IA lo arregla con el error; si sigue sin quedar, se divide en pasos más
   // chicos (una vez). Si la IA misma no respondió, o se llegó al tope, se detiene. Devuelve si siguió trabajando.
+  // Un paso que no quedó se arregla solo, en los dos modos (la persona no tiene que apretar nada): 1) tu IA lo arregla con el
+  // error, hasta 2 veces; 2) si sigue sin quedar, se divide en partes (5.1, 5.2) y sigue con la primera; 3) si la IA se cortó
+  // (red, límite de su cuenta), se intenta una vez más. Se detiene si la persona pidió parar o se llegó al tope de la app.
+  const REPARAR = 2;
   function autoReparar(n, x) {
-    if (x.causa === "ia" || x.causa === "gasto" || E.proyecto.gastado >= E.tope) return false;
-    if (!E.reparados[n]) {
-      E.reparados[n] = true;
-      toast(Tp("El paso {n} no quedó. Le pido a tu IA que lo arregle.", { n: numeroDe(n) }));
+    if (E.parar || E.proyecto.gastado >= E.tope || x.estado !== "fallo" || E.saltados.has(n)) return false;
+    const veces = E.reparados[n] || 0;
+    if (x.causa === "ia") {
+      if (veces >= 1) return false;
+      E.reparados[n] = 1;
+      toast(Tp("Tu IA se cortó en el paso {n}. Lo intento de nuevo.", { n: numeroDe(n) }));
       hacerPaso(n);
       return true;
     }
-    if (!E.divididos[x.titulo]) {
+    if (veces < REPARAR) {
+      E.reparados[n] = veces + 1;
+      toast(Tp("El paso {n} no quedó. Tu IA lo arregla sola (vez {k} de {t}).", { n: numeroDe(n), k: veces + 1, t: REPARAR }));
+      hacerPaso(n);
+      return true;
+    }
+    if (!E.divididos[x.titulo] && puedeDividirse(x)) {
       E.divididos[x.titulo] = true;
-      toast(Tp("El paso {n} sigue sin quedar. Lo divido en pasos más chicos.", { n: numeroDe(n) }));
+      toast(Tp("El paso {n} sigue sin quedar. Lo divido en partes y sigo con la primera.", { n: numeroDe(n) }));
+      E.seguirTras = true;
       dividirPaso(n);
       return true;
     }
+    return false;
+  }
+  // El primer paso con falla que todavía se puede arreglar solo (después de un lote, o cuando se arregló otro).
+  function repararPendiente() {
+    const p = E.proyecto;
+    for (let i = 0; i < p.pasos.length; i++) if (p.pasos[i].estado === "fallo" && autoReparar(i, p.pasos[i])) return true;
     return false;
   }
   const nuevoVivo = () => ({ inicio: Date.now(), ultimo: Date.now(), fase: "preparar", intento: 1, escritos: new Set(), leyendo: "", busca: "", tokens: 0,
@@ -1238,9 +1258,12 @@
       else if (!r.ok) {
         const x = p.pasos[r.n];
         if (dividirPorTope(r.n, x)) return;
-        if (E.modo === "auto" && !E.parar && autoReparar(r.n, x)) return;
-        E.error = Tp("El paso {n} no quedó. Abajo ves por qué y puedes arreglarlo.", { n: numeroDe(r.n) });
-      } else delete E.reparados[r.n];
+        if (autoReparar(r.n, x)) return;
+        E.error = Tp("Intenté arreglar el paso {n} solo y no quedó. Abajo ves qué falló.", { n: numeroDe(r.n) });
+      } else {
+        delete E.reparados[r.n];
+        if (repararPendiente()) return;   // otro paso que había fallado (por ejemplo en un lote)
+      }
       // Todo automático: sigue mientras no falle, no se pida parar y no se pase del tope.
       if (E.modo === "auto" && r && r.ok && !E.parar && seguirAuto()) return;
       E.parar = false;
@@ -1258,11 +1281,9 @@
       for (const n of r.ns || []) if (p.pasos[n].estado === "listo") delete E.reparados[n];
       const topado = fallados.find((n) => p.pasos[n].causa === "tope");
       if (topado !== undefined && dividirPorTope(topado, p.pasos[topado])) return;
-      if (E.modo === "auto" && !E.parar) {
-        if (fallados.length && autoReparar(fallados[0], p.pasos[fallados[0]])) return;
-        if (!fallados.length && seguirAuto()) return;
-      }
-      if (fallados.length) E.error = Tp("El paso {n} no quedó. Abajo ves por qué y puedes arreglarlo.", { n: numeroDe(fallados[0]) });
+      if (fallados.length && repararPendiente()) return;
+      if (E.modo === "auto" && !E.parar && !fallados.length && seguirAuto()) return;
+      if (fallados.length) E.error = Tp("Intenté arreglar el paso {n} solo y no quedó. Abajo ves qué falló.", { n: numeroDe(fallados[0]) });
       E.parar = false;
       pintar();
       if (p.pasos.every((x) => x.estado === "listo") && E.paso === 7) toast("Tu app está lista.");

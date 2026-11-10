@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.16.0
+- Los pasos se arreglan solos, también en «paso a paso»: si un paso falla, tu IA lo corrige con el error (hasta 2 veces) y, si sigue, Pieza lo divide en partes y sigue con la primera. Si tu IA se cortó, lo intenta otra vez. Solo te pregunta si nada de eso resulta. · *Steps fix themselves, also in “step by step”: if a step fails, your AI corrects it with the error (up to 2 times) and, if it still fails, Pieza splits it into parts and goes on with the first one. If your AI stopped, it tries again. It only asks you if none of that works.*
+
 ## 0.15.0
 - Arreglo: en la app de escritorio no llegaba el avance de un paso (se quedaba en «Prepara») ni el código para conectar GitHub. Ahora llegan. · *Fix: in the desktop app a step's progress didn't arrive (it stayed on “Prepare”), nor did the code to connect GitHub. Now they arrive.*
 - Cada etapa de un paso dice exactamente qué hace: qué le pasa Pieza a tu IA, qué archivos leyó y qué buscó, qué escribió, qué revisa y qué prueba corre en este momento. · *Each stage of a step says exactly what it does: what Pieza gives your AI, which files it read and what it searched for, what it wrote, what it checks and which test is running right now.*
