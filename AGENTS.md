@@ -68,6 +68,17 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 - **En vivo:** `proyectoPaso` tiene `"progreso": "pasoAvance"`: `proyectos.py` emite (`trabajos.emitir`) la fase (`ia`,
   `pruebas`) y lo que la IA lee y escribe; la interfaz lo muestra con el tiempo que lleva (`vivoHTML`).
 - **Revisión a ciegas** (`proyectos.py revisar`, acción `proyectoRevisar`): el patrón «elefante y pez dorado». Tres sesiones nuevas de la IA (`ENFOQUES`: riesgos, uso, pasos) leen solo la idea y el plan, en paralelo, y devuelven hallazgos validados (`validar_revision`). Lo que la persona acepta vuelve a `plan` como `acuerdos` y va a cada pedido (`_detalle`).
+- **Pasos chicos y conectados:** el plan trae por paso `entrega` (lo que deja listo para otros, con nombres exactos) y `depende`
+  (índices de pasos anteriores; sin él, del anterior). `validar_plan` rechaza un paso de más de `TOPE_PASO` tokens o
+  `MAX_ARCHIVOS_PASO` archivos propios (sin contar `SIN_CONTAR`) y se pide de nuevo. Cada paso recibe primero lo que dejaron
+  listo los pasos de los que depende (`_historia`) y lo que él debe dejar (`_entrega`).
+- **Varios pasos a la vez** (`proyectos.py lote`, acción `proyectoLote` → `loteListo`, solo con Claude o Codex): los pasos que
+  `listos_para_lote` elige (todo lo que usan listo, sin archivos propios en común, hasta `MAX_LOTE`) corren en paralelo, cada uno
+  en una copia de la carpeta. Después se juntan (`_juntar`: JSON clave por clave, texto por líneas); lo que choca queda
+  pendiente para hacerlo solo. Las pruebas corren una vez. La interfaz lo replica en `paraLote`.
+- **Dividir** (`proyectos.py dividir`, acción `proyectoDividir` → `pasoDividido`): cambia un paso por 2 a 4 más chicos; los que
+  dependían de él pasan a depender del último. En «Todo automático», un paso que falla se arregla una vez y, si sigue, se divide
+  una vez (`autoReparar`).
 - **Cuando un paso no queda:** `paso` guarda en cada paso `historial` (cada intento: resumen, archivos, `causa` —`pruebas`, `ia`,
   `respuesta`, `acciones`— y el error), `registro` (lo que leyó y escribió la última vez) y `causa`. Sin cambios no es un fallo:
   mandan las pruebas (lo del paso puede estar hecho de antes). Al reintentar, el error anterior va desde el primer intento

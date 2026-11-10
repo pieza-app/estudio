@@ -12,7 +12,7 @@
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
-    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {},
+    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: 200000, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {},
     vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, propuesta: { nombre: "", que: "", archivos: "" } };
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
@@ -188,8 +188,8 @@
       <div class="pz-pie"><button type="button" class="pz-boton" id="proponer"${x.nombre.trim() && x.que.trim() ? "" : " disabled"}>Proponer en GitHub</button></div>`;
   }
   // En vivo: cuánto lleva, en qué fase va y qué archivos lee y escribe la IA (eventos de la acción, `pasoAvance`).
-  function vivoHTML() {
-    const v = E.vivo || {};
+  function vivoHTML(n) {
+    const v = E.vivos[n] || {};
     const min = Math.max(0, Math.floor((Date.now() - (v.inicio || Date.now())) / 60000));
     const fase = v.fase === "pruebas" ? Tp("Corriendo las pruebas…") : v.intento > 1 ? Tp("Segundo intento: tu IA arregla lo que falló…")
       : Tp("Tu IA está en este paso…");
@@ -201,8 +201,8 @@
   }
   // La consola en vivo: lo que tu IA lee y escribe en el paso actual (o un resumen si no hay nada corriendo).
   function consolaHTML() {
-    const v = E.ocupado === "paso" ? E.vivo || {} : null;
-    if (!v) {
+    const vivos = E.ocupado === "paso" ? E.enCurso.map((n) => [n, E.vivos[n] || {}]) : [];
+    if (!vivos.length) {
       // Sin nada corriendo: lo que hizo la última vez (el paso que falló o el último que corrió).
       const pasos = (E.proyecto && E.proyecto.pasos) || [];
       let i = pasos.findIndex((x) => x.estado === "fallo" && (x.registro || []).length);
@@ -212,10 +212,13 @@
         `<p class="consola-linea"><span class="consola-${esc(r.t)}">${esc(QUE_HIZO[r.t] || r.t)}</span><span data-sin-traducir>${esc(r.ruta)}</span></p>`).join("")}</div>`;
     }
     const lineas = [];
-    if (v.leyendo) lineas.push(["lee", v.leyendo]);
-    for (const r of [...(v.escritos || [])].slice(-8)) lineas.push(["escribe", r]);
-    if (v.fase === "pruebas") lineas.push(["prueba", Tp("Corriendo las pruebas…")]);
-    return `<div class="consola" role="log"><p class="consola-titulo">En vivo</p>${lineas.map(([t, x]) =>
+    for (const [n, v] of vivos) {
+      const quien = vivos.length > 1 ? Tp("paso {n}", { n: n + 1 }) + " · " : "";
+      if (v.leyendo) lineas.push(["lee", quien + v.leyendo]);
+      for (const r of [...(v.escritos || [])].slice(-8 / vivos.length)) lineas.push(["escribe", quien + r]);
+      if (v.fase === "pruebas") lineas.push(["prueba", Tp("Corriendo las pruebas…")]);
+    }
+    return `<div class="consola" role="log"><p class="consola-titulo" data-sin-traducir>${esc(vivos.length > 1 ? Tp("En vivo · {n} pasos a la vez", { n: vivos.length }) : Tp("En vivo"))}</p>${lineas.map(([t, x]) =>
       `<p class="consola-linea"><span class="consola-${t}">${QUE_HIZO[t]}</span><span data-sin-traducir>${esc(x)}</span></p>`).join("")}</div>`;
   }
   function trabajando(texto) {
@@ -281,6 +284,37 @@
   const QUE_HIZO = { lee: "lee", escribe: "escribe", prueba: "prueba" };
   // El próximo paso por hacer: el primero que no está listo y que la persona no saltó.
   function proximo(p) { return p.pasos.findIndex((x, i) => x.estado !== "listo" && !E.saltados.has(i)); }
+  // De qué pasos depende uno (un plan de antes no lo dice: del anterior). Igual que proyectos.dependencias.
+  function depende(p, i) {
+    const d = p.pasos[i].depende;
+    return Array.isArray(d) ? d.filter((j) => Number.isInteger(j) && j >= 0 && j < i) : i > 0 ? [i - 1] : [];
+  }
+  const SIN_CONTAR = ["ui/idiomas/", "CHANGELOG.md", "AGENTS.md", "README.md", "pruebas/"];
+  // Los pasos que se pueden hacer ahora y a la vez (como proyectos.listos_para_lote): todo lo que usan está listo y no comparten
+  // archivos propios. Solo con una IA que edita la carpeta (Claude o Codex).
+  function paraLote(p) {
+    const elegidos = [], tocados = new Set();
+    p.pasos.forEach((x, i) => {
+      if (elegidos.length >= 3 || x.estado === "listo" || E.saltados.has(i)) return;
+      if (depende(p, i).some((d) => p.pasos[d].estado !== "listo")) return;
+      const propios = (x.archivos || []).filter((a) => !SIN_CONTAR.some((s) => a.startsWith(s)));
+      if (propios.some((a) => tocados.has(a)) || (!propios.length && elegidos.length)) return;
+      elegidos.push(i); propios.forEach((a) => tocados.add(a));
+    });
+    return elegidos;
+  }
+  const EDITAN = ["claude", "codex"];
+  // Todo automático: el próximo trabajo. Varios pasos a la vez si se puede; si no, el próximo paso.
+  function seguirAuto() {
+    const p = E.proyecto;
+    if (p.gastado >= E.tope) { E.error = Tp("Me detuve: llegaste al tope de {n} tokens.", { n: miles(E.tope) }); return false; }
+    const lote = EDITAN.includes(E.config.ia) ? paraLote(p).filter((i) => p.pasos[i].estado !== "fallo") : [];
+    if (lote.length > 1) { hacerLote(lote); return true; }
+    const sig = proximo(p);
+    if (sig < 0) return false;
+    hacerPaso(sig);
+    return true;
+  }
   function detallePaso(x) {
     const intentos = (x.historial || []).map((h) => `<li data-sin-traducir>${esc(h.causa
       ? Tp("Intento {n}: no quedó ({causa})", { n: h.intento, causa: Tp(CAUSAS[h.causa] || "") || h.causa })
@@ -299,8 +333,9 @@
     return `<div class="por-que" role="group" aria-label="Por qué no quedó"><p class="etiqueta">Por qué no quedó</p>
       <p data-sin-traducir>${esc(Tp(CAUSAS[x.causa] || "El paso no quedó."))}</p>
       ${x.error ? `<details><summary>Ver el error</summary><pre data-sin-traducir>${esc(x.error)}</pre></details>` : ""}
-      <p class="suave">«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si quieres seguir con los demás, sáltalo por ahora.</p>
+      <p class="suave">«Arreglarlo» le pasa este error a tu IA para que lo corrija. Si el paso es muy grande, divídelo. Para seguir con los demás, sáltalo por ahora.</p>
       <div class="acciones-fallo"><button type="button" class="pz-boton pz-principal" data-arreglar="${i}"${corre || !E.config.ia ? " disabled" : ""}>Arreglarlo con mi IA</button>
+      <button type="button" class="pz-boton" data-dividir="${i}"${corre || !E.config.ia ? " disabled" : ""}>Dividirlo en pasos más chicos</button>
       ${E.saltados.has(i) ? "" : `<button type="button" class="pz-boton" data-saltar="${i}"${corre ? " disabled" : ""}>Saltarlo por ahora</button>`}</div></div>`;
   }
   function pasoPasos() {
@@ -312,14 +347,15 @@
       <b data-sin-traducir>${esc(x.titulo)}</b>
       <small class="suave" data-sin-traducir>${esc(x.gastado ? (x.medido ? Tp("{n} tokens gastados", { n: miles(x.gastado) }) : Tp("~{n} tokens gastados", { n: miles(x.gastado) })) : Tp("~{n} tokens estimados", { n: miles(x.tokens) }))}</small>
       ${x.resumen ? `<p class="resumen-paso" data-sin-traducir>${esc(x.resumen)}</p>` : ""}
-      ${E.ocupado === "paso" && E.enCurso === i ? vivoHTML() : x.estado === "fallo" ? falloHTML(x, i) : ""}
-      ${E.ocupado === "paso" && E.enCurso === i ? "" : detallePaso(x)}</li>`).join("");
+      ${depende(p, i).length ? `<small class="usa" data-sin-traducir>${esc(Tp("Usa lo del paso {lista}", { lista: depende(p, i).map((d) => d + 1).join(", ") }))}</small>` : ""}
+      ${E.ocupado === "paso" && E.enCurso.includes(i) ? vivoHTML(i) : x.estado === "fallo" ? falloHTML(x, i) : ""}
+      ${E.ocupado === "paso" && E.enCurso.includes(i) ? "" : detallePaso(x)}</li>`).join("");
     const modos = [["paso", "Paso a paso"], ["auto", "Todo automático"]].map(([m, n]) =>
       `<button type="button" data-modo="${m}" aria-pressed="${E.modo === m}"${E.ocupado ? " disabled" : ""}>${esc(n)}</button>`).join("");
     const fin = faltan === 0;
     const accion = siguiente < 0 ? "" : E.ocupado === "paso"
       ? (E.modo === "auto" ? `<button type="button" class="pz-boton" id="parar"${E.parar ? " disabled" : ""}>${esc(E.parar ? "Se detiene al terminar este paso" : "Detener")}</button>` : "")
-      : `<button type="button" class="pz-boton pz-principal" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${E.config.ia ? "" : " disabled"}>${
+      : `<button type="button" class="pz-boton pz-principal" id="hacer-paso" data-n="${siguiente}" data-sin-traducir${E.config.ia && !E.ocupado ? "" : " disabled"}>${
         esc(p.pasos[siguiente].estado === "fallo" ? Tp("Arreglar el paso {n}", { n: siguiente + 1 })
           : E.modo === "auto" ? Tp("Hacer todo desde el paso {n}", { n: siguiente + 1 }) : Tp("Hacer el paso {n}", { n: siguiente + 1 }))}</button>`;
     // Lo que se hace va arriba y queda a la vista al bajar (barra fija): el modo, el tope y el botón del próximo paso.
@@ -330,8 +366,9 @@
     const quedan = !fin && siguiente < 0
       ? `<p class="aviso-pasos">${esc(Tp("Quedan {n} pasos sin terminar. Arréglalos para que tu app quede lista.", { n: faltan }))}</p>` : "";
     return cabeza() + medidor(p) + barra
-      + `<p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola. Si uno falla, intenta arreglarlo una vez; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
-      + sinIA() + errorHTML() + quedan + `<div class="dos-columnas"><div class="columna-principal"><ol class="pasos">${filas}</ol></div>
+      + `<p class="suave">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí. Si uno falla, lo arregla o lo divide; si sigue fallando, se detiene y te dice por qué." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>`
+      + sinIA() + errorHTML() + quedan + (E.ocupado === "dividir" ? trabajando("Tu IA está dividiendo el paso en pasos más chicos…") : "")
+      + `<div class="dos-columnas"><div class="columna-principal"><ol class="pasos">${filas}</ol></div>
         <aside class="columna-lado">${consolaHTML()}</aside></div>`
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
@@ -502,13 +539,14 @@
       host.enviar("proyectoPlan", { nombre: n.nombre.trim(), frase: n.frase.trim(), detalle: (n.detalle || "").trim(), acuerdos,
         plataformas: n.plataformas, piezas: n.piezas });
     } else if (b.id === "crear") { ocupar("crear"); host.enviar("proyectoCrear", { id: E.proyecto.id }); }
-    else if (b.id === "hacer-paso") hacerPaso(Number(b.dataset.n));
+    else if (b.id === "hacer-paso") { if (E.modo !== "auto" || E.proyecto.pasos[Number(b.dataset.n)].estado === "fallo" || !seguirAuto()) hacerPaso(Number(b.dataset.n)); }
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
     else if (b.id === "parar") { E.parar = true; pintar(); }
+    else if (b.dataset.dividir) dividirPaso(Number(b.dataset.dividir));
     else if (b.dataset.arreglar) { const n = Number(b.dataset.arreglar); E.saltados.delete(n); hacerPaso(n); }
     else if (b.dataset.saltar) {
       E.saltados.add(Number(b.dataset.saltar)); E.error = "";
-      if (E.modo === "auto" && proximo(E.proyecto) >= 0) hacerPaso(proximo(E.proyecto)); else pintar();
+      if (!(E.modo === "auto" && seguirAuto())) pintar();
     }
     else if (b.dataset.modo) { E.modo = b.dataset.modo; pintar(); }
   });
@@ -520,11 +558,41 @@
       + "&body=" + encodeURIComponent(cuerpo);
   }
   function ocupar(que) { E.ocupado = que; E.error = ""; E.parar = false; pintar(); }
+  // Todo automático, cuando un paso no queda: primero tu IA lo arregla con el error; si sigue sin quedar, se divide en pasos más
+  // chicos (una vez). Si la IA misma no respondió, o se llegó al tope, se detiene. Devuelve si siguió trabajando.
+  function autoReparar(n, x) {
+    if (x.causa === "ia" || E.proyecto.gastado >= E.tope) return false;
+    if (!E.reparados[n]) {
+      E.reparados[n] = true;
+      toast(Tp("El paso {n} no quedó. Le pido a tu IA que lo arregle.", { n: n + 1 }));
+      hacerPaso(n);
+      return true;
+    }
+    if (!E.divididos[x.titulo]) {
+      E.divididos[x.titulo] = true;
+      toast(Tp("El paso {n} sigue sin quedar. Lo divido en pasos más chicos.", { n: n + 1 }));
+      dividirPaso(n);
+      return true;
+    }
+    return false;
+  }
+  const nuevoVivo = () => ({ inicio: Date.now(), fase: "ia", intento: 1, escritos: new Set(), leyendo: "" });
   function hacerPaso(n) {
-    E.enCurso = n;
-    E.vivo = { inicio: Date.now(), fase: "ia", intento: 1, escritos: new Set(), leyendo: "" };
+    E.enCurso = [n];
+    E.vivos = { [n]: nuevoVivo() };
     ocupar("paso");
     host.enviar("proyectoPaso", { id: E.proyecto.id, n });
+  }
+  function hacerLote(ns) {
+    E.enCurso = ns;
+    E.vivos = Object.fromEntries(ns.map((n) => [n, nuevoVivo()]));
+    ocupar("paso");
+    host.enviar("proyectoLote", { id: E.proyecto.id, ns });
+  }
+  function dividirPaso(n) {
+    E.enCurso = [];
+    ocupar("dividir");
+    host.enviar("proyectoDividir", { id: E.proyecto.id, n });
   }
   // Mientras corre un paso, el reloj se pinta cada 20 s (sin tocar nada más).
   setInterval(() => { if (E.ocupado === "paso" && E.paso === 7) pintar(); }, 20000);
@@ -533,7 +601,7 @@
     const p = E.proyectos.find((x) => x.id === id);
     if (!p) return;
     E.proyecto = p;
-    E.saltados = new Set(); E.reparados = {};
+    E.saltados = new Set(); E.reparados = {}; E.divididos = {};
     E.nueva = { plataformas: p.plataformas, nombre: p.nombre, frase: p.frase, detalle: p.detalle || "", piezas: p.piezas, tocadas: p.piezas };
     irA(p.estado === "plan" ? 5 : p.estado === "nuevo" ? 5 : 7);
   }
@@ -632,10 +700,12 @@
     },
     fichaLista(r) { E.ficha = r || { ok: false }; if (E.paso === 4) pintar(); },
     pasoAvance(eventos) {
-      const v = E.vivo;
-      if (!v || !Array.isArray(eventos)) return;
+      if (!Array.isArray(eventos)) return;
       for (const e of eventos) {
         if (!e || typeof e !== "object") continue;
+        const v = E.vivos[e.n] || E.vivos[E.enCurso[0]];
+        if (!v) continue;
+        if (e.t === "fase" && e.fase === "pruebas") Object.values(E.vivos).forEach((w) => { w.fase = "pruebas"; });
         if (e.t === "fase") { v.fase = e.fase; v.intento = e.intento || 1; }
         else if (e.t === "lee" && typeof e.ruta === "string") v.leyendo = e.ruta;
         else if (e.t === "escribe" && typeof e.ruta === "string") { v.escritos.delete(e.ruta); v.escritos.add(e.ruta); v.leyendo = ""; }
@@ -690,24 +760,43 @@
       if (!r || !r.proyecto) E.error = (r && r.error) || Tp("No se pudo.");
       else if (!r.ok) {
         const x = p.pasos[r.n];
-        // Todo automático: un paso que falla se intenta arreglar solo una vez (la IA recibe el error) antes de detenerse.
-        if (E.modo === "auto" && !E.parar && !E.reparados[r.n] && x.causa !== "ia" && p.gastado < E.tope) {
-          E.reparados[r.n] = true;
-          toast(Tp("El paso {n} no quedó. Le pido a tu IA que lo arregle.", { n: r.n + 1 }));
-          return hacerPaso(r.n);
-        }
+        if (E.modo === "auto" && !E.parar && autoReparar(r.n, x)) return;
         E.error = Tp("El paso {n} no quedó. Abajo ves por qué y puedes arreglarlo.", { n: r.n + 1 });
       } else delete E.reparados[r.n];
-      // Todo automático: sigue con el próximo mientras no falle, no se pida parar y no se pase del tope.
-      const sig = p ? proximo(p) : -1;
-      if (E.modo === "auto" && r && r.ok && !E.parar && sig >= 0) {
-        if (p.gastado >= E.tope) E.error = Tp("Me detuve: llegaste al tope de {n} tokens.", { n: miles(E.tope) });
-        else return hacerPaso(sig);
-      }
+      // Todo automático: sigue mientras no falle, no se pida parar y no se pase del tope.
+      if (E.modo === "auto" && r && r.ok && !E.parar && seguirAuto()) return;
       E.parar = false;
       pintar();
       if (r && !r.ok && E.paso === 7) { const el = document.getElementById(`paso-${r.n}`); if (el) el.scrollIntoView({ block: "center", behavior: "smooth" }); }
       if (p && p.pasos.every((x) => x.estado === "listo") && E.paso === 7) toast("Tu app está lista.");
+    },
+    loteListo(r) {
+      E.ocupado = "";
+      if (r && r.proyecto) E.proyecto = r.proyecto;
+      const p = E.proyecto;
+      if (!r || !r.proyecto) { E.error = (r && r.error) || Tp("No se pudo."); E.parar = false; return pintar(); }
+      if ((r.aplazados || []).length) toast(Tp("Algunos pasos tocaban lo mismo: los hago después, uno a uno."));
+      const fallados = (r.ns || []).filter((n) => p.pasos[n].estado === "fallo");
+      for (const n of r.ns || []) if (p.pasos[n].estado === "listo") delete E.reparados[n];
+      if (E.modo === "auto" && !E.parar) {
+        if (fallados.length && autoReparar(fallados[0], p.pasos[fallados[0]])) return;
+        if (!fallados.length && seguirAuto()) return;
+      }
+      if (fallados.length) E.error = Tp("El paso {n} no quedó. Abajo ves por qué y puedes arreglarlo.", { n: fallados[0] + 1 });
+      E.parar = false;
+      pintar();
+      if (p.pasos.every((x) => x.estado === "listo") && E.paso === 7) toast("Tu app está lista.");
+    },
+    pasoDividido(r) {
+      E.ocupado = "";
+      if (r && r.ok) {
+        E.proyecto = r.proyecto;
+        E.saltados = new Set(); E.reparados = {}; E.divididos = {};  // los números de los pasos cambiaron
+        toast(Tp("Dividí el paso {n} en {k} pasos más chicos.", { n: r.n + 1, k: r.nuevos }));
+        if (E.modo === "auto" && !E.parar && seguirAuto()) return;
+      } else E.error = (r && r.error) || Tp("No se pudo.");
+      E.parar = false;
+      pintar();
     },
     iaLista(r) { E.ias = (r && r.ias) || []; pintar(); },
     iaProbada: (r) => ui.iaProbada(r),
@@ -749,11 +838,11 @@
     const id = d.nombre.normalize("NFKD").replace(/[^A-Za-z0-9]/g, "").toLowerCase().slice(0, 30);
     const ficha = fichaSimulada(d);
     const pasos = [
-      ["Lo que se guarda", "El formato de los datos y el script que los lee y escribe, con sus pruebas.", 6000],
-      ["La pantalla principal", "La lista y el formulario, con sus textos en inglés.", 9000],
-      ["Buscar y ordenar", "Filtrar y ordenar lo guardado, con pruebas de interfaz.", 5000],
-      ["La página y el README", "Contar qué hace la app, con capturas de datos ficticios.", 3000],
-    ].map(([titulo, que, tokens]) => ({ titulo: Tp(titulo), que: Tp(que), archivos: [], tokens, estado: "pendiente", gastado: 0 }));
+      ["Lo que se guarda", "El formato de los datos y el script que los lee y escribe, con sus pruebas.", 6000, ["bin/datos.py"], []],
+      ["La pantalla principal", "La lista y el formulario, con sus textos en inglés.", 9000, ["ui/app.js"], [0]],
+      ["Buscar y ordenar", "Filtrar y ordenar lo guardado, con pruebas de interfaz.", 5000, ["bin/buscar.py"], [0]],
+      ["La página y el README", "Contar qué hace la app, con capturas de datos ficticios.", 3000, ["docs/index.html"], [1, 2]],
+    ].map(([titulo, que, tokens, archivos, dep]) => ({ titulo: Tp(titulo), que: Tp(que), archivos, tokens, depende: dep, estado: "pendiente", gastado: 0 }));
     const p = { id, nombre: d.nombre, frase: d.frase, detalle: d.detalle || "", acuerdos: d.acuerdos || [], revision: null, plataformas: d.plataformas, piezas: d.piezas || [], estado: "plan", pasos,
       ahorro: ficha.tokens_ahorrados, gastado_plan: 2400, gastado: 2400 };
     SIM.proyectos = [...SIM.proyectos.filter((x) => x.id !== id), p];
@@ -810,6 +899,25 @@
         p.estado = "pasos";
         p.gastado = p.gastado_plan + p.pasos.reduce((s, y) => s + (y.gastado || 0), 0);
         c.responder("pasoListo", { ok: true, proyecto: p, n: d.n });
+      });
+      case "proyectoLote":
+        for (const n of d.ns) c.luego(200, () => c.responder("pasoAvance", [{ t: "fase", fase: "ia", n, intento: 1 }, { t: "escribe", ruta: `bin/paso${n + 1}.py`, n }]));
+        c.luego(600, () => c.responder("pasoAvance", [{ t: "fase", fase: "pruebas", n: d.ns[0], intento: 1 }]));
+        return c.luego(900, () => {
+          const p = SIM.proyectos.find((x) => x.id === d.id);
+          for (const n of d.ns) Object.assign(p.pasos[n], { estado: "listo", intentos: 1, gastado: Math.round(p.pasos[n].tokens * 0.9), resumen: Tp("Listo: las pruebas quedaron en verde.") });
+          p.estado = "pasos";
+          p.gastado = p.gastado_plan + p.pasos.reduce((s, y) => s + (y.gastado || 0), 0);
+          c.responder("loteListo", { ok: true, proyecto: p, ns: d.ns, aplicados: d.ns, aplazados: [] });
+        });
+      case "proyectoDividir": return c.luego(600, () => {
+        const p = SIM.proyectos.find((x) => x.id === d.id), x = p.pasos[d.n];
+        const mitad = (sufijo, dep) => ({ ...x, titulo: `${x.titulo} (${sufijo})`, tokens: Math.round(x.tokens / 2), estado: "pendiente", gastado: 0,
+          error: "", causa: undefined, historial: [], registro: [], resumen: "", depende: dep, dividido_de: x.titulo });
+        const k = 2, correr = (j) => (j < d.n ? j : j === d.n ? d.n + k - 1 : j + k - 1);
+        const despues = p.pasos.slice(d.n + 1).map((y, j) => ({ ...y, depende: depende(p, d.n + 1 + j).map(correr) }));
+        p.pasos = [...p.pasos.slice(0, d.n), mitad("1", depende(p, d.n)), mitad("2", [d.n]), ...despues];
+        c.responder("pasoDividido", { ok: true, proyecto: p, n: d.n, nuevos: k });
       });
       default: return COMUNES[accion] ? COMUNES[accion](d, c) : undefined;
     }
