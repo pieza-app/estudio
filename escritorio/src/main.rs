@@ -37,3 +37,29 @@ fn main() {
         host.funcion("requisitoInstalar", |d, avance| requisitos::instalar(&d, &|e| avance.emitir(e)));
     });
 }
+
+#[cfg(test)]
+mod pruebas {
+    // Lo que manda la interfaz tiene que pasar las reglas de app.json tal como las aplica el host (la vista previa no las aplica).
+    use crate::pieza::enchufe;
+    use serde_json::json;
+
+    #[test]
+    fn lo_que_manda_la_interfaz_pasa_las_reglas() {
+        let recursos = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let (acciones, errores) = enchufe::cargar_acciones(&recursos);
+        assert!(errores.is_empty(), "{errores:?}");
+        for (accion, datos) in [
+            ("proyectoPaso", json!({"id": "pilota", "n": 10, "tope": 2_500_000})),
+            ("proyectoLote", json!({"id": "pilota", "ns": [10, 11], "tope": 2_500_000})),
+            ("proyectoDividir", json!({"id": "pilota", "n": 10, "tope": 250_000})),
+            ("proyectoReprobar", json!({"id": "pilota", "n": 3})),
+            ("proyectoIndicar", json!({"id": "pilota", "texto": "Usa solo velas de 1 h."})),
+            ("proyectoIndicar", json!({"id": "pilota", "quitar": 0})),
+            ("requisitoInstalar", json!({"id": "rust"})),
+        ] {
+            let def = acciones.get(accion).unwrap_or_else(|| panic!("falta {accion}"));
+            assert!(enchufe::validar_datos(def, &datos).is_ok(), "{accion} rechaza {datos}");
+        }
+    }
+}

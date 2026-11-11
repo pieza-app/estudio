@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.18.0",
+ "version": "0.18.1",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -383,6 +383,11 @@
     "ns": {
      "tipo": "lista",
      "max": 3,
+     "de": {
+      "tipo": "entero",
+      "min": 0,
+      "max": 39
+     },
      "requerido": true
     },
     "tope": {
