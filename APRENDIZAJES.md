@@ -60,4 +60,8 @@ Formato: **la lección** · qué pasó · cómo se evita (la prueba, si existe).
     reescribía archivos completos. · `reglas.md` y `_prompt_editar` piden Grep + leer solo la parte, Edit en vez de Write y
     archivos chicos por tema; el mapa marca los GRANDES; la interfaz avisa y ofrece ordenarlos; cada paso guarda cuánto tardó
     (prueba `test_archivos_grandes_se_marcan`).
+17. **Pieza guía; la IA no explora.** Cada paso empezaba de cero: la IA buscaba qué había en la app leyendo archivos. Pieza ya
+    sabe qué hay: le da un índice (funciones, clases y secciones de cada archivo propio con su línea, y las acciones de
+    `app.json`), armado sin IA antes de cada paso. Lo de las piezas no se lee: su API está en AGENTS.md. · `indice()` (prueba en
+    `test_archivos_grandes_se_marcan`).
 
