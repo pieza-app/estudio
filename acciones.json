@@ -192,6 +192,11 @@
     "ns": {
      "tipo": "lista",
      "max": 3,
+     "de": {
+      "tipo": "entero",
+      "min": 0,
+      "max": 39
+     },
      "requerido": true
     },
     "tope": {

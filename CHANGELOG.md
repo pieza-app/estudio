@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.18.1
+- Arreglo: «Hacer todo desde el paso…» decía «No entendí lo que pediste» cuando tocaba hacer varios pasos a la vez. Ahora los hace. · *Fix: “Do everything from step…” said “I didn't understand that request” when several steps had to run at once. Now it runs them.*
+
 ## 0.18.0
 - «Dile a Pieza»: escribe «hacer todo desde el paso 10.2», «solo el paso 4», «saltar el paso 5» o «detente antes del paso 12» y Pieza lo hace (sin gastar tokens). Lo demás («usa solo velas de 1 h») lo tiene en cuenta tu IA en cada paso que falta. · *“Tell Pieza”: write “do everything from step 10.2”, “only step 4”, “skip step 5” or “stop before step 12” and Pieza does it (without spending tokens). Anything else (“use only 1 h candles”) your AI keeps in mind in every remaining step.*
 - Tu IA ve los mismos números de paso que tú (10.1, 10.2) y sabe de qué paso grande sale cada parte. · *Your AI sees the same step numbers you do (10.1, 10.2) and knows which big step each part comes from.*
