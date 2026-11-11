@@ -17,7 +17,8 @@ Estas reglas van en cada pedido. Son cortas a propósito: cada pedido es un solo
 8. **Datos ficticios** en ejemplos y pruebas (Ana Pérez, Matías Soto).
 
 ## Cómo trabajar (rápido y barato: cada archivo que lees se vuelve a leer en cada vuelta)
-1. **Parte por lo que ya trae este pedido**: el mapa de archivos, lo que dejaron los pasos anteriores y las reglas. De `AGENTS.md`
+1. **Parte por lo que ya trae este pedido**: el mapa de archivos, el **índice** (qué función o sección hay en cada archivo y en qué
+   línea), lo que dejaron los pasos anteriores y las reglas. Con el índice vas directo a la línea: no explores. De `AGENTS.md`
    lee solo la sección que necesitas (búscala con Grep), no el archivo entero.
 2. **Busca antes de leer.** Ubica con Grep o Glob y lee solo esa parte (Read con `offset` y `limit`). No leas entero un archivo de
    más de 300 líneas y no vuelvas a leer lo que ya leíste. El mapa marca los archivos grandes.

@@ -616,6 +616,73 @@ def grandes(carpeta):
     return sorted(r, key=lambda x: -x[1])[:8]
 
 
+MAX_INDICE = 14_000   # caracteres del índice (~3.500 tokens): lo justo para ubicarse sin leer
+INDICE_PATRONES = {
+    ".py": re.compile(r"^\s{0,4}(?:class|def|async def)\s+([A-Za-z_]\w*)|^([A-Z][A-Z0-9_]{2,})\s*="),
+    ".js": re.compile(r"^\s{0,4}(?:async\s+)?function\s+([A-Za-z_$][\w$]*)|^\s{0,4}(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(?[^=]*=>"),
+    ".mjs": re.compile(r"^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)|^// ?(\d+\. .{3,60})"),
+    ".rs": re.compile(r"^\s{0,4}(?:pub(?:\([a-z]+\))?\s+)?(?:fn|struct|enum|mod)\s+([A-Za-z_]\w*)"),
+    ".md": re.compile(r"^(#{1,3} .{2,70})"),
+}
+
+
+def _simbolos(ruta, ext):
+    """[(línea, nombre)] de un archivo propio: funciones, clases, constantes o títulos. Sin IA: lo saca Pieza."""
+    patron = INDICE_PATRONES[ext]
+    r = []
+    try:
+        with open(ruta, encoding="utf-8", errors="replace") as f:
+            for i, linea in enumerate(f, 1):
+                m = patron.match(linea)
+                if m:
+                    r.append((i, (m.group(1) or m.group(2) or "").strip()))
+                    if len(r) >= 400:
+                        break
+    except OSError:
+        pass
+    return r
+
+
+def indice(carpeta, prioridad=()):
+    """El índice de la app: por cada archivo propio, qué tiene y en qué línea («bin/lib_puntaje.py: combinar:120, notas:340…»), y
+    las acciones de app.json. Así la IA va directo a la línea (Read con offset) en vez de explorar y leer archivos enteros en cada
+    paso. Los archivos del paso (`prioridad`) van primero y completos; el resto se corta si no cabe."""
+    de_piezas = _de_piezas(carpeta)
+    entradas = []
+    for raiz, dirs, archivos in os.walk(carpeta):
+        dirs[:] = sorted(x for x in dirs if not x.startswith(".") and x not in ("node_modules", "target", "__pycache__", "dist", "datos"))
+        for a in sorted(archivos):
+            ext = os.path.splitext(a)[1]
+            rel = os.path.relpath(os.path.join(raiz, a), carpeta).replace(os.sep, "/")
+            if ext not in INDICE_PATRONES or rel in de_piezas or _no_leer(rel) or rel in ("CHANGELOG.md", "README.md") \
+                    or rel.startswith(("pruebas/datos/", "ui/idiomas/", "docs/")):
+                continue
+            ss = _simbolos(os.path.join(raiz, a), ext)
+            if ss:
+                entradas.append((rel, ss))
+    primero = [e for e in entradas if e[0] in prioridad]
+    entradas = primero + [e for e in entradas if e[0] not in prioridad]
+    lineas = []
+    try:
+        acciones = nucleo.leer_json(os.path.join(carpeta, "app.json"), {}, maximo=1_000_000).get("acciones") or {}
+        if isinstance(acciones, dict) and acciones:
+            lineas.append("app.json → acciones: " + ", ".join(
+                f"{k} ({v.get('script') or 'rust'}{' ' + ' '.join(v.get('args') or [])[:30] if v.get('args') else ''})"
+                for k, v in list(acciones.items())[:80] if isinstance(v, dict)))
+    except (ValueError, OSError, AttributeError):
+        pass
+    total = sum(len(x) for x in lineas)
+    for rel, ss in entradas:
+        linea = f"{rel}: " + ", ".join(f"{nombre}:{n}" for n, nombre in ss)
+        if total + len(linea) > MAX_INDICE:
+            linea = linea[:max(0, MAX_INDICE - total)].rsplit(", ", 1)[0] + " …"
+            lineas.append(linea)
+            break
+        lineas.append(linea)
+        total += len(linea)
+    return "\n".join(lineas)
+
+
 def _mapa(carpeta):
     """Los archivos de la app que la IA puede leer, con su tamaño: así va directo a lo que necesita. Las piezas van aparte."""
     de_piezas = _de_piezas(carpeta)
@@ -684,6 +751,10 @@ def _prompt_paso(p, n, error=None):
 # Los archivos de la app
 Propios (los que se cambian): {", ".join(propios) or "ninguno"}
 De piezas (no se cambian; su API está en AGENTS.md): {", ".join(de_piezas) or "ninguno"}
+
+# Índice: qué hay en cada archivo propio y en qué línea (lo arma Pieza, está al día)
+Úsalo para ir directo: lee desde esa línea (Read con offset y limit) en vez de explorar o leer el archivo entero.
+{indice(p["carpeta"], x.get("archivos") or ())}
 
 # Este paso ({_n(p, n)})
 {x['titulo']}

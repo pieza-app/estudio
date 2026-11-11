@@ -426,6 +426,14 @@ class Proyectos(unittest.TestCase):
         self.assertTrue(any(x.startswith("pruebas/test_grande.py") and "2000 líneas: GRANDE" in x for x in propios), propios)
         self.assertIn(("pruebas/test_grande.py", 2000), self.p.grandes(carpeta))
         self.assertIn("nunca entero un archivo marcado GRANDE", self.p._prompt_editar(self.p._leer("recetas"), 0))
+        # El índice: qué hay en cada archivo propio y en qué línea, sin las piezas.
+        with open(os.path.join(carpeta, "bin", "lib_notas.py"), "w") as f:
+            f.write("NOTA_MAX = 100\n\n\ndef combinar(notas):\n    return 0\n\n\nclass Puntaje:\n    def total(self):\n        return 1\n")
+        ind = self.p.indice(carpeta, ("bin/lib_notas.py",))
+        self.assertTrue(ind.split("\n")[1].startswith("bin/lib_notas.py: NOTA_MAX:1, combinar:4, Puntaje:8, total:9"), ind)
+        self.assertNotIn("bin/nucleo.py", ind, "las piezas no van en el índice")
+        self.assertIn("app.json → acciones:", ind)
+        self.assertIn("# Índice: qué hay en cada archivo propio", self.p._prompt_editar(self.p._leer("recetas"), 0))
 
     def test_numeros_e_indicaciones_en_el_pedido(self):
         """La IA ve los mismos números que la persona (10.1, 10.2) y lo que la persona le dijo a Pieza para toda la app."""

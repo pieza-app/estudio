@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.20.0
+- Pieza guía a tu IA con un índice de tu app: qué hay en cada archivo y en qué línea. Tu IA va directo a lo que necesita en vez de explorar y leer todo en cada paso. · *Pieza guides your AI with an index of your app: what each file has and on which line. Your AI goes straight to what it needs instead of exploring and reading everything in each step.*
+
 ## 0.19.0
 - Los pasos son más rápidos y gastan menos: tu IA ya no lee enteros los archivos grandes ni los reescribe completos; busca y cambia solo lo que necesita. Si tu app tiene archivos muy grandes, Pieza te avisa y ofrece que tu IA los ordene por tema. Cada paso dice cuánto tardó. · *Steps are faster and spend less: your AI no longer reads big files whole or rewrites them completely; it searches and changes only what it needs. If your app has very big files, Pieza tells you and offers to have your AI split them by topic. Each step says how long it took.*
 
