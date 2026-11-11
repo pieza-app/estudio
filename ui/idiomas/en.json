@@ -619,6 +619,12 @@
   "Entendí: hago solo el paso {n}.": "Got it: I do only step {n}.",
   "Entendí: hago todo, solo, desde el paso {n}.": "Got it: I do everything on my own from step {n}.",
   "Listo: lo tengo en cuenta en cada paso que falta.": "Done: I keep it in mind in every remaining step.",
-  "Ej.: hacer todo desde el paso 3 · saltar el paso 5 · usa colores más suaves": "E.g.: do everything from step 3 · skip step 5 · use softer colors"
+  "Ej.: hacer todo desde el paso 3 · saltar el paso 5 · usa colores más suaves": "E.g.: do everything from step 3 · skip step 5 · use softer colors",
+  "Tardó {n} min": "Took {n} min",
+  "releyó {n} tokens ya leídos (caché, más baratos y lentos)": "re-read {n} tokens it had already read (cache: cheaper but slow)",
+  "Estos archivos son muy grandes y cada paso los relee: por eso tarda más. {lista}.": "These files are very big and every step re-reads them: that's why it takes longer. {lista}.",
+  "{ruta} ({n} líneas)": "{ruta} ({n} lines)",
+  "Ya le pedí a tu IA que los ordene por tema en los pasos que faltan.": "I already asked your AI to split them by topic in the remaining steps.",
+  "Que tu IA los ordene por tema": "Have your AI split them by topic"
  }
 }
