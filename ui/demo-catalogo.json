@@ -420,7 +420,7 @@
   {
    "id": "contrato",
    "nombre": "Contrato del puente",
-   "version": "0.1.3",
+   "version": "0.1.4",
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "Una prueba que revisa que la interfaz y cada plataforma (Mac, Windows/Linux, celular, vista previa) digan lo mismo: cada acción atendida (registrada, del host o declarada), acciones.json al día, las respuestas existen y la seguridad común. Lo propio de la app va en un archivo chico.",
@@ -445,7 +445,7 @@
     "cuando": "Toda app con interfaz y al menos un host (Mac, Windows/Linux o celular).",
     "palabras": []
    },
-   "bytes": 43497
+   "bytes": 44303
   },
   {
    "id": "empaquetado",
@@ -699,7 +699,7 @@
   {
    "id": "host-tauri",
    "nombre": "App de Mac, Windows y Linux",
-   "version": "0.1.3",
+   "version": "0.2.0",
    "estado": "lista",
    "categoria": "plataforma",
    "descripcion": "Un solo host en Rust (Tauri) para Mac, Windows y Linux, con la misma API que host-mac y host-escritorio: ventana con el WebView del sistema (liviana, sin Chromium adentro), protocolo propio solo para ui/ y los medios que la app aprueba, puente con guardas, acciones declaradas con datos validados y límite de tiempo, config, idioma, menús, bandeja, apariencia, carpeta, vigilante, secretos en el llavero del sistema, avisos, diálogos y una sola instancia.",
@@ -757,7 +757,7 @@
     "cuando": "Siempre que haya app de escritorio (Mac, Windows o Linux).",
     "palabras": []
    },
-   "bytes": 194914
+   "bytes": 201542
   },
   {
    "id": "host-ui",
@@ -825,7 +825,7 @@
   {
    "id": "ia",
    "nombre": "Tu IA",
-   "version": "0.7.2",
+   "version": "0.8.0",
    "estado": "lista",
    "categoria": "ia",
    "descripcion": "La IA de la persona (Claude Code, Codex o Gemini) con su propia cuenta: sin herramientas, sin su memoria, el pedido nunca como argumento, material y revisión a fondo de solo lectura, y en vivo (lo que lee y «Detener»).",
@@ -867,7 +867,7 @@
      "analizar"
     ]
    },
-   "bytes": 33103
+   "bytes": 82958
   },
   {
    "id": "mcp",
@@ -1179,7 +1179,7 @@
   {
    "id": "red",
    "nombre": "Red segura",
-   "version": "0.2.0",
+   "version": "0.3.0",
    "estado": "lista",
    "categoria": "conexiones",
    "descripcion": "Pedidos HTTPS desde los scripts: solo a dominios permitidos, sin redirecciones, con tope de tamaño y de tiempo, y la credencial nunca en un error.",
@@ -1202,7 +1202,7 @@
     "cuando": "Algún script de la app sale a internet (APIs, descargas).",
     "palabras": []
    },
-   "bytes": 12280
+   "bytes": 36279
   },
   {
    "id": "tema",
@@ -1242,7 +1242,7 @@
   {
    "id": "trabajos",
    "nombre": "Trabajos largos",
-   "version": "0.2.2",
+   "version": "0.3.0",
    "estado": "lista",
    "categoria": "datos",
    "descripcion": "Lo que tarda minutos corre por etapas en segundo plano: estado en disco, avance en vivo, latido, «Detener», «Seguir donde quedó» y trabajos que esperan respuestas.",
@@ -1279,7 +1279,7 @@
      "largo"
     ]
    },
-   "bytes": 28700
+   "bytes": 53789
   },
   {
    "id": "transcribir",

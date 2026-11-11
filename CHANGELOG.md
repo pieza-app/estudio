@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.20.1
+- Piezas al día: las piezas nuevas o arregladas de Pieza ya se pueden usar al crear una app. · *Pieces up to date: new or fixed Pieza pieces can now be used when creating an app.*
+
 ## 0.20.0
 - Pieza guía a tu IA con un índice de tu app: qué hay en cada archivo y en qué línea. Tu IA va directo a lo que necesita en vez de explorar y leer todo en cada paso. · *Pieza guides your AI with an index of your app: what each file has and on which line. Your AI goes straight to what it needs instead of exploring and reading everything in each step.*
 
