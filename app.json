@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.17.0",
+ "version": "0.18.0",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
@@ -230,6 +230,31 @@
    "responde": "pasoReprobado",
    "progreso": "pasoAvance",
    "limite": 900
+  },
+  "proyectoIndicar": {
+   "script": "proyectos.py",
+   "args": [
+    "indicar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "texto": {
+     "tipo": "texto",
+     "max": 500
+    },
+    "quitar": {
+     "tipo": "entero",
+     "min": 0,
+     "max": 9
+    }
+   },
+   "responde": "indicacionLista",
+   "limite": 30
   },
   "publicarExplorar": {
    "script": "publicar.py",

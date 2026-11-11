@@ -11,6 +11,9 @@ import tempfile
 import unittest
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(RAIZ, "bin"))
+import proyectos as _proyectos  # noqa: E402
+PROBAR_REAL = _proyectos.probar   # otras pruebas cambian proyectos.probar por uno falso
 
 
 def correr(script, *args, entrada=None):
@@ -412,6 +415,25 @@ class Proyectos(unittest.TestCase):
         self.respuestas.extend(['{"hallazgos": []}'] * 3)
         self.assertTrue(self.p.revisar({"id": "recetas"})["ok"])
 
+    def test_numeros_e_indicaciones_en_el_pedido(self):
+        """La IA ve los mismos números que la persona (10.1, 10.2) y lo que la persona le dijo a Pieza para toda la app."""
+        p = {"pasos": [{}, {}, {"grupo": ["a"]}, {"grupo": ["a"]}, {"grupo": ["a", "b"]}, {"grupo": ["a", "b"]}, {}]}
+        self.assertEqual(self.p.numeros(p), ["1", "2", "3.1", "3.2", "3.3.1", "3.3.2", "4"])
+        self.plan_en_paralelo()
+        self.p.crear({"id": "recetas"})
+        self.assertTrue(self.p.indicar({"id": "recetas", "texto": "  Usa  solo velas de 1 h. "})["ok"])
+        self.p.indicar({"id": "recetas", "texto": "Usa solo velas de 1 h."})   # repetida: no se duplica
+        p = self.p._leer("recetas")
+        self.assertEqual(p["indicaciones"], ["Usa solo velas de 1 h."])
+        p["pasos"][1].update(grupo=["g1"], dividido_de="Paso grande")
+        pedido = self.p._prompt_paso(p, 1)
+        self.assertIn("Usa solo velas de 1 h.", pedido)
+        self.assertIn("Es una parte de «Paso grande»", pedido)
+        self.assertIn("# Este paso (2.1)", pedido)
+        self.assertEqual(self.p.indicar({"id": "recetas", "quitar": 0})["proyecto"]["indicaciones"], [])
+        with self.assertRaises(ValueError):
+            self.p.indicar({"id": "recetas", "texto": "   "})
+
     def test_pedir_un_cambio_a_una_app_creada(self):
         """«Pedir un cambio»: el plan nuevo es solo para el cambio, lo hecho se queda y el cambio queda anotado."""
         self.plan_en_paralelo()
@@ -659,7 +681,7 @@ class EnVivo(unittest.TestCase):
             antes, self.p.trabajos.emitir = self.p.trabajos.emitir, vistos.append
             antes_aislar, self.p.aislar = self.p.aislar, lambda orden, carpeta: (orden, False)
             try:
-                ok, salida = self.p.probar(tmp, 4)
+                ok, salida = PROBAR_REAL(tmp, 4)
             finally:
                 self.p.trabajos.emitir, self.p.aislar = antes, antes_aislar
         self.assertFalse(ok)

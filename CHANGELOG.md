@@ -8,6 +8,11 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.18.0
+- «Dile a Pieza»: escribe «hacer todo desde el paso 10.2», «solo el paso 4», «saltar el paso 5» o «detente antes del paso 12» y Pieza lo hace (sin gastar tokens). Lo demás («usa solo velas de 1 h») lo tiene en cuenta tu IA en cada paso que falta. · *“Tell Pieza”: write “do everything from step 10.2”, “only step 4”, “skip step 5” or “stop before step 12” and Pieza does it (without spending tokens). Anything else (“use only 1 h candles”) your AI keeps in mind in every remaining step.*
+- Tu IA ve los mismos números de paso que tú (10.1, 10.2) y sabe de qué paso grande sale cada parte. · *Your AI sees the same step numbers you do (10.1, 10.2) and knows which big step each part comes from.*
+- El tope de toda la app es opcional. Si lo alcanzas, Pieza lo dice claro y puedes quitarlo o subirlo con un toque. · *The limit for the whole app is optional. If you reach it, Pieza says so clearly and you can remove or raise it with one tap.*
+
 ## 0.17.0
 - Pieza empieza a pasar a Rust: revisar e instalar lo que necesita tu computador (Git, Node, Rust y GitHub CLI) ya corre en Rust, dentro de la app. Las piezas de la IA, de la red y de los trabajos también vienen en Rust. · *Pieza starts moving to Rust: checking and installing what your computer needs (Git, Node, Rust and GitHub CLI) now runs in Rust, inside the app. The AI, network and jobs pieces also come in Rust.*
 

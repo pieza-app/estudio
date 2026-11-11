@@ -103,6 +103,11 @@ avance| …)`: el host valida los datos igual. Ya en Rust: `requisitos.rs`. Lo n
 - **Arreglo automático** (`autoReparar`, `repararPendiente`, en los dos modos): falla → la IA lo arregla con el error (`REPARAR`
   veces) → se divide (`dividirPaso` + `seguirTras`) → la persona decide. Causa «ia»: un reintento. Se detiene con «parar» o el tope
   de la app.
+- **Dile a Pieza** (`decirHTML`, `entenderOrden`): «hacer todo desde el paso X», «solo el paso X», «saltar el paso X» y «detente
+  antes del paso X» los entiende la interfaz sola (`pasoPorNumero` con los números que ve la persona). Lo demás va a
+  `proyectos.py indicar` (acción `proyectoIndicar` → `indicacionLista`, `p["indicaciones"]`, máx. `MAX_INDICACIONES`) y entra en
+  cada pedido (`_indicaciones`). Los pedidos usan los mismos números que la interfaz (`numeros`, igual que en `ui/app.js`) y una
+  parte dice de qué paso sale (`dividido_de`). El tope de toda la app es opcional (`E.tope = 0`, `enTope`).
 - **Eliminar una app** borra su registro y su carpeta local (nunca el repo de GitHub), con confirmación.
 - **acciones.json** se arma siempre antes de las pruebas (`_armar_acciones`), en `paso` y en `lote`: la IA no puede tocarlo.
 - **Publicar y proponer:** «Publicar» usa el `gh` de la persona (Pieza no guarda claves ni pide permisos).
