@@ -221,6 +221,13 @@ await page.evaluate(() => {
 });
 await page.waitForFunction((n) => document.querySelectorAll(".pasos > li").length === n + 1, conPartes);
 await page.waitForSelector(".pasos > li:nth-last-child(2).estado-listo");   // la primera parte ya se hizo sola
+// «Dile a Pieza»: una indicación para toda la app queda a la vista; una orden («saltar el paso 4»: el que la persona ve como 4) la entiende sin IA.
+await page.fill("#decir", "Usa solo velas de 1 h.");
+await page.click("#enviar-decir");
+await page.waitForSelector(".indicaciones li");
+await page.fill("#decir", "saltar el paso 4");
+await page.click("#enviar-decir");
+await page.waitForFunction(() => window.Pieza._pruebas.E.saltados.size === 1);
 // Un paso que falla se arregla solo también en «paso a paso»: tu IA lo corrige sin que la persona apriete nada.
 await page.evaluate(() => {
   const E = window.Pieza._pruebas.E, n = 0;

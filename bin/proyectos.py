@@ -6,7 +6,8 @@
   proyectos.py revisar <entrada.json {id}> <salida.json>
   proyectos.py crear <entrada.json {id}> <salida.json>
   proyectos.py paso  <entrada.json {id, n}> <salida.json>
-  proyectos.py reprobar <entrada.json {id, n}> <salida.json>   (solo las pruebas, sin IA: no gasta tokens)
+  proyectos.py reprobar <entrada.json {id, n}> <salida.json>
+  proyectos.py indicar  <entrada.json {id, texto | quitar}> <salida.json>   («Dile a Pieza»: va en cada pedido a la IA)   (solo las pruebas, sin IA: no gasta tokens)
   proyectos.py borrar <entrada.json {id, carpeta: si|no}> <salida.json>
 
 Un proyecto se guarda en <carpeta de datos>/proyectos/<id>.json. La app queda en ~/Pieza/<Nombre> (o en PIEZA_PROYECTOS, para
@@ -52,7 +53,9 @@ TOPE_PASO = 60_000   # tokens estimados: un paso más grande se divide
 MAX_ARCHIVOS_PASO = 6  # archivos propios por paso (sin contar en.json, CHANGELOG ni pruebas)
 MAX_LOTE = 3         # pasos que se hacen a la vez
 LIMITE_LOTE = 2400
-MAX_CAMBIO = 2000  # «pedir un cambio» a una app ya creada o publicada
+MAX_CAMBIO = 2000
+MAX_INDICACION = 500   # «Dile a Pieza»: cada indicación para toda la app
+MAX_INDICACIONES = 10  # «pedir un cambio» a una app ya creada o publicada
 MAX_FRASE = 400
 MAX_ACUERDOS = 20  # cambios aceptados de la revisión
 MAX_HALLAZGOS = 6  # por enfoque
@@ -178,12 +181,42 @@ def dependencias(p, i):
     return [d for d in dep if isinstance(d, int) and 0 <= d < i] if isinstance(dep, list) else ([i - 1] if i > 0 else [])
 
 
+def numeros(p):
+    """El número que ve la persona de cada paso: 1, 2… y las partes de uno dividido, 10.1, 10.2 (la misma regla que `numeros` en
+    ui/app.js). Así la IA y la persona hablan de los mismos pasos."""
+    salida, cuenta, antes = [], [], []
+    for i, x in enumerate(p.get("pasos") or []):
+        claves = [g for g in (x.get("grupo") or []) if isinstance(g, str)] + [f"#{i}"]
+        for j in range(len(claves)):
+            igual = len(antes) > j and claves[:j + 1] == antes[:j + 1]
+            if not igual:
+                mismo_padre = len(antes) > j and claves[:j] == antes[:j]
+                base = cuenta[j] if (mismo_padre or j == 0) and len(cuenta) > j else 0
+                del cuenta[j:]
+                cuenta.append(base + 1)
+        antes = claves
+        salida.append(".".join(str(c) for c in cuenta[:len(claves)]))
+    return salida
+
+
+def _n(p, i):
+    ns = numeros(p)
+    return ns[i] if 0 <= i < len(ns) else str(i + 1)
+
+
+def _indicaciones(p):
+    """Lo que la persona le dijo a Pieza para toda la app («Dile a Pieza»): vale para todos los pasos."""
+    xs = [_texto(t, MAX_INDICACION) for t in (p.get("indicaciones") or [])[-MAX_INDICACIONES:]]
+    xs = [t for t in xs if t]
+    return ("\n# Lo que te pidió la persona para toda la app (manda en cada paso)\n" + "\n".join(f"- {t}" for t in xs) + "\n") if xs else ""
+
+
 def _detalle(p):
     """La idea completa que dio la persona (opcional). Manda sobre lo que la IA suponga."""
     d = _texto(p.get("detalle"), MAX_DETALLE)
     acuerdos = "\n".join(f"- {a}" for a in (p.get("acuerdos") or [])[:MAX_ACUERDOS])
     return (f"\n# La idea completa (manda sobre lo que supongas)\n{d}\n" if d else "") + (
-        f"\n# Cambios acordados en la revisión (también mandan)\n{acuerdos}\n" if acuerdos else "")
+        f"\n# Cambios acordados en la revisión (también mandan)\n{acuerdos}\n" if acuerdos else "") + _indicaciones(p)
 
 
 def _prompt_plan(p, ficha, hechos=(), cambio=""):
@@ -577,18 +610,20 @@ def _historia(p, n):
         tocados = ", ".join((x.get("escritos") or [])[:12])
         entrega = f" Dejó listo: {x['entrega']}" if x.get("entrega") else ""
         if i in dep:
-            primero.append(f"{i + 1}. {x['titulo']} (este paso lo usa): {_texto(x.get('resumen'), 600) or 'listo'}{entrega}"
+            primero.append(f"{_n(p, i)}. {x['titulo']} (este paso lo usa): {_texto(x.get('resumen'), 600) or 'listo'}{entrega}"
                            + (f" (tocó {tocados})" if tocados else ""))
         else:
-            resto.append(f"{i + 1}. {x['titulo']}: {_texto(x.get('resumen'), 200) or 'listo'}{entrega}")
+            resto.append(f"{_n(p, i)}. {x['titulo']}: {_texto(x.get('resumen'), 200) or 'listo'}{entrega}")
     return "\n".join(primero + resto) or "Ninguno todavía."
 
 
 def _prompt_paso(p, n, error=None):
     with open(os.path.join(_guias(), "reglas.md"), encoding="utf-8") as f:
         reglas = f.read()
-    plan_ = "\n".join(f"{i + 1}. {x['titulo']} ({x['estado']})" for i, x in enumerate(p["pasos"]))
+    plan_ = "\n".join(f"{_n(p, i)}. {x['titulo']} ({x['estado']})" for i, x in enumerate(p["pasos"]))
     x = p["pasos"][n]
+    parte = (f"\nEs una parte de «{x['dividido_de']}», que se dividió en pasos más chicos (los que tienen el mismo número antes del punto): "
+             "haz solo esta parte.") if x.get("dividido_de") else ""
     propios, de_piezas = _mapa(p["carpeta"])
     extra = (f"\n\n# El intento anterior no quedó\nArregla la causa (puede que lo del paso ya esté hecho y solo falte arreglar esto). "
              f"Las últimas líneas:\n```\n{error}\n```") if error else ""
@@ -607,9 +642,9 @@ def _prompt_paso(p, n, error=None):
 Propios (los que se cambian): {", ".join(propios) or "ninguno"}
 De piezas (no se cambian; su API está en AGENTS.md): {", ".join(de_piezas) or "ninguno"}
 
-# Este paso ({n + 1})
+# Este paso ({_n(p, n)})
 {x['titulo']}
-{x['que']}
+{x['que']}{parte}
 Archivos que pensabas tocar: {', '.join(x['archivos']) or 'los que hagan falta'}{_entrega(p, n)}{extra}
 
 # Cómo responder
@@ -622,7 +657,7 @@ Lee solo lo que necesitas (usa el mapa de arriba). Responde SOLO este JSON, sin 
 def _entrega(p, n):
     """Lo que este paso tiene que dejar listo para los que vienen (con esos nombres exactos) y quiénes lo van a usar."""
     x = p["pasos"][n]
-    usan = [str(j + 1) for j in range(n + 1, len(p["pasos"])) if n in dependencias(p, j)]
+    usan = [_n(p, j) for j in range(n + 1, len(p["pasos"])) if n in dependencias(p, j)]
     if not x.get("entrega") and not usan:
         return ""
     return ("\nLo que tiene que dejar listo, con estos nombres (otros pasos lo usan): " + (x.get("entrega") or "lo que hagas")
@@ -764,6 +799,23 @@ def paso(d):
     return {"ok": x["estado"] == "listo", "proyecto": _guardar(p), "n": n}
 
 
+def indicar(d):
+    """«Dile a Pieza»: guarda una indicación para toda la app (va en cada pedido a la IA) o borra una (`quitar`: su índice)."""
+    p = _leer(d.get("id"))
+    xs = [t for t in (p.get("indicaciones") or []) if isinstance(t, str)]
+    if isinstance(d.get("quitar"), int):
+        if 0 <= d["quitar"] < len(xs):
+            xs.pop(d["quitar"])
+    else:
+        t = " ".join(_texto(d.get("texto"), MAX_INDICACION).split())
+        if not t:
+            raise ValueError("Escribe lo que quieres que Pieza tenga en cuenta.")
+        if t not in xs:
+            xs = (xs + [t])[-MAX_INDICACIONES:]
+    p["indicaciones"] = xs
+    return {"ok": True, "proyecto": _guardar(p)}
+
+
 def reprobar(d):
     """Corre las pruebas de nuevo, sin IA y sin gastar tokens: sirve cuando la persona (o algo afuera) ya arregló lo que fallaba.
     Si pasan, el paso queda listo; si no, el error se actualiza para que «Arreglarlo» le pase el de ahora a la IA."""
@@ -802,9 +854,9 @@ def _prompt_dividir(p, n, tope=0):
     return f"""Eres quien planifica los pasos de la app «{p['nombre']}» ({p['frase']}).
 {_detalle(p)}
 # El plan
-{chr(10).join(f"{i + 1}. {y['titulo']} ({y['estado']})" for i, y in enumerate(p['pasos']))}
+{chr(10).join(f"{_n(p, i)}. {y['titulo']} ({y['estado']})" for i, y in enumerate(p['pasos']))}
 
-# El paso {n + 1} es muy grande o no quedó
+# El paso {_n(p, n)} es muy grande o no quedó
 {x['titulo']}: {x['que']}
 Archivos: {', '.join(x.get('archivos') or []) or 'sin decir'}
 Lo que deja listo: {x.get('entrega') or 'sin decir'}
@@ -1234,4 +1286,4 @@ def lista(_d):
 
 if __name__ == "__main__":
     nucleo.script({"lista": lista, "plan": plan, "revisar": revisar, "crear": crear, "paso": paso, "lote": lote, "dividir": dividir,
-                   "borrar": borrar, "abrir": abrir, "reprobar": reprobar}, __doc__)
+                   "borrar": borrar, "abrir": abrir, "reprobar": reprobar, "indicar": indicar}, __doc__)

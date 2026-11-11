@@ -12,14 +12,16 @@
     aportar: `https://github.com/${REPO}/blob/main/CONTRIBUTING.md` };
   const E = { config: {}, version: "", ias: [], ajustes: false, iniciada: false,
     catalogo: [], paso: 0, nueva: nuevaApp(), ficha: null, armando: false,
-    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: guardado("pieza.tope", 2000000), topePaso: guardado("pieza.topePaso", 250000), seguirTras: false, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {}, abiertos: new Set(), cerrados: new Set(), mejora: null,
+    proyectos: [], proyecto: null, ocupado: "", error: "", modo: "paso", tope: guardado("pieza.tope", 0), topePaso: guardado("pieza.topePaso", 250000), seguirTras: false, parar: false, saltados: new Set(), reparados: {}, divididos: {}, enCurso: [], vivos: {}, abiertos: new Set(), cerrados: new Set(), mejora: null,
     vista: "", apps: null, gh: null, pub: { dueno: "", visibilidad: "publico", explorador: true }, despues: { cambio: "", nota: "" }, propuesta: { nombre: "", que: "", archivos: "" } };
   // El avance de una acción con «progreso»: el host de escritorio lo manda como {eventos: [...]} (la vista previa, igual).
   const eventosDe = (d) => (Array.isArray(d) ? d : d && Array.isArray(d.eventos) ? d.eventos : []);
   // Los topes se recuerdan en este equipo (localStorage; si no se puede, valen hasta cerrar la app).
   function guardado(clave, porDefecto) {
-    try { const v = Number(localStorage.getItem(clave)); return v >= 5000 ? v : porDefecto; } catch { return porDefecto; }
+    try { const v = Number(localStorage.getItem(clave)); return v >= 5000 || (v === 0 && localStorage.getItem(clave) === "0") ? v : porDefecto; } catch { return porDefecto; }
   }
+  // El tope de toda la app es opcional (0 = sin tope): el que manda es el tope por paso.
+  const enTope = () => E.tope > 0 && E.proyecto && E.proyecto.gastado >= E.tope;
   function recordar(clave, v) { try { localStorage.setItem(clave, String(v)); } catch { /* sin almacenamiento: vale hasta cerrar */ } }
   // Una app nueva, mientras la persona la arma paso a paso (todavía no se crea nada en el disco).
   function nuevaApp() { return { plataformas: [], nombre: "", frase: "", detalle: "", piezas: [], tocadas: [] }; }
@@ -554,7 +556,10 @@
   // Todo automático: el próximo trabajo. Varios pasos a la vez si se puede; si no, el próximo paso.
   function seguirAuto() {
     const p = E.proyecto;
-    if (p.gastado >= E.tope) { E.error = Tp("Me detuve: llegaste al tope de {n} tokens.", { n: miles(E.tope) }); return false; }
+    if (enTope()) { E.error = Tp("Me detuve: llegaste al tope de {n} tokens de toda la app.", { n: miles(E.tope) }); return false; }
+    if (E.pararEn !== undefined && proximo(p) === E.pararEn) {
+      E.error = Tp("Me detuve antes del paso {n}, como me pediste.", { n: numero(p, E.pararEn) }); E.pararEn = undefined; return false;
+    }
     const lote = EDITAN.includes(E.config.ia) ? paraLote(p).filter((i) => p.pasos[i].estado !== "fallo") : [];
     if (lote.length > 1) { hacerLote(lote); return true; }
     const sig = proximo(p);
@@ -615,6 +620,58 @@
       ${corre ? vivoHTML(i) : x.estado === "fallo" ? falloHTML(x, i) : ""}
       ${corre ? "" : detallePaso(x)}</div></details></li>`;
   }
+  // «Dile a Pieza»: órdenes simples que Pieza entiende sola (sin IA, sin gastar) y, si no es una orden, una indicación para toda la
+  // app que va en cada pedido a la IA (proyectos.py indicar). Pieza dice lo que entendió.
+  function decirHTML(p) {
+    const xs = p.indicaciones || [];
+    return `<section class="decir"><label class="pz-campo"><span>${esc("Dile a Pieza")}</span>
+        <textarea id="decir" rows="2" maxlength="500" placeholder="Ej.: hacer todo desde el paso 3 · saltar el paso 5 · usa colores más suaves">${esc(E.decir || "")}</textarea></label>
+      <div class="decir-pie"><p class="suave">${esc("Entiendo «hacer todo desde el paso…», «solo el paso…», «saltar el paso…» y «detente antes del paso…». Lo demás lo tengo en cuenta en cada paso.")}</p>
+        <button type="button" class="pz-boton" id="enviar-decir"${(E.decir || "").trim() && !E.ocupado ? "" : " disabled"}>Enviar</button></div>
+      ${xs.length ? `<p class="etiqueta">${esc("Lo que tengo en cuenta en cada paso")}</p><ul class="indicaciones">${xs.map((t, i) =>
+        `<li><span data-sin-traducir>${esc(t)}</span><button type="button" class="pz-plano" data-quitar-indicacion="${i}" aria-label="${esc(Tp("Quitar"))}"${E.ocupado ? " disabled" : ""}>✕</button></li>`).join("")}</ul>` : ""}
+    </section>`;
+  }
+  // El índice del paso que la persona nombra («10.2», «10» = la primera parte de 10, «paso 3»).
+  function pasoPorNumero(p, texto) {
+    const ns = numeros(p);
+    const i = ns.indexOf(texto);
+    return i >= 0 ? i : ns.findIndex((k) => k.startsWith(texto + "."));
+  }
+  // Lo que Pieza entiende sola. Devuelve {orden, n} o null (entonces es una indicación para la IA).
+  function entenderOrden(p, texto) {
+    const t = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const m = t.match(/paso\s*(\d+(?:\.\d+)*)/);
+    if (!m) return null;
+    const n = pasoPorNumero(p, m[1]);
+    if (n < 0) return { orden: "no-existe", numero: m[1] };
+    if (/\b(salta|saltar|saltate|omite|omitir|sin hacer)\b/.test(t)) return { orden: "saltar", n };
+    if (/\b(detente|detener|detenerte|parar|frena|frenar)\b/.test(t)) return { orden: "parar", n };
+    if (/\b(solo|unicamente)\b/.test(t)) return { orden: "solo", n };
+    if (/\b(desde|a partir|todo|sigue|seguir|continua|continuar|haz|hacer)\b/.test(t)) return { orden: "desde", n };
+    return null;
+  }
+  function decir() {
+    const p = E.proyecto, texto = (E.decir || "").trim();
+    if (!texto || E.ocupado) return;
+    const o = entenderOrden(p, texto);
+    E.decir = "";
+    if (!o) {   // una indicación para toda la app
+      ocupar("indicar");
+      return host.enviar("proyectoIndicar", { id: p.id, texto });
+    }
+    if (o.orden === "no-existe") { toast("No encontré el paso {n}.", { valores: { n: o.numero } }); return pintar(); }
+    const k = numero(p, o.n);
+    if (o.orden === "saltar") { E.saltados.add(o.n); toast("Entendí: salto el paso {n} por ahora.", { valores: { n: k } }); return pintar(); }
+    if (o.orden === "parar") { E.pararEn = o.n; toast("Entendí: me detengo antes del paso {n}.", { valores: { n: k } }); return pintar(); }
+    // «desde» y «solo»: lo de antes que falta queda para después (no se borra nada) y se parte por ese paso.
+    p.pasos.forEach((x, i) => { if (i < o.n && x.estado !== "listo") E.saltados.add(i); });
+    E.saltados.delete(o.n); E.parar = false; E.error = "";
+    if (o.orden === "solo") { E.modo = "paso"; toast("Entendí: hago solo el paso {n}.", { valores: { n: k } }); return hacerPaso(o.n); }
+    E.modo = "auto";
+    toast("Entendí: hago todo, solo, desde el paso {n}.", { valores: { n: k } });
+    if (!seguirAuto()) pintar();
+  }
   function pasoPasos() {
     const p = E.proyecto;
     const siguiente = proximo(p);
@@ -644,6 +701,10 @@
       + (fin ? `<div class="listo"><h3>Tu app está lista</h3><p class="suave">Está en tu carpeta:</p><p><code data-sin-traducir>${esc(p.carpeta || "")}</code></p>
         <p class="suave">«Ver mi app» la abre en tu navegador, con datos de ejemplo.</p>
         <p class="suave">Para instalarla como app y compartirla, publícala: GitHub arma la página y las descargas para Mac, Windows y Linux.</p></div>` : "")
+      + (enTope() ? `<div class="aviso-tope"><p>${esc(Tp("Tu app ya gastó {g} tokens y el tope de toda la app es {t}.", { g: miles(p.gastado), t: miles(E.tope) }))}</p>
+        <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="quitar-tope">Quitar el tope y seguir</button>
+        <button type="button" class="pz-boton" id="subir-tope">${esc(Tp("Subirlo a {n}", { n: miles(Math.ceil(p.gastado * 1.5 / 100000) * 100000) }))}</button></div></div>` : "")
+      + (fin ? "" : decirHTML(p))
       + `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{h} de {n} pasos listos", { h: hechos, n: p.pasos.length }))}</p>
         <button type="button" class="pz-plano" id="abrir-todo" data-que="paso">${esc(abiertos("paso") ? "Cerrar todos" : "Abrir todos")}</button></div>
         <progress class="barra-avance" max="${p.pasos.length}" value="${hechos}" aria-hidden="true"></progress>
@@ -652,7 +713,7 @@
     const lado = medidor(p) + `<div class="panel-bloque"><p class="etiqueta">Modo</p><div class="pz-seg" role="group" aria-label="Modo">${modos}</div>
         <label class="tope"><span>Tope por paso (tokens)</span><input id="tope-paso" type="number" min="5000" step="5000" value="${E.topePaso}"></label>
         <p class="panel-nota">${esc("Si un paso llega a este tope, lo detengo y lo divido en partes (por ejemplo 5.1 y 5.2). Después sigo con la primera parte.")}</p>
-        <label class="tope"><span>Tope de toda la app (tokens)</span><input id="tope" type="number" min="1000" step="1000" value="${E.tope}"></label>
+        <label class="tope"><span>Tope de toda la app (opcional)</span><input id="tope" type="number" min="0" step="100000" placeholder="Sin tope" value="${E.tope || ""}"></label>
         ${enFila ? `<p class="panel-nota">${esc("En este plan cada paso usa el anterior, así que van uno a uno. «Rehacer lo que falta» (en el plan) lo arma con pasos que se pueden hacer a la vez.")}</p>` : ""}
         <p class="panel-nota">${esc(E.modo === "auto" ? "Pieza hace todos los pasos sola, varios a la vez cuando no dependen entre sí." : "Tú apruebas cada paso. Después de cada uno ves lo que gastó tu IA.")}</p>
         <p class="panel-nota">${esc("Si un paso falla, tu IA lo arregla sola (hasta 2 veces) y, si sigue, lo divido en partes. Solo te pregunto si nada de eso resulta.")}</p></div>`
@@ -879,6 +940,13 @@
     } else if (b.id === "crear") { ocupar("crear"); host.enviar("proyectoCrear", { id: E.proyecto.id }); }
     else if (b.id === "hacer-paso") { if (E.modo !== "auto" || E.proyecto.pasos[Number(b.dataset.n)].estado === "fallo" || !seguirAuto()) hacerPaso(Number(b.dataset.n)); }
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
+    else if (b.id === "enviar-decir") decir();
+    else if (b.dataset.quitarIndicacion) { ocupar("indicar"); host.enviar("proyectoIndicar", { id: E.proyecto.id, quitar: Number(b.dataset.quitarIndicacion) }); }
+    else if (b.id === "quitar-tope" || b.id === "subir-tope") {
+      E.tope = b.id === "quitar-tope" ? 0 : Math.ceil(E.proyecto.gastado * 1.5 / 100000) * 100000;
+      recordar("pieza.tope", E.tope); E.error = "";
+      if (!(E.modo === "auto" && seguirAuto())) pintar();
+    }
     else if (b.id === "parar") { E.parar = true; pintar(); }
     else if (b.id === "abrir-todo") {
       const que = b.dataset.que, total = E.proyecto ? E.proyecto.pasos.length : 0;
@@ -923,7 +991,7 @@
   // (red, límite de su cuenta), se intenta una vez más. Se detiene si la persona pidió parar o se llegó al tope de la app.
   const REPARAR = 2;
   function autoReparar(n, x) {
-    if (E.parar || E.proyecto.gastado >= E.tope || x.estado !== "fallo" || E.saltados.has(n)) return false;
+    if (E.parar || enTope() || x.estado !== "fallo" || E.saltados.has(n)) return false;
     const veces = E.reparados[n] || 0;
     if (x.causa === "ia") {
       if (veces >= 1) return false;
@@ -957,8 +1025,8 @@
     leidos: 0, leidosLista: [], busquedas: [], pruebas: [], fallo: "" });
   // El tope vale en los dos modos: sin espacio, no se empieza nada (la persona lo sube en el panel si quiere seguir).
   function sinTope() {
-    if (E.proyecto.gastado < E.tope) return false;
-    E.error = Tp("Llegaste al tope de {n} tokens. Para seguir, súbelo en el panel.", { n: miles(E.tope) });
+    if (!enTope()) return false;
+    E.error = Tp("Llegaste al tope de {n} tokens de toda la app. Para seguir, súbelo o quítalo.", { n: miles(E.tope) });
     pintar();
     return true;
   }
@@ -979,7 +1047,7 @@
   }
   // Un paso que llegó al tope por paso: se divide solo y sigue con la primera parte (en los dos modos).
   function dividirPorTope(n, x) {
-    if (x.causa !== "tope" || !puedeDividirse(x) || E.parar || E.proyecto.gastado >= E.tope) return false;
+    if (x.causa !== "tope" || !puedeDividirse(x) || E.parar || enTope()) return false;
     toast(Tp("El paso {n} llegó a tu tope por paso. Lo divido en partes y sigo con la primera.", { n: numeroDe(n) }));
     E.seguirTras = true;
     dividirPaso(n);
@@ -1060,7 +1128,7 @@
   }
   document.addEventListener("input", (ev) => {
     const id = ev.target.id;
-    if (id === "tope") { E.tope = Math.max(1000, Number(ev.target.value) || 0); recordar("pieza.tope", E.tope); return; }
+    if (id === "tope") { const v = Number(ev.target.value) || 0; E.tope = v > 0 ? Math.max(1000, v) : 0; recordar("pieza.tope", E.tope); return; }
     if (id === "tope-paso") { E.topePaso = Math.max(5000, Number(ev.target.value) || 0); recordar("pieza.topePaso", E.topePaso); return; }
     if (id === "pz-nombre" || id === "pz-que" || id === "pz-archivos") {
       const x = E.propuesta, antes = !!(x.nombre.trim() && x.que.trim());
@@ -1069,6 +1137,7 @@
       return;
     }
     if (id === "frase-rapida") { E.fraseRapida = ev.target.value; return; }
+    if (id === "decir") { const antes = !!(E.decir || "").trim(); E.decir = ev.target.value; if (antes !== !!E.decir.trim()) pintar(); return; }
     if (id === "cambio" || id === "nota-version") {
       const clave = id === "cambio" ? "cambio" : "nota", antes = !!E.despues[clave].trim();
       E.despues[clave] = ev.target.value;
@@ -1112,6 +1181,12 @@
       pintar();
     },
     fichaLista(r) { E.ficha = r || { ok: false }; if (E.paso === 4) pintar(); },
+    indicacionLista(r) {
+      E.ocupado = "";
+      if (r && r.ok) { E.proyecto = r.proyecto; toast("Listo: lo tengo en cuenta en cada paso que falta."); }
+      else E.error = (r && r.error) || Tp("No se pudo.");
+      pintar();
+    },
     pasoReprobado(r) {
       E.ocupado = ""; E.enCurso = [];
       if (r && r.proyecto) E.proyecto = r.proyecto;
@@ -1415,6 +1490,11 @@
       case "proyectosLista": return c.responder("proyectosListos", { ok: true, proyectos: SIM.proyectos, aisladas: true });
       case "proyectoBorrar": SIM.proyectos = SIM.proyectos.filter((x) => x.id !== d.id);
         return c.luego(150, () => c.responder("proyectoBorrado", { ok: true, id: d.id, carpeta: d.carpeta === "si" }));
+      case "proyectoIndicar": return c.luego(200, () => {
+        const p = SIM.proyectos.find((x) => x.id === d.id);
+        p.indicaciones = typeof d.quitar === "number" ? (p.indicaciones || []).filter((_, i) => i !== d.quitar) : [...(p.indicaciones || []), d.texto].slice(-10);
+        c.responder("indicacionLista", { ok: true, proyecto: JSON.parse(JSON.stringify(p)) });
+      });
       case "proyectoReprobar": return c.luego(600, () => {
         const p = SIM.proyectos.find((x) => x.id === d.id), x = p.pasos[d.n];
         Object.assign(x, { estado: "listo", error: "" }); delete x.causa;

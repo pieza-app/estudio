@@ -151,6 +151,32 @@
    "limite": 1300,
    "pieza": "app"
   },
+  "proyectoIndicar": {
+   "script": "proyectos.py",
+   "args": [
+    "indicar"
+   ],
+   "entrada": "archivo",
+   "datos": {
+    "id": {
+     "tipo": "texto",
+     "max": 30,
+     "requerido": true
+    },
+    "texto": {
+     "tipo": "texto",
+     "max": 500
+    },
+    "quitar": {
+     "tipo": "entero",
+     "min": 0,
+     "max": 9
+    }
+   },
+   "responde": "indicacionLista",
+   "limite": 30,
+   "pieza": "app"
+  },
   "proyectoLote": {
    "script": "proyectos.py",
    "args": [
