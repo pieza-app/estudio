@@ -27,6 +27,53 @@ const servidor = http.createServer((q, r) => {
 await new Promise((ok) => servidor.listen(0, "127.0.0.1", ok));
 const BASE = `http://127.0.0.1:${servidor.address().port}/index.html`;
 
+// Las reglas de cada acción, como las aplica el host (enchufe.rs → validar_datos / validar_valor).
+const ACCIONES = JSON.parse(fs.readFileSync(path.join(path.dirname(UI), "acciones.json"), "utf8")).acciones;
+function revisarDatos(acciones) {
+  const malos = (window.__datosMalos = []);
+  const entero = (v) => Number.isInteger(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER;
+  function valor(r, v) {
+    switch (r.tipo) {
+      case "texto": return typeof v === "string" && (v.length <= (r.max || 0) || r.recortar === true);
+      case "enum": return (r.valores || []).some((x) => x === v);
+      case "bool": return typeof v === "boolean";
+      case "entero": return entero(v) && !(r.min !== undefined && v < r.min) && !(r.max !== undefined && v > r.max);
+      case "rutaRelativa": return typeof v === "string" && v.length <= 400 && !v.startsWith("/") && !v.split(/[\\/]/).includes("..");
+      case "base64": return typeof v === "string";
+      case "lista": return Array.isArray(v) && v.length <= (r.max || 100) && v.every((x) => valor(r.de || { tipo: "texto", max: 2000 }, x));
+      default: return false;
+    }
+  }
+  function revisar(accion, d) {
+    const def = acciones[accion];
+    if (!def) return;   // registrada o del host: no la valida app.json
+    const en_args = (def.args || []).filter((a) => typeof a === "string" && a.startsWith("$")).map((a) => a.slice(1));
+    for (const [campo, r] of Object.entries(def.datos || {})) {
+      if (campo === "*") continue;
+      const v = d && d[campo];
+      let malo = "";
+      if (v === undefined || v === null) { if (en_args.includes(campo) || r.requerido === true) malo = `falta «${campo}»`; }
+      else if (!valor(r, v)) malo = `«${campo}» = ${JSON.stringify(v)} no calza con ${JSON.stringify(r)}`;
+      if (malo) { malos.push(`${accion}: ${malo}`); console.error(`El host rechazaría ${accion}: ${malo}`); }
+    }
+  }
+  let real;
+  Object.defineProperty(window, "PiezaHost", {
+    configurable: true,
+    get: () => real,
+    set(v) {
+      real = v;
+      const crear = v.crearHost;
+      v.crearHost = (o) => {
+        const s = o.simular;
+        const envolver = typeof s === "function" ? (a, d, c) => { revisar(a, d); return s(a, d, c); }
+          : Object.fromEntries(Object.entries(s || {}).map(([a, f]) => [a, (d, c) => { revisar(a, d); return f(d, c); }]));
+        return crear({ ...o, simular: envolver });
+      };
+    },
+  });
+}
+
 const navegador = await chromium.launch();
 const errores = [];
 async function abrir(consulta, ancho = 1280) {
@@ -34,6 +81,9 @@ async function abrir(consulta, ancho = 1280) {
   page.on("pageerror", (e) => errores.push(`${consulta}: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errores.push(`${consulta}: ${m.text()}`); });
   await page.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => console.error(`CSP: ${e.violatedDirective}`)));
+  // La vista previa no es el host: el host de escritorio valida cada acción con las reglas de app.json y rechaza lo que no calza
+  // («No entendí lo que pediste»). Aquí se valida igual todo lo que la interfaz manda (APRENDIZAJES.md, «La vista previa no es el host»).
+  await page.addInitScript(revisarDatos, ACCIONES);
   await page.goto(BASE + consulta);
   return page;
 }
