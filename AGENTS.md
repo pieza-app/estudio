@@ -28,6 +28,7 @@ hechas y no gastan tokens. La IA de la persona solo hace lo propio de la app (pl
 | `pruebas/` | `correr.sh` (todo lo que revisa GitHub en cada cambio) y las pruebas. |
 | `herramientas/` | `revisar_privacidad.sh` (antes de cada commit), `empaquetar.sh` (arma la app de Mac), `subir_version.py` (sube la versión en app.json, tauri.conf.json, Cargo.toml, Cargo.lock y el CHANGELOG). |
 | `app.json`, `piezas.json`, `acciones.json` | **Pieza** (ver «Piezas»): `app.json` describe la app (id, nombre, versión, datos, plataformas, config y sus acciones); `piezas.json` y `acciones.json` los escribe `pieza.py`. |
+| `APRENDIZAJES.md`, `.claude/agents/pieza-aprendiz.md` | Los errores que llegaron a la persona, con su lección y la prueba que los atrapa; el agente revisa cada cambio contra la lista y suma lecciones nuevas |
 | `CHANGELOG.md` | Lo que cambia para quien usa la app, en palabras simples (ver «Lo que rodea a un cambio»). |
 | `bin/piezas.py` | `lista` (el catálogo) y `ficha {plataformas, piezas}`: suma las piezas que van siempre, el host de cada sistema y lo que cada pieza requiere; devuelve lo hecho, lo que falta, pantallas, permisos, red, tareas y tokens ahorrados (bytes ÷ 4). |
 | `datos/catalogo.json` | El catálogo de piezas (solo datos). Lo arma `herramientas/catalogo_de_pieza.py <carpeta de pieza>`, que también escribe `ui/demo-catalogo.json` para la vista previa. «Catálogo al día» (`.github/workflows/catalogo-al-dia.yml`) lo hace cada día: si cambió y las pruebas pasan, sube la versión con `herramientas/subir_version.py`, lo deja en main y lanza «Publicar versión». |
@@ -179,6 +180,8 @@ Pieza usa piezas de Pieza, la base de la familia de apps: código probado que se
 - Al agregar o actualizar una pieza, pon al día esta tabla (`pieza.py estado .` dice las versiones).
 
 ## Reglas al cambiar cosas
+- **Antes de cerrar un cambio, revísalo contra `APRENDIZAJES.md`** (o pídeselo al agente `pieza-aprendiz`). Cada error que llegó a
+  la persona se anota ahí con su lección y su prueba, en el mismo PR que lo arregla.
 - Código, comentarios, commits y textos en **español** (de Chile neutro). Todo texto nuevo visible va con su traducción en
   `ui/idiomas/en.json` en el mismo cambio, como frase completa con marcadores (`T("Llevas {n}…", {n})`), nunca pedazos pegados.
 - Contenido de la persona con `esc()` y `data-sin-traducir`. Lo que escribe la persona **nunca** va como argumento de un proceso.

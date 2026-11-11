@@ -1,6 +1,7 @@
 # Lista blanca: solo se versiona lo listado. Algo nuevo en la raíz se agrega aquí (si no, queda fuera sin aviso).
 /*
 !/.gitignore
+!/APRENDIZAJES.md
 !/.github/
 !/.claude/
 !/bin/
