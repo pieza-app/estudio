@@ -278,6 +278,11 @@ await page.waitForSelector(".indicaciones li");
 await page.fill("#decir", "saltar el paso 4");
 await page.click("#enviar-decir");
 await page.waitForFunction(() => window.Pieza._pruebas.E.saltados.size === 1);
+// Archivos muy grandes: Pieza avisa por qué tarda y ofrece que la IA los ordene (una indicación para los pasos que faltan).
+await page.evaluate(() => { window.Pieza._pruebas.E.proyecto.grandes = [{ ruta: "pruebas/test_app.py", lineas: 3085 }]; });
+await page.click('[data-modo="paso"]');
+await page.click("#ordenar-grandes");
+await page.waitForSelector("text=Archivos chicos:");
 // Un paso que falla se arregla solo también en «paso a paso»: tu IA lo corrige sin que la persona apriete nada.
 await page.evaluate(() => {
   const E = window.Pieza._pruebas.E, n = 0;

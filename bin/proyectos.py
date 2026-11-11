@@ -39,6 +39,7 @@ import re
 import secrets
 import subprocess
 import sys
+import time
 import unicodedata
 
 import ia
@@ -581,6 +582,40 @@ def _no_leer(rel):
     return any(rel == x or (x.endswith("/") and rel.startswith(x)) for x in NO_LEER)
 
 
+GRANDE_BYTES = 24 * 1024
+GRANDE_LINEAS = 400
+
+
+def _lineas(ruta):
+    try:
+        with open(ruta, "rb") as f:
+            return sum(1 for _ in f)
+    except OSError:
+        return 0
+
+
+def grandes(carpeta):
+    """Los archivos propios que más gastan: [(ruta, líneas)] de más de GRANDE_LINEAS, el más grande primero."""
+    de_piezas = _de_piezas(carpeta)
+    r = []
+    for raiz, dirs, archivos in os.walk(carpeta):
+        dirs[:] = [x for x in dirs if x not in (".git", "node_modules", "target", "__pycache__", "dist")]
+        for a in archivos:
+            ruta = os.path.join(raiz, a)
+            rel = os.path.relpath(ruta, carpeta).replace(os.sep, "/")
+            if rel in de_piezas or _no_leer(rel) or rel.startswith("pruebas/datos/") or not a.endswith((".py", ".js", ".mjs", ".css", ".md", ".rs", ".json")):
+                continue
+            try:
+                if os.path.getsize(ruta) < GRANDE_BYTES:
+                    continue
+            except OSError:
+                continue
+            n = _lineas(ruta)
+            if n >= GRANDE_LINEAS * 2:
+                r.append((rel, n))
+    return sorted(r, key=lambda x: -x[1])[:8]
+
+
 def _mapa(carpeta):
     """Los archivos de la app que la IA puede leer, con su tamaño: así va directo a lo que necesita. Las piezas van aparte."""
     de_piezas = _de_piezas(carpeta)
@@ -591,11 +626,19 @@ def _mapa(carpeta):
             rel = os.path.relpath(os.path.join(raiz, a), carpeta).replace(os.sep, "/")
             if _no_leer(rel) or rel.startswith("pruebas/datos/"):
                 continue
+            ruta = os.path.join(raiz, a)
             try:
-                kb = max(1, round(os.path.getsize(os.path.join(raiz, a)) / 1024))
+                bytes_ = os.path.getsize(ruta)
             except OSError:
                 continue
-            (piezas_ if rel in de_piezas else propios).append(f"{rel} ({kb} KB)")
+            kb = max(1, round(bytes_ / 1024))
+            if rel in de_piezas:
+                piezas_.append(f"{rel} ({kb} KB)")
+                continue
+            # Los grandes, con sus líneas y el aviso: leerlos enteros es lo que más gasta (se vuelven a leer en cada vuelta).
+            lineas = _lineas(ruta) if bytes_ >= GRANDE_BYTES else 0
+            propios.append(f"{rel} ({kb} KB, {lineas} líneas: GRANDE, lee solo la parte que necesitas)" if lineas >= GRANDE_LINEAS
+                           else f"{rel} ({kb} KB)")
     return propios[:MAX_MAPA], piezas_[:MAX_MAPA]
 
 
@@ -687,6 +730,7 @@ def _gastar(x, uso, estimado):
 
 
 def paso(d):
+    inicio = time.time()
     p = _leer(d.get("id"))
     n = d.get("n")
     if p.get("estado") not in ("creado", "pasos") or not p.get("carpeta"):
@@ -795,7 +839,9 @@ def paso(d):
     if x["estado"] == "fallo":
         x["causa"] = historial[-1]["causa"] if historial else "ia"
     p["estado"] = "pasos"
+    x["segundos"] = int(time.time() - inicio)   # cuánto tardó esta vez (se ve en «Ver lo que hizo»)
     p["gastado"] = sum(y.get("gastado", 0) for y in p["pasos"]) + p.get("gastado_plan", 0)
+    p["grandes"] = [{"ruta": r, "lineas": n} for r, n in grandes(p["carpeta"])]
     return {"ok": x["estado"] == "listo", "proyecto": _guardar(p), "n": n}
 
 
@@ -1235,9 +1281,11 @@ def _prompt_editar(p, n, error=None):
     """El pedido de un paso cuando la IA edita la carpeta: las mismas reglas, sin JSON."""
     base = _prompt_paso(p, n, error)
     return base.split("# Cómo responder")[0] + """# Cómo trabajar en este paso
-1. Lee solo lo que necesitas: los archivos que vas a cambiar y lo que los usa. Usa el mapa de arriba y busca con Grep en un
-   archivo grande antes de leerlo entero. Lee un archivo de pieza solo si su API no está en AGENTS.md.
-2. Crea o cambia los archivos que el paso necesita, directamente en la carpeta. No toques los archivos de piezas.
+1. Lee solo lo que necesitas. Todo lo que lees se vuelve a leer en cada vuelta: un archivo grande leído entero hace el paso lento
+   y caro. Ubica con Grep y lee solo esa parte (Read con offset y limit); nunca entero un archivo marcado GRANDE en el mapa, ni
+   `AGENTS.md` entero (busca la sección). No releas lo que ya leíste. Un archivo de pieza, solo si su API no está en AGENTS.md.
+2. Cambia con Edit solo lo que cambia; Write solo para archivos nuevos. Lo nuevo de un archivo de más de 800 líneas va en un
+   archivo nuevo del mismo tema (`pruebas/test_<tema>.py`, `bin/lib_<tema>.py`). No toques los archivos de piezas.
 3. Al terminar, responde en 1 a 3 frases qué hiciste. Nada más."""
 
 

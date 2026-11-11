@@ -52,3 +52,12 @@ Formato: **la lección** · qué pasó · cómo se evita (la prueba, si existe).
 13. **Lo que usa `cfg(unix)` deja `mut` sin usar en Windows** y `clippy -D warnings` falla solo allá. · Variables por `cfg`.
 14. **Otras pruebas cambian funciones del módulo** (`proyectos.probar = lambda …`). · Guarda la real al importar (`PROBAR_REAL`).
 15. **Redondear a pocos decimales rompe comparaciones finas** (Pilota: `spread_relativo` a 8 decimales). · Redondea solo al mostrar.
+
+## Velocidad
+
+16. **Cada archivo que la IA lee se vuelve a leer en cada vuelta.** En Pilota, un paso estimado en 50 mil tokens gastaba 200 a 700
+    mil y releía 15 a 18 millones de la caché: leía entero `pruebas/test_app.py` (3.000 líneas) y `AGENTS.md` varias veces, y
+    reescribía archivos completos. · `reglas.md` y `_prompt_editar` piden Grep + leer solo la parte, Edit en vez de Write y
+    archivos chicos por tema; el mapa marca los GRANDES; la interfaz avisa y ofrece ordenarlos; cada paso guarda cuánto tardó
+    (prueba `test_archivos_grandes_se_marcan`).
+

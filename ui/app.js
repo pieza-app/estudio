@@ -574,7 +574,11 @@
     const registro = (x.registro || []).slice(-40).map((r) =>
       `<p class="consola-linea"><span class="consola-${esc(r.t)}">${esc(QUE_HIZO[r.t] || r.t)}</span><span data-sin-traducir>${esc(r.ruta)}</span></p>`).join("");
     if (!x.resumen && !intentos && !registro && !(x.escritos || []).length) return "";
+    // Cuánto tardó y cuánto releyó (la caché): así se ve por qué un paso fue lento.
+    const costo = [x.segundos ? Tp("Tardó {n} min", { n: Math.max(1, Math.round(x.segundos / 60)) }) : "",
+      x.cache ? Tp("releyó {n} tokens ya leídos (caché, más baratos y lentos)", { n: corto(x.cache) }) : ""].filter(Boolean).join(" · ");
     return `<details class="detalle-paso"><summary>Ver lo que hizo</summary>
+      ${costo ? `<p class="suave" data-sin-traducir>${esc(costo)}</p>` : ""}
       ${x.resumen ? `<p class="resumen-completo" data-sin-traducir>${esc(x.resumen)}</p>` : ""}
       ${(x.escritos || []).length ? `<p class="etiqueta">Archivos que cambió</p><p class="archivos" data-sin-traducir>${esc(x.escritos.join(", "))}</p>` : ""}
       ${intentos ? `<p class="etiqueta">Intentos</p><ul class="intentos">${intentos}</ul>` : ""}
@@ -622,6 +626,17 @@
   }
   // «Dile a Pieza»: órdenes simples que Pieza entiende sola (sin IA, sin gastar) y, si no es una orden, una indicación para toda la
   // app que va en cada pedido a la IA (proyectos.py indicar). Pieza dice lo que entendió.
+  // Archivos propios muy grandes: cada paso los relee y por eso tarda y gasta más. Se ofrece ordenarlos (una indicación para la
+  // IA: lo nuevo va en archivos por tema, y se parte el grande cuando lo toque).
+  function grandesHTML(p) {
+    const gs = (p.grandes || []).filter((g) => g.lineas >= 1500).slice(0, 3);
+    if (!gs.length) return "";
+    const ya = (p.indicaciones || []).some((t) => t.startsWith("Archivos chicos:"));
+    return `<div class="aviso-grandes"><p>${esc(Tp("Estos archivos son muy grandes y cada paso los relee: por eso tarda más. {lista}.", {
+        lista: gs.map((g) => Tp("{ruta} ({n} líneas)", { ruta: g.ruta, n: miles(g.lineas) })).join(", ") }))}</p>
+      ${ya ? `<p class="suave">${esc("Ya le pedí a tu IA que los ordene por tema en los pasos que faltan.")}</p>`
+        : `<button type="button" class="pz-boton" id="ordenar-grandes"${E.ocupado ? " disabled" : ""}>Que tu IA los ordene por tema</button>`}</div>`;
+  }
   function decirHTML(p) {
     const xs = p.indicaciones || [];
     return `<section class="decir"><label class="pz-campo"><span>${esc("Dile a Pieza")}</span>
@@ -704,6 +719,7 @@
       + (enTope() ? `<div class="aviso-tope"><p>${esc(Tp("Tu app ya gastó {g} tokens y el tope de toda la app es {t}.", { g: miles(p.gastado), t: miles(E.tope) }))}</p>
         <div class="pz-pie"><button type="button" class="pz-boton pz-principal" id="quitar-tope">Quitar el tope y seguir</button>
         <button type="button" class="pz-boton" id="subir-tope">${esc(Tp("Subirlo a {n}", { n: miles(Math.ceil(p.gastado * 1.5 / 100000) * 100000) }))}</button></div></div>` : "")
+      + (fin ? "" : grandesHTML(p))
       + (fin ? "" : decirHTML(p))
       + `<div class="lista-cabeza"><p class="suave" data-sin-traducir>${esc(Tp("{h} de {n} pasos listos", { h: hechos, n: p.pasos.length }))}</p>
         <button type="button" class="pz-plano" id="abrir-todo" data-que="paso">${esc(abiertos("paso") ? "Cerrar todos" : "Abrir todos")}</button></div>
@@ -941,6 +957,11 @@
     else if (b.id === "hacer-paso") { if (E.modo !== "auto" || E.proyecto.pasos[Number(b.dataset.n)].estado === "fallo" || !seguirAuto()) hacerPaso(Number(b.dataset.n)); }
     else if (b.id === "ver-app") host.enviar("proyectoVista", { id: E.proyecto.id });
     else if (b.id === "enviar-decir") decir();
+    else if (b.id === "ordenar-grandes") {
+      const gs = (E.proyecto.grandes || []).filter((g) => g.lineas >= 1500).map((g) => g.ruta);
+      ocupar("indicar");
+      host.enviar("proyectoIndicar", { id: E.proyecto.id, texto: `Archivos chicos: cuando toques ${gs.join(", ")}, parte lo que toques en archivos por tema (pruebas/test_<tema>.py, bin/lib_<tema>.py, ui/<pantalla>.js) sin cambiar lo que hacen. Lee solo la parte que necesitas.`.slice(0, 500) });
+    }
     else if (b.dataset.quitarIndicacion) { ocupar("indicar"); host.enviar("proyectoIndicar", { id: E.proyecto.id, quitar: Number(b.dataset.quitarIndicacion) }); }
     else if (b.id === "quitar-tope" || b.id === "subir-tope") {
       E.tope = b.id === "quitar-tope" ? 0 : Math.ceil(E.proyecto.gastado * 1.5 / 100000) * 100000;

@@ -16,9 +16,13 @@ Estas reglas van en cada pedido. Son cortas a propósito: cada pedido es un solo
 7. **Todo texto visible tiene su inglés** en `ui/idiomas/en.json`, como frase completa con marcadores.
 8. **Datos ficticios** en ejemplos y pruebas (Ana Pérez, Matías Soto).
 
-## Cómo trabajar
-1. Lee `AGENTS.md` de la app antes de escribir. Ahí está el mapa y cómo se prueba.
-2. Mira el ejemplo que dejó `pieza.py crear` (`ui/app.js`, `bin/`, `pruebas/`) y sigue su forma.
-3. Escribe archivos completos, no pedazos.
-4. Suma o cambia las pruebas del paso (`pruebas/test_app.py`, `pruebas/interfaz.mjs`).
-5. Después de tu respuesta, Pieza corre `bash pruebas/correr.sh`. Si falla, recibes el error y tienes un intento más.
+## Cómo trabajar (rápido y barato: cada archivo que lees se vuelve a leer en cada vuelta)
+1. **Parte por lo que ya trae este pedido**: el mapa de archivos, lo que dejaron los pasos anteriores y las reglas. De `AGENTS.md`
+   lee solo la sección que necesitas (búscala con Grep), no el archivo entero.
+2. **Busca antes de leer.** Ubica con Grep o Glob y lee solo esa parte (Read con `offset` y `limit`). No leas entero un archivo de
+   más de 300 líneas y no vuelvas a leer lo que ya leíste. El mapa marca los archivos grandes.
+3. **Cambia solo lo que cambia** (Edit). Write solo para archivos nuevos. (Si respondes en JSON, como con Gemini, van completos.)
+4. **Archivos chicos.** Si un archivo propio pasa de 800 líneas, lo nuevo va en un archivo nuevo del mismo tema: pruebas en
+   `pruebas/test_<tema>.py` (se corren solas), lógica en `bin/lib_<tema>.py`. `AGENTS.md` queda corto: el detalle va en `docs/`.
+5. Sigue la forma de lo que ya está (`ui/app.js`, `bin/`, `pruebas/`). Suma o cambia las pruebas del paso.
+6. Después de tu respuesta, Pieza corre `bash pruebas/correr.sh`. Si falla, recibes el error y tienes un intento más.

@@ -415,6 +415,18 @@ class Proyectos(unittest.TestCase):
         self.respuestas.extend(['{"hallazgos": []}'] * 3)
         self.assertTrue(self.p.revisar({"id": "recetas"})["ok"])
 
+    def test_archivos_grandes_se_marcan(self):
+        """Un archivo propio grande va en el mapa con sus líneas y el aviso, y `grandes` lo cuenta para la interfaz."""
+        self.plan_en_paralelo()
+        self.p.crear({"id": "recetas"})
+        carpeta = self.p._leer("recetas")["carpeta"]
+        with open(os.path.join(carpeta, "pruebas", "test_grande.py"), "w") as f:
+            f.write("x = 1  # una línea de prueba bastante larga para pesar\n" * 2000)
+        propios, _ = self.p._mapa(carpeta)
+        self.assertTrue(any(x.startswith("pruebas/test_grande.py") and "2000 líneas: GRANDE" in x for x in propios), propios)
+        self.assertIn(("pruebas/test_grande.py", 2000), self.p.grandes(carpeta))
+        self.assertIn("nunca entero un archivo marcado GRANDE", self.p._prompt_editar(self.p._leer("recetas"), 0))
+
     def test_numeros_e_indicaciones_en_el_pedido(self):
         """La IA ve los mismos números que la persona (10.1, 10.2) y lo que la persona le dijo a Pieza para toda la app."""
         p = {"pasos": [{}, {}, {"grupo": ["a"]}, {"grupo": ["a"]}, {"grupo": ["a", "b"]}, {"grupo": ["a", "b"]}, {}]}
