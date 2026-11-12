@@ -1,7 +1,7 @@
 {
  "nombre": "Pieza",
  "id": "pieza",
- "version": "0.20.1",
+ "version": "0.20.2",
  "repo": "pieza-app/estudio",
  "datos": "sistema",
  "icono": "docs/favicon.svg",
