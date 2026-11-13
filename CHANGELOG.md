@@ -8,6 +8,9 @@ Lo que cambia para quien usa Pieza, en palabras simples. Las descargas de cada v
 <!-- Una línea por cambio que se nota, en lenguaje de persona («Ahora puedes…»), en español · *e inglés*. Al publicar una
 versión (subir «version» en app.json), estas líneas pasan a «## X.Y.Z». -->
 
+## 0.20.3
+- Piezas al día: las piezas nuevas o arregladas de Pieza ya se pueden usar al crear una app. · *Pieces up to date: new or fixed Pieza pieces can now be used when creating an app.*
+
 ## 0.20.2
 - Piezas al día: las piezas nuevas o arregladas de Pieza ya se pueden usar al crear una app. · *Pieces up to date: new or fixed Pieza pieces can now be used when creating an app.*
 
