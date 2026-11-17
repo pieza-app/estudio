@@ -2989,7 +2989,7 @@ dependencies = [
 
 [[package]]
 name = "pieza"
-version = "0.20.6"
+version = "0.20.7"
 dependencies = [
  "arboard",
  "base64 0.22.1",

@@ -526,7 +526,7 @@
   {
    "id": "github",
    "nombre": "Repo listo para la comunidad",
-   "version": "0.3.1",
+   "version": "0.3.2",
    "estado": "lista",
    "categoria": "repo",
    "descripcion": "El repo listo para la comunidad desde app.json: plantillas de issues y PR, dependabot, revisar.yml, Pieza al día, AGENTS/CONTRIBUTING/SECURITY con lo que llena la IA marcado, agentes, revisión de privacidad, .gitignore de lista blanca y pieza.py repo configurar.",
@@ -552,7 +552,7 @@
     "cuando": "Siempre: es lo que hace que la comunidad pueda aportar con seguridad (agrégala al final, después de las demás piezas: AGENTS.md lista las que ya están).",
     "palabras": []
    },
-   "bytes": 86503
+   "bytes": 86703
   },
   {
    "id": "grabar-pantalla",
