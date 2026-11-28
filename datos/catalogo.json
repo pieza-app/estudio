@@ -825,7 +825,7 @@
   {
    "id": "ia",
    "nombre": "Tu IA",
-   "version": "0.8.0",
+   "version": "0.8.1",
    "estado": "lista",
    "categoria": "ia",
    "descripcion": "La IA de la persona (Claude Code, Codex o Gemini) con su propia cuenta: sin herramientas, sin su memoria, el pedido nunca como argumento, material y revisión a fondo de solo lectura, y en vivo (lo que lee y «Detener»).",
@@ -867,7 +867,7 @@
      "analizar"
     ]
    },
-   "bytes": 82958
+   "bytes": 82946
   },
   {
    "id": "mcp",
